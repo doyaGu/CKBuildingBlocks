@@ -236,7 +236,7 @@ int Test(const CKBehaviorContext &behcontext)
     beh->GetInputParameterValue(0, &op);
 
     //____________________________/ Get Inputs
-    float val[2];
+    float val[2] = {0.0f, 0.0f};
     CKSTRING str[2] = {0, 0};
     CKGUID guid;
     bool string = false;
