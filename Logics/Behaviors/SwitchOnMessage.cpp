@@ -101,7 +101,6 @@ int SwitchOnMessage(const CKBehaviorContext &behcontext)
             beh->GetInputParameterValue(i, &MsgType);
             for (a = 0; a < count_message; a++) // For each message retrieved this frame (send to our 'beo')
             {
-
                 message = beo->GetLastFrameMessage(a);
                 if (MsgType == message->GetMsgType())
                     beh->ActivateOutput(i);
@@ -123,14 +122,14 @@ CKERROR SwitchOnMessageCallBack(const CKBehaviorContext &behcontext)
     case CKM_BEHAVIORATTACH:
     case CKM_BEHAVIORLOAD:
     {
-        CKBeObject *beo = (CKBeObject *)beh->GetOwner();
+        CKBeObject *beo = beh->GetOwner();
         if (beo)
             beo->SetAsWaitingForMessages(TRUE);
     }
     break;
     case CKM_BEHAVIORDETACH:
     {
-        CKBeObject *beo = (CKBeObject *)beh->GetOwner();
+        CKBeObject *beo = beh->GetOwner();
         if (beo)
             beo->SetAsWaitingForMessages(FALSE);
     }
