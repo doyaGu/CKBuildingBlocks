@@ -133,11 +133,10 @@ int Picking2d(const CKBehaviorContext &behcontext)
 
 #if CKVERSION == 0x13022002
     CKPICKRESULT res;
-    CK3dEntity *ent = (CK3dEntity *)(rend->Pick(point.x, point.y, &res));
 #else
     VxIntersectionDesc res;
-    CK3dEntity *ent = (CK3dEntity *)(rend->Pick(point.x, point.y, &res));
 #endif
+    CK3dEntity *ent = (CK3dEntity *)(rend->Pick((int) point.x, (int) point.y, &res));
     if (ent || res.Sprite)
     {
         beh->SetOutputParameterObject(0, ent);
