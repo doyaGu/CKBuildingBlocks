@@ -240,7 +240,7 @@ public:
     virtual CKBOOL CreateFont(CKSTRING fontName, int systemFontIndex, int weight, CKBOOL italic, CKBOOL underline, int resolution, int iForcedSize);
 
     // Create a texture from a logical font
-    virtual CKTexture *CreateTextureFromFont(int systemFontIndex, int resolution, CKBOOL extended, CKBOOL bold, CKBOOL italic, CKBOOL underline, CKBOOL renderControls, CKBOOL dynamic, int iFontSize = 0);
+    virtual CKTexture *CreateTextureFromFont(int systemFontIndex, int resolution, CKBOOL extended, int weight, CKBOOL italic, CKBOOL underline, CKBOOL renderControls, CKBOOL dynamic, int iFontSize = 0);
 
     // Draw a text
     virtual void DrawText(CKRenderContext *iRC, int iFontIndex, const char *iText, const Vx2DVector &iPosition, const Vx2DVector &iScale, CKDWORD iStartColor, CKDWORD iEndColor);
