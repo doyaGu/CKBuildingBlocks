@@ -1,6 +1,5 @@
 #include "CKTextureFont.h"
 #include "CKFontManager.h"
-#include "CKRasterizer.h"
 
 CKTextureFont::CKTextureFont(CKFontManager *fm, CKContext *ctx, char *name)
 {
@@ -1077,9 +1076,8 @@ void CKTextureFont::SetRenderStates(CKRenderContext *dev, int options)
     dev->SetTextureStageState(CKRST_TSS_TEXTUREMAPBLEND, VXTEXTUREBLEND_MODULATEALPHA);
 
     dev->SetTextureStageState(CKRST_TSS_STAGEBLEND, 0, 1);
-
-    CKRasterizerContext* rst = dev->GetRasterizerContext();
-    rst->SetTransformMatrix(VXMATRIX_TEXTURE0, VxMatrix::Identity());
+    dev->SetTextureStageState(CKRST_TSS_TEXTURETRANSFORMFLAGS, 0);
+    dev->SetTextureStageState(CKRST_TSS_TEXCOORDINDEX, 0);
 
     if (m_Properties & FONT_DISABLEFILTER)
     {
