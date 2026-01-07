@@ -1154,7 +1154,7 @@ CKBOOL CKFontManager::CreateFont(CKSTRING fontName, int sysFontIndex, int weight
 	if (!pm)
 		return FALSE;
 	CKEnumStruct *data = pm->GetEnumDescByType(pm->ParameterGuidToType(CKPGUID_FONTNAME));
-	if ((sysFontIndex < 0) || (sysFontIndex > data->NbData))
+	if ((sysFontIndex < 0) || (sysFontIndex >= data->NbData))
 		return FALSE;
 
 	// We check if the fontName is present
@@ -1368,7 +1368,7 @@ Remarks:
 See also:
 
 *************************************************/
-CKTexture *CKFontManager::CreateTextureFromFont(int sysFontIndex, int resolution, CKBOOL extended, int bold, CKBOOL italic, CKBOOL underline, CKBOOL renderControls, CKBOOL dynamic, int iForcedSize)
+CKTexture *CKFontManager::CreateTextureFromFont(int sysFontIndex, int resolution, CKBOOL extended, int weight, CKBOOL italic, CKBOOL underline, CKBOOL renderControls, CKBOOL dynamic, int iForcedSize)
 {
 #ifndef FONTMANAGER_NOSYSFONT
 	CKParameterManager *pm = m_Context->GetParameterManager();
@@ -1376,8 +1376,8 @@ CKTexture *CKFontManager::CreateTextureFromFont(int sysFontIndex, int resolution
 		return NULL;
 
 	CKEnumStruct *data = pm->GetEnumDescByType(pm->ParameterGuidToType(CKPGUID_FONTNAME));
-	if ((sysFontIndex < 0) || (sysFontIndex > data->NbData))
-		return FALSE;
+	if ((sysFontIndex < 0) || (sysFontIndex >= data->NbData))
+		return NULL;
 
 	// Get the font name by index
 	CKSTRING fontName = data->Desc[sysFontIndex];
@@ -1411,7 +1411,7 @@ CKTexture *CKFontManager::CreateTextureFromFont(int sysFontIndex, int resolution
 	if (renderControls)
 		textureName << "_C";
 	textureName << "_";
-	switch (bold)
+	switch (weight)
 	{
 	case 100:
 		textureName << "THIN";
@@ -1454,7 +1454,7 @@ CKTexture *CKFontManager::CreateTextureFromFont(int sysFontIndex, int resolution
 		FontIterator it = m_Fonts.Find(textureName);
 		if (it == m_Fonts.End())
 		{
-			if (!CreateFont(textureName.Str(), sysFontIndex, bold, italic, underline, resolution, iForcedSize))
+			if (!CreateFont(textureName.Str(), sysFontIndex, weight, italic, underline, resolution, iForcedSize))
 				return NULL;
 			// exists this time because we just create it !
 			it = m_Fonts.Find(textureName);
