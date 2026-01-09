@@ -103,6 +103,7 @@ struct TextData
     CK_ID m_Entity;
     int m_FontIndex;
     CKSTRING m_String;
+    CKDWORD m_StringHash;
     Vx2DVector m_Scale;
     CKDWORD m_StartColor;
     CKDWORD m_EndColor;
@@ -117,10 +118,13 @@ struct TextData
     float m_CaretSize;
     CKMaterial *m_CaretMaterial;
     VxRect m_ClippingRect;
+    CKDWORD m_AutoCacheKey;
+    CKBOOL m_AutoCacheValid;
 
     TextData() : m_Entity(0),
                  m_FontIndex(0),
                  m_String(NULL),
+                 m_StringHash(2166136261u),
                  m_Scale(1.0f, 1.0f),
                  m_EndColor(WHITE),
                  m_StartColor(WHITE),
@@ -128,10 +132,12 @@ struct TextData
                  m_Mat(NULL),
                  m_TextFlags(0),
                  m_CaretSize(0.0f),
-                 m_CaretMaterial(NULL) {}
+                 m_CaretMaterial(NULL),
+                 m_AutoCacheKey(0),
+                 m_AutoCacheValid(FALSE) {}
 
     TextData(CK_ID entity, int fontIndex, CKSTRING string, Vx2DVector scale, CKDWORD startColor, CKDWORD endColor, int align, VxRect textZone, CKMaterial *mat, int textFlags)
-        : m_Entity(entity), m_FontIndex(fontIndex), m_Scale(scale), m_StartColor(startColor), m_EndColor(endColor), m_Align(align), m_TextZone(textZone), m_Mat(mat), m_TextFlags(textFlags), m_CaretSize(0.0f), m_CaretMaterial(NULL)
+        : m_Entity(entity), m_FontIndex(fontIndex), m_StringHash(2166136261u), m_Scale(scale), m_StartColor(startColor), m_EndColor(endColor), m_Align(align), m_TextZone(textZone), m_Mat(mat), m_TextFlags(textFlags), m_CaretSize(0.0f), m_CaretMaterial(NULL), m_AutoCacheKey(0), m_AutoCacheValid(FALSE)
     {
         m_String = CKStrdup(string);
     }
@@ -146,6 +152,7 @@ struct TextData
         m_Entity = td.m_Entity;
         m_FontIndex = td.m_FontIndex;
         m_String = CKStrdup(td.m_String);
+        m_StringHash = td.m_StringHash;
         m_Scale = td.m_Scale;
         m_EndColor = td.m_EndColor;
         m_StartColor = td.m_StartColor;
@@ -154,6 +161,8 @@ struct TextData
         m_TextFlags = td.m_TextFlags;
         m_CaretSize = td.m_CaretSize;
         m_CaretMaterial = td.m_CaretMaterial;
+        m_AutoCacheKey = td.m_AutoCacheKey;
+        m_AutoCacheValid = td.m_AutoCacheValid;
     }
 
     TextData &operator=(const TextData &td)
@@ -164,6 +173,7 @@ struct TextData
             m_Entity = td.m_Entity;
             m_FontIndex = td.m_FontIndex;
             m_String = CKStrdup(td.m_String);
+            m_StringHash = td.m_StringHash;
             m_Scale = td.m_Scale;
             m_EndColor = td.m_EndColor;
             m_StartColor = td.m_StartColor;
@@ -172,6 +182,8 @@ struct TextData
             m_TextFlags = td.m_TextFlags;
             m_CaretSize = td.m_CaretSize;
             m_CaretMaterial = td.m_CaretMaterial;
+            m_AutoCacheKey = td.m_AutoCacheKey;
+            m_AutoCacheValid = td.m_AutoCacheValid;
         }
         return *this;
     }
@@ -193,6 +205,8 @@ class CKFontManager : public CKBaseManager
     //                Public Part                       ////
     ////////////////////////////////////////////////////////
 public:
+    struct TextDrawBatch;
+
     ///
     // Virtual Override
 
@@ -288,6 +302,14 @@ public:
     CKBOOL GetCharWidths(CKBYTE startChar, CKBYTE endChar, int *widths);
 
     int GetFontCount() { return m_FontArray.Size(); }
+    void Get2DTextBatchStats(int &cmds, int &textCmds, int &caretCmds, int &rectCmds, int &indices) const
+    {
+        cmds = m_TextBatchCmds2D;
+        textCmds = m_TextBatchTextCmds2D;
+        caretCmds = m_TextBatchCaretCmds2D;
+        rectCmds = m_TextBatchRectCmds2D;
+        indices = m_TextBatchIndices2D;
+    }
 
     ////////////////////////////////////////////////////////
     ////               Private Part                     ////
@@ -309,6 +331,8 @@ private:
     void DrawRectanglesCallback(CKRenderContext *dev);
     static void DrawTextCallback2D(CKRenderContext *dev, void *arg);
     static void DrawTextCallback3D(CKRenderContext *dev, void *arg);
+    void SortTextList2D();
+    void SortTextList3D(CKRenderContext *dev);
 
     //////////////////////////////
     // Members
@@ -346,6 +370,12 @@ private:
     int m_FontAttribute;
 
     CKBOOL m_TextureLoaded;
+    TextDrawBatch *m_TextDrawBatch2D;
+    int m_TextBatchCmds2D;
+    int m_TextBatchTextCmds2D;
+    int m_TextBatchCaretCmds2D;
+    int m_TextBatchRectCmds2D;
+    int m_TextBatchIndices2D;
 
     // Win32 Specific (System TT fonts information)
 #ifndef FONTMANAGER_NOSYSFONT
