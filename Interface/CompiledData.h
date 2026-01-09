@@ -12,6 +12,11 @@ public:
     void ClearStructure();
     void PrepareStructure();
     void ExtendStructure(int nc);
+    void Reset();
+
+    int GetIndexCount() const;
+    const CKWORD *GetIndexPtr() const;
+    VxDrawPrimitiveData *GetDrawPrimitiveData();
 
     VxDrawPrimitiveData *GetStructure(CKRST_DPFLAGS Flags, int VertexCount);
     CKWORD *GetIndices(int IndicesCount);
@@ -24,6 +29,7 @@ protected:
     VxDrawPrimitiveData m_DrawPrimData;
     VxDrawPrimitiveData m_DrawPrimDataUser;
     XArray<CKWORD> m_Indices;
+    int m_VertexCapacity;
 };
 
 #endif

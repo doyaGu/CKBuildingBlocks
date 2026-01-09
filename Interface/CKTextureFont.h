@@ -40,6 +40,12 @@ struct CharacterTextureCoordinates
     float vwidth;
 };
 
+struct TextDrawEmitter
+{
+    void (*EmitCaret)(void *user, float x, float y, float w, float h, CKDWORD flags);
+    void *user;
+};
+
 class CKFontManager;
 class CompiledTextData;
 
@@ -77,6 +83,7 @@ public:
     void DrawString(CKRenderContext *dev, CKSTRING string, int len, VxVector position, VxRect &textZone, CKDWORD options, CompiledTextData *ctdata = NULL);
     void DrawStringShadowed(CKRenderContext *dev, CKSTRING string, int len, VxVector position, VxRect &textZone, CKDWORD options, CompiledTextData *ctdata = NULL);
     void DrawCaret(CKRenderContext *context, float posx, float posy, float dimx, float dimy, CKDWORD flags);
+    int AppendStringGeometry(CKRenderContext *dev, CKSTRING string, int len, VxVector position, VxRect &textZone, CKDWORD options, CompiledTextData *ctdata, TextDrawEmitter *emitter = NULL);
 
 public:
     // The Font Name
@@ -152,6 +159,7 @@ public:
     CharacterTextureCoordinates m_FontCoordinates[256];
 
 private:
+    int BuildStringGeometry(CKRenderContext *dev, CKSTRING string, int slen, VxVector position, VxRect &textZone, CKDWORD textoptions, CompiledTextData *ctdata, TextDrawEmitter *emitter, CKBOOL drawNow);
     CKContext *m_Context;
 };
 

@@ -1,6 +1,8 @@
 #include "CKTextureFont.h"
 #include "CKFontManager.h"
 
+static const CKDWORD TEXT_SCISSOR = 4096;
+
 CKTextureFont::CKTextureFont(CKFontManager *fm, CKContext *ctx, char *name)
 {
     // Font Visual Properties
@@ -21,6 +23,16 @@ CKTextureFont::CKTextureFont(CKFontManager *fm, CKContext *ctx, char *name)
     m_CaretMaterial = NULL;
     m_CaretSize = 0.0f;
     m_SpacePercentage = 0.3f;
+    m_SystemFontName = NULL;
+    m_Offset.Set(0.0f, 0.0f);
+    m_Margins.SetCorners(0.0f, 0.0f, 0.0f, 0.0f);
+    m_TextExtents.SetCorners(0.0f, 0.0f, 0.0f, 0.0f);
+    m_ClippingRect.SetCorners(0.0f, 0.0f, 0.0f, 0.0f);
+    m_ScreenExtents.Set(0.0f, 0.0f);
+    m_LineCount = 0;
+    m_SpaceSize = 0.0f;
+    m_HLeading = 0.0f;
+    m_LineWidth = 0.0f;
 
     m_FontName = CKStrdup(name);
     m_Context = ctx;
@@ -30,6 +42,7 @@ CKTextureFont::CKTextureFont(CKFontManager *fm, CKContext *ctx, char *name)
 CKTextureFont::~CKTextureFont()
 {
     CKDeletePointer(m_FontName);
+    CKDeletePointer(m_SystemFontName);
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -43,6 +56,8 @@ char *CKTextureFont::GetFontName()
 
 CKBOOL CKTextureFont::IsFontSimilar(CKTexture *fontTexture, Vx2DVector &charNumber, CKBOOL fixed)
 {
+    if (!fontTexture)
+        return FALSE;
     if (fixed)
     {
         if (!(m_SpacingProperties & FIXED))
@@ -53,6 +68,8 @@ CKBOOL CKTextureFont::IsFontSimilar(CKTexture *fontTexture, Vx2DVector &charNumb
         if (m_SpacingProperties & FIXED)
             return FALSE;
     }
+    if (m_CharNumber.x != charNumber.x || m_CharNumber.y != charNumber.y)
+        return FALSE;
     if (m_FontTexture != CKOBJID(fontTexture))
         return FALSE;
 
@@ -83,6 +100,8 @@ void CKTextureFont::CreateCKFont(CKTexture *fontTexture, VxRect &textZone, Vx2DV
 
     m_FontZone = textZone;
     m_SpacePercentage = iSpaceSize;
+    if (m_SpacePercentage < 0.0f)
+        m_SpacePercentage = 0.0f;
 
     // the Creation
     CreateFromTexture();
@@ -105,20 +124,35 @@ void CKTextureFont::CreateFromTexture()
 
     m_ScreenExtents.Set(twidth, theight);
 
-    float ustep = m_FontZone.GetWidth() / (twidth * m_CharNumber.x);
-    float vstep = m_FontZone.GetHeight() / (theight * m_CharNumber.y);
+    if (m_CharNumber.x <= 0.0f || m_CharNumber.y <= 0.0f)
+        return;
+
+    if (m_FirstCharacter < 0)
+        m_FirstCharacter = 0;
+    if (m_FirstCharacter > 255)
+        return;
+
+    int charsX = (int)m_CharNumber.x;
+    if ((float)charsX < m_CharNumber.x)
+        ++charsX;
+    int charsY = (int)m_CharNumber.y;
+    if ((float)charsY < m_CharNumber.y)
+        ++charsY;
+    if (charsX <= 0 || charsY <= 0)
+        return;
+
+    float ustep = m_FontZone.GetWidth() / (twidth * (float)charsX);
+    float vstep = m_FontZone.GetHeight() / (theight * (float)charsY);
 
     Vx2DVector v2 = m_FontZone.GetTopLeft();
-    float u = v2.x / twidth;
-    float v = v2.y / theight;
-
-    int c = m_FirstCharacter;
+    const float ustart = v2.x / twidth;
+    const float vstart = v2.y / theight;
 
     // Initialisation of the characters
     for (int k = 0; k < 256; ++k)
     {
-        m_FontCoordinates[k].ustart = u;
-        m_FontCoordinates[k].vstart = v;
+        m_FontCoordinates[k].ustart = ustart;
+        m_FontCoordinates[k].vstart = vstart;
         m_FontCoordinates[k].uwidth = ustep;
         m_FontCoordinates[k].uprewidth = 0;
         m_FontCoordinates[k].upostwidth = 0;
@@ -127,10 +161,13 @@ void CKTextureFont::CreateFromTexture()
 
     if (m_SpacingProperties & FIXED) // The font must be fixed
     {
+        float u = ustart;
+        float v = vstart;
+        int c = m_FirstCharacter;
         // fill the uvs with the characters
-        for (int i = 0; (float)i < m_CharNumber.y; ++i)
+        for (int i = 0; i < charsY && c < 256; ++i)
         {
-            for (int j = 0; (float)j < m_CharNumber.x; ++j)
+            for (int j = 0; j < charsX && c < 256; ++j)
             {
                 m_FontCoordinates[c].ustart = u;
                 m_FontCoordinates[c].vstart = v;
@@ -141,12 +178,15 @@ void CKTextureFont::CreateFromTexture()
                 u += ustep;
                 c++;
             }
-            u = 0.0f;
+            u = ustart;
             v += vstep;
         }
     }
     else // The font must be proportional
     {
+        float u = ustart;
+        float v = vstart;
+        int c = m_FirstCharacter;
         CKDWORD transColor = 0;
         CKBOOL alpha = TRUE;
         if (fontTexture->IsTransparent())
@@ -161,11 +201,12 @@ void CKTextureFont::CreateFromTexture()
         float upixel = 1.0f / width;
         float vpixel = 1.0f / height;
 
-        int xpixel = 0;
-        int ypixel = 0;
+        int xpixel = (int)v2.x;
+        int ypixel = (int)v2.y;
 
         int xwidth = (int)(width * ustep);
         int ywidth = (int)(height * vstep);
+        const int rowStart = xpixel;
 
 #ifndef FONTMANAGER_NOSYSFONT
         // Give the priority to the user defined font texture
@@ -175,71 +216,91 @@ void CKTextureFont::CreateFromTexture()
         // Mark the font as to be saved
         m_SpacingProperties |= SPACINGTOBESAVED;
 
+        CKBOOL spacingDone = FALSE;
         // Select the font
         CKTexture *texture = (CKTexture *)m_Context->GetObject(m_FontTexture);
         CKSTRING textureName = (texture) ? texture->GetName() : NULL;
-        if (textureName)
-            if (m_FontManager->SelectFont(textureName))
+        if (textureName && m_FontManager->SelectFont(textureName))
+        {
+            if (m_FontManager->IsTrueTypeFont())
             {
-                if (m_FontManager->IsTrueTypeFont())
+                FONT_ABC fontABC[256];
+                if (m_FontManager->GetCharABCWidths(0, 255, fontABC))
                 {
-                    FONT_ABC fontABC[256];
-                    if (m_FontManager->GetCharABCWidths(0, 255, fontABC))
+                    for (int i = 0; i < charsY && c < 256; i++)
                     {
-                        for (int i = 0; i < m_CharNumber.y; i++)
+                        for (int j = 0; j < charsX && c < 256; j++)
                         {
-                            for (int j = 0; j < m_CharNumber.x; j++)
-                            {
-                                m_FontCoordinates[c].ustart = u + (float)fontABC[c].abcA * upixel;
-                                m_FontCoordinates[c].vstart = v;
-                                m_FontCoordinates[c].uprewidth = (float)fontABC[c].abcA * upixel;
-                                m_FontCoordinates[c].uwidth = (float)fontABC[c].abcB * upixel;
-                                m_FontCoordinates[c].upostwidth = (float)fontABC[c].abcC * upixel;
-                                m_FontCoordinates[c].vwidth = vstep;
+                            m_FontCoordinates[c].ustart = u + (float)fontABC[c].abcA * upixel;
+                            m_FontCoordinates[c].vstart = v;
+                            m_FontCoordinates[c].uprewidth = (float)fontABC[c].abcA * upixel;
+                            m_FontCoordinates[c].uwidth = (float)fontABC[c].abcB * upixel;
+                            m_FontCoordinates[c].upostwidth = (float)fontABC[c].abcC * upixel;
+                            m_FontCoordinates[c].vwidth = vstep;
 
-                                u += ustep;
-                                c++;
-                            }
-                            u = 0.0f;
-                            v += vstep;
+                            u += ustep;
+                            c++;
                         }
+                        u = ustart;
+                        v += vstep;
                     }
-                }
-                else
-                {
-                    int widths[256];
-                    if (m_FontManager->GetCharWidths(0, 255, widths))
-                    {
-                        for (int i = 0; i < m_CharNumber.y; i++)
-                        {
-                            for (int j = 0; j < m_CharNumber.x; j++)
-                            {
-                                m_FontCoordinates[c].ustart = u;
-                                m_FontCoordinates[c].vstart = v;
-                                m_FontCoordinates[c].uprewidth = 0;
-                                m_FontCoordinates[c].uwidth = widths[c] * upixel;
-                                m_FontCoordinates[c].upostwidth = 0;
-                                m_FontCoordinates[c].vwidth = vstep;
-
-                                u += ustep;
-                                c++;
-                            }
-                            u = 0.0f;
-                            v += vstep;
-                        }
-                    }
+                    spacingDone = TRUE;
                 }
             }
             else
+            {
+                int widths[256];
+                if (m_FontManager->GetCharWidths(0, 255, widths))
+                {
+                    for (int i = 0; i < charsY && c < 256; i++)
+                    {
+                        for (int j = 0; j < charsX && c < 256; j++)
+                        {
+                            m_FontCoordinates[c].ustart = u;
+                            m_FontCoordinates[c].vstart = v;
+                            m_FontCoordinates[c].uprewidth = 0;
+                            m_FontCoordinates[c].uwidth = widths[c] * upixel;
+                            m_FontCoordinates[c].upostwidth = 0;
+                            m_FontCoordinates[c].vwidth = vstep;
+
+                            u += ustep;
+                            c++;
+                        }
+                        u = ustart;
+                        v += vstep;
+                    }
+                    spacingDone = TRUE;
+                }
+            }
+        }
+        if (!spacingDone)
 #endif
             {
-                CKDWORD *pixelMap = (CKDWORD *)fontTexture->LockSurfacePtr();
-                const int rowStride = iWidth;
+                VxImageDescEx texDesc;
+                fontTexture->GetSystemTextureDesc(texDesc);
+                CKDWORD *pixelMap = NULL;
+                int rowStride = 0;
+                if (texDesc.BitsPerPixel == 32)
+                {
+                    pixelMap = (CKDWORD *)fontTexture->LockSurfacePtr();
+                    if (pixelMap)
+                    {
+                        if (texDesc.BytesPerLine)
+                            rowStride = (texDesc.BytesPerLine >> 2);
+                        else
+                            rowStride = texDesc.Width;
+                    }
+                }
+                if (pixelMap && rowStride <= 0)
+                {
+                    fontTexture->ReleaseSurfacePtr();
+                    pixelMap = NULL;
+                }
 
                 // fill the uvs with the characters
-                for (int i = 0; i < m_CharNumber.y; ++i)
+                for (int i = 0; i < charsY && c < 256; ++i)
                 {
-                    for (int j = 0; j < m_CharNumber.x; ++j)
+                    for (int j = 0; j < charsX && c < 256; ++j)
                     {
                         m_FontCoordinates[c].ustart = u;
                         m_FontCoordinates[c].vstart = v;
@@ -259,8 +320,10 @@ void CKTextureFont::CreateFromTexture()
                             {
                                 for (y = 0; y < ywidth; y++)
                                 {
-                                    // color = fontTexture->GetPixel(xpixel+k,ypixel+y);
-                                    color = pixelMap[xpixel + k + rowStride * (ypixel + y)];
+                                    if (pixelMap)
+                                        color = pixelMap[xpixel + k + rowStride * (ypixel + y)];
+                                    else
+                                        color = fontTexture->GetPixel(xpixel + k, ypixel + y);
                                     if (ColorGetAlpha(color))
                                         break;
                                 }
@@ -269,8 +332,10 @@ void CKTextureFont::CreateFromTexture()
                             {
                                 for (y = 0; y < ywidth; y++)
                                 {
-                                    // color = fontTexture->GetPixel(xpixel+k,ypixel+y);
-                                    color = pixelMap[xpixel + k + rowStride * (ypixel + y)];
+                                    if (pixelMap)
+                                        color = pixelMap[xpixel + k + rowStride * (ypixel + y)];
+                                    else
+                                        color = fontTexture->GetPixel(xpixel + k, ypixel + y);
                                     if (color != transColor)
                                         break;
                                 }
@@ -302,8 +367,11 @@ void CKTextureFont::CreateFromTexture()
                             const int baseIndex = xpixel + xwidth - 1 - k;
                             for (y = 0; y < ywidth; y++)
                             {
-                                // CKDWORD color = fontTexture->GetPixel(xpixel+xwidth-1-k,ypixel+y);
-                                CKDWORD color = pixelMap[baseIndex + rowStride * (ypixel + y)];
+                                CKDWORD color;
+                                if (pixelMap)
+                                    color = pixelMap[baseIndex + rowStride * (ypixel + y)];
+                                else
+                                    color = fontTexture->GetPixel(baseIndex, ypixel + y);
                                 if (alpha)
                                 {
                                     if (ColorGetAlpha(color))
@@ -329,14 +397,15 @@ void CKTextureFont::CreateFromTexture()
                         c++;
                     }
 
-                    u = 0.0f;
-                    xpixel = 0;
+                    u = ustart;
+                    xpixel = rowStart;
 
                     v += vstep;
                     ypixel += ywidth;
                 }
 
-                fontTexture->ReleaseSurfacePtr();
+                if (pixelMap)
+                    fontTexture->ReleaseSurfacePtr();
             }
     }
 
@@ -358,27 +427,31 @@ float CKTextureFont::GetStringWidth(CKSTRING string)
     if (!string)
         return 0.0f;
 
-    // TODO : optimize this
     float scale = m_Scale.x * m_ScreenExtents.x;
+    if (scale == 0.0f)
+        return 0.0f;
     float leading = m_Leading.x / scale;
     float italic = m_ItalicOffset / scale;
 
     float sw = 0.0f;
-    while ((*string > 0) && *string != '\n')
+    CKBOOL hasChar = FALSE;
+    const CharacterTextureCoordinates *coords = m_FontCoordinates;
+    const char *ptr = string;
+    while ((*ptr > 0) && *ptr != '\n')
     {
-        // We add the character width (relative to the texture)
-        CharacterTextureCoordinates *ctc = &m_FontCoordinates[(unsigned char)*string];
-        sw += (ctc->uprewidth + ctc->uwidth + ctc->upostwidth);
-        // We add the leading
-        sw += leading;
-
-        string++;
+        const CharacterTextureCoordinates &ctc = coords[(unsigned char)*ptr];
+        sw += (ctc.uprewidth + ctc.uwidth + ctc.upostwidth + leading);
+        ++ptr;
+        hasChar = TRUE;
     }
 
-    // No space after last character of the line
-    sw -= leading;
-    // Italic offset at the end
-    sw += italic;
+    if (hasChar)
+    {
+        // No space after last character of the line
+        sw -= leading;
+        // Italic offset at the end
+        sw += italic;
+    }
 
     return sw * scale;
 }
@@ -440,7 +513,6 @@ void DrawFillRectangle(CKRenderContext *dev, CKMaterial *mat, VxRect &rect, CKBO
     CKDWORD *colors = (CKDWORD *)data->Colors.Ptr;
 #endif
 
-    // TODO handle the multi lines
     mat->SetAsCurrent(dev);
     dev->SetState(VXRENDERSTATE_ZWRITEENABLE, FALSE);
 
@@ -572,13 +644,14 @@ void DrawFillRectangle(CKRenderContext *dev, CKMaterial *mat, VxRect &rect, CKBO
     dev->DrawPrimitive(VX_TRIANGLEFAN, indices, 4, data);
 }
 
-void CKTextureFont::DrawString(CKRenderContext *dev, CKSTRING string, int slen, VxVector position, VxRect &textZone, CKDWORD textoptions, CompiledTextData *ctdata)
+int CKTextureFont::BuildStringGeometry(CKRenderContext *dev, CKSTRING string, int slen, VxVector position, VxRect &textZone, CKDWORD textoptions, CompiledTextData *ctdata, TextDrawEmitter *emitter, CKBOOL drawNow)
 {
     if (!slen)
-        return;
+        return 0;
     int len = slen;
     const CKBOOL is3d = (textoptions & TEXT_3D) != 0;
     const CKBOOL doClip = (textoptions & TEXT_CLIP) != 0;
+    const CKBOOL scissorClip = (textoptions & TEXT_SCISSOR) != 0;
     const CKBOOL showCaret = (textoptions & TEXT_SHOWCARET) != 0;
     const CharacterTextureCoordinates *coords = m_FontCoordinates;
 
@@ -591,7 +664,7 @@ void CKTextureFont::DrawString(CKRenderContext *dev, CKSTRING string, int slen, 
     if (textoptions & TEXT_SCREENCLIP)
     {
         if (!textzone.Clip(m_ClippingRect))
-            return;
+            return 0;
     }
 
     ///
@@ -645,13 +718,13 @@ void CKTextureFont::DrawString(CKRenderContext *dev, CKSTRING string, int slen, 
     VxVector pos = position;
     const float width = m_Scale.x * m_ScreenExtents.x;
     const float height = m_Scale.y * m_ScreenExtents.y;
-    float italic = m_ItalicOffset * width;
-    const float invWidth = doClip ? (1.0f / width) : 0.0f;
+    float italic = m_ItalicOffset;
+    const float invWidth = (doClip && !scissorClip) ? (1.0f / width) : 0.0f;
 
     CKTexture *tex = GetFontTexture();
     if (!tex)
     {
-        return;
+        return 0;
     }
 
     // Multiplication by scale removed because big fonts were cropped !
@@ -699,28 +772,31 @@ void CKTextureFont::DrawString(CKRenderContext *dev, CKSTRING string, int slen, 
     {
         // Bottom of the zone
         if (pos.y > textzone.bottom)
-            return;
+            return 0;
         // Top of the zone
         if (endy < textzone.top)
-            return;
+            return 0;
         // Right of the zone
         if (pos.x > textzone.right)
-            return;
+            return 0;
         // Left of the zone
         if (pos.x + m_LineWidth < textzone.left)
-            return;
+            return 0;
 
-        // Cut on top
-        if (starty < textzone.top)
+        if (!scissorClip)
         {
-            cutup = (textzone.top - starty) / lineheight;
-            starty = textzone.top;
-        }
-        // Cut on bottom
-        if (endy > textzone.bottom)
-        {
-            cutdown = 1.0f - (endy - textzone.bottom) / lineheight;
-            endy = textzone.bottom;
+            // Cut on top
+            if (starty < textzone.top)
+            {
+                cutup = (textzone.top - starty) / lineheight;
+                starty = textzone.top;
+            }
+            // Cut on bottom
+            if (endy > textzone.bottom)
+            {
+                cutdown = 1.0f - (endy - textzone.bottom) / lineheight;
+                endy = textzone.bottom;
+            }
         }
     }
 
@@ -739,8 +815,15 @@ void CKTextureFont::DrawString(CKRenderContext *dev, CKSTRING string, int slen, 
             {
                 if (showCaret)
                 {
-                    DrawCaret(dev, pos.x, starty, m_SpaceSize, endy - starty, dataFlags);
-                    SetRenderStates(dev, textoptions);
+                    if (drawNow)
+                    {
+                        DrawCaret(dev, pos.x, starty, m_SpaceSize, endy - starty, dataFlags);
+                        SetRenderStates(dev, textoptions);
+                    }
+                    else if (emitter && emitter->EmitCaret)
+                    {
+                        emitter->EmitCaret(emitter->user, pos.x, starty, m_SpaceSize, endy - starty, dataFlags);
+                    }
                 }
                 seeCaret = FALSE;
             }
@@ -756,8 +839,15 @@ void CKTextureFont::DrawString(CKRenderContext *dev, CKSTRING string, int slen, 
             {
                 if (showCaret)
                 {
-                    DrawCaret(dev, pos.x, starty, m_SpaceSize, endy - starty, dataFlags);
-                    SetRenderStates(dev, textoptions);
+                    if (drawNow)
+                    {
+                        DrawCaret(dev, pos.x, starty, m_SpaceSize, endy - starty, dataFlags);
+                        SetRenderStates(dev, textoptions);
+                    }
+                    else if (emitter && emitter->EmitCaret)
+                    {
+                        emitter->EmitCaret(emitter->user, pos.x, starty, m_SpaceSize, endy - starty, dataFlags);
+                    }
                 }
             }
             seeCaret = TRUE;
@@ -798,16 +888,19 @@ void CKTextureFont::DrawString(CKRenderContext *dev, CKSTRING string, int slen, 
                 continue;
             }
 
-            if (pos.x < textzone.left) // Letter partially left of the zone
+            if (!scissorClip)
             {
-                startu += (textzone.left - startx) * invWidth;
-                startx = textzone.left;
-            }
+                if (pos.x < textzone.left) // Letter partially left of the zone
+                {
+                    startu += (textzone.left - startx) * invWidth;
+                    startx = textzone.left;
+                }
 
-            if (endx > textzone.right) // Letter partially left of the zone
-            {
-                endu -= (endx - textzone.right) * invWidth;
-                endx = textzone.right;
+                if (endx > textzone.right) // Letter partially right of the zone
+                {
+                    endu -= (endx - textzone.right) * invWidth;
+                    endx = textzone.right;
+                }
             }
         }
 
@@ -839,8 +932,15 @@ void CKTextureFont::DrawString(CKRenderContext *dev, CKSTRING string, int slen, 
         {
             if (showCaret)
             {
-                DrawCaret(dev, startx, starty, endx - startx, endy - starty, dataFlags);
-                SetRenderStates(dev, textoptions);
+                if (drawNow)
+                {
+                    DrawCaret(dev, startx, starty, endx - startx, endy - starty, dataFlags);
+                    SetRenderStates(dev, textoptions);
+                }
+                else if (emitter && emitter->EmitCaret)
+                {
+                    emitter->EmitCaret(emitter->user, startx, starty, endx - startx, endy - starty, dataFlags);
+                }
             }
             seeCaret = FALSE;
         }
@@ -890,7 +990,7 @@ void CKTextureFont::DrawString(CKRenderContext *dev, CKSTRING string, int slen, 
     }
 
     if (!len)
-        return;
+        return 0;
 
     ///
     // Colors & Normals
@@ -960,8 +1060,27 @@ void CKTextureFont::DrawString(CKRenderContext *dev, CKSTRING string, int slen, 
     if (ctdata)
         ctdata->PatchIndices(oldlen * 6, len * 6);
 
-    // the drawing itself
-    dev->DrawPrimitive(VX_TRIANGLELIST, IndicesPtr, len * 6, data);
+    if (drawNow)
+    {
+        // the drawing itself
+        dev->DrawPrimitive(VX_TRIANGLELIST, IndicesPtr, len * 6, data);
+    }
+
+    return len * 6;
+}
+
+void CKTextureFont::DrawString(CKRenderContext *dev, CKSTRING string, int slen, VxVector position, VxRect &textZone, CKDWORD textoptions, CompiledTextData *ctdata)
+{
+    BuildStringGeometry(dev, string, slen, position, textZone, textoptions, ctdata, NULL, TRUE);
+}
+
+int CKTextureFont::AppendStringGeometry(CKRenderContext *dev, CKSTRING string, int slen, VxVector position, VxRect &textZone, CKDWORD textoptions, CompiledTextData *ctdata, TextDrawEmitter *emitter)
+{
+    if (!ctdata)
+        return 0;
+
+    CKDWORD options = textoptions | TEXT_COMPILED;
+    return BuildStringGeometry(dev, string, slen, position, textZone, options, ctdata, emitter, FALSE);
 }
 
 void CKTextureFont::DrawCaret(CKRenderContext *context, float posx, float posy, float dimx, float dimy, CKDWORD flags)
@@ -1064,7 +1183,6 @@ void CKTextureFont::SetRenderStates(CKRenderContext *dev, int options)
     CKTexture *fonttexture = (CKTexture *)m_Context->GetObject(m_FontTexture);
     dev->SetTexture(fonttexture);
 
-    // TODO : move these in the TExt3D and 2D Callback
     dev->SetState(VXRENDERSTATE_ALPHABLENDENABLE, TRUE);
     dev->SetState(VXRENDERSTATE_ZWRITEENABLE, FALSE);
 
@@ -1199,6 +1317,7 @@ void CKTextureFont::DrawCKText(CKRenderContext *dev, CKBeObject *obj, CKSTRING s
     float zonewidth = textZone.GetWidth();
     float paragraphIndentX = m_ParagraphIndentation.x * coords[0].uwidth * width;
     float paragraphIndentY = m_ParagraphIndentation.y * coords[0].vwidth * height;
+    float verticalspace = coords[0].vwidth * height + m_Leading.y;
 
     // We clear the line array
     fontMgr->ClearLines();
@@ -1212,6 +1331,9 @@ void CKTextureFont::DrawCKText(CKRenderContext *dev, CKBeObject *obj, CKSTRING s
     float lastwidth = 0.0f;
     CKBOOL lastcharacterwasspace = TRUE;
     CKBOOL paragraphstart = TRUE;
+    int linecount = 0;
+    float textwidth = 0.0f;
+    float textheight = 0.0f;
 
     // String cutting, LineData Array filling
     while (*string)
@@ -1302,6 +1424,13 @@ void CKTextureFont::DrawCKText(CKRenderContext *dev, CKBeObject *obj, CKSTRING s
                 string++;
         }
         // end of a line (or text)
+        if (ldata.stringwidth > textwidth)
+            textwidth = ldata.stringwidth;
+        if ((ldata.len < 0) && (linecount != 0))
+            textheight += paragraphIndentY;
+        textheight += verticalspace;
+        linecount++;
+
         m_FontManager->AddLine(ldata);
 
         if (*string && string != lastword && *lastword != '\n')
@@ -1309,13 +1438,9 @@ void CKTextureFont::DrawCKText(CKRenderContext *dev, CKBeObject *obj, CKSTRING s
     }
 
     // now we have to draw the strings
-    int linecount = fontMgr->GetLineCount();
     VxVector pos(textZone.left, textZone.top, 0.0f);
 
-    // we now have to calculate the text extents
-    float textwidth = 0.0f;
-    float textheight = 0.0f;
-    m_LineCount = GetTextExtents(textwidth, textheight);
+    m_LineCount = linecount;
 
     ///
     // Vertical Alignment Calculation
@@ -1348,6 +1473,13 @@ void CKTextureFont::DrawCKText(CKRenderContext *dev, CKBeObject *obj, CKSTRING s
     }
 
     m_TextExtents.SetDimension(pos.x, pos.y, textwidth, textheight);
+
+    VxRect backgroundRect = m_TextExtents;
+    if (optJustified)
+    {
+        backgroundRect.left = textZone.left;
+        backgroundRect.right = textZone.right;
+    }
 
     ///
     // Resize
@@ -1413,25 +1545,27 @@ void CKTextureFont::DrawCKText(CKRenderContext *dev, CKBeObject *obj, CKSTRING s
     {
         // we store the zone of the rectangle to draw
         if (ctdata)
-            ctdata->m_DrawZone = drawzone;
+            ctdata->m_DrawZone = backgroundRect;
         ///
         // Background
         if (optBackground)
         {
-            DrawFillRectangle(dev, mat, drawzone, m_Properties & FONT_LIGHTING, opt3d);
+            DrawFillRectangle(dev, mat, backgroundRect, m_Properties & FONT_LIGHTING, opt3d);
         }
 
         // States
         SetRenderStates(dev, options);
     }
 
-    float verticalspace = coords[0].vwidth * height + m_Leading.y;
-
     // The actual Drawing
     for (int i = 0; i < linecount; ++i)
     {
         // current line
         LineData *data = fontMgr->GetLine(i);
+        int drawLen = data->len;
+        const CKBOOL isParagraph = (drawLen < 0);
+        if (isParagraph)
+            drawLen = -drawLen;
 
         m_SpaceSize = spacesize;
         m_HLeading = hlead;
@@ -1457,18 +1591,15 @@ void CKTextureFont::DrawCKText(CKRenderContext *dev, CKBeObject *obj, CKSTRING s
             else // no space, we adjust leading
             {
                 float delta = zonewidth - data->stringwidth;
-                int dlen = data->len;
-                if (dlen < 0)
-                    dlen = -dlen;
-                if (dlen > 1)
+                if (drawLen > 1)
                 {
                     if (delta > 0)
                     {
-                        m_HLeading = hlead + delta / (dlen - 1);
+                        m_HLeading = hlead + delta / (drawLen - 1);
                     }
                     else
                     {
-                        m_HLeading = hlead - -delta / (dlen - 1);
+                        m_HLeading = hlead - -delta / (drawLen - 1);
                     }
                 }
             }
@@ -1491,10 +1622,8 @@ void CKTextureFont::DrawCKText(CKRenderContext *dev, CKBeObject *obj, CKSTRING s
             }
         }
 
-        // Paragraph Indentation
-        if (data->len < 0)
+        if (isParagraph)
         {
-            data->len = -data->len;
             if (alignLeft)
             {
                 pos.x += paragraphIndentX;
@@ -1506,18 +1635,17 @@ void CKTextureFont::DrawCKText(CKRenderContext *dev, CKBeObject *obj, CKSTRING s
         // WARNING quand derniere ligne ou quand ligne qui contient un \n, pas de leading ni de space modifie...
         // peut etre mettre les deux a 0 lors de la creation des lines datas... et retrouver ensuite la vraie longueur
         // while(*string && *string != '\n') len++;
-        // TODO : optimize
         if (reallyDraw)
         {
             ///
             // Shadow
             if (m_Properties & FONT_SHADOW)
             {
-                DrawStringShadowed(dev, data->string, data->len, pos, textZone, options, ctdata);
+                DrawStringShadowed(dev, data->string, drawLen, pos, textZone, options, ctdata);
             }
             else
             {
-                DrawString(dev, data->string, data->len, pos, textZone, options, ctdata);
+                DrawString(dev, data->string, drawLen, pos, textZone, options, ctdata);
             }
         }
 

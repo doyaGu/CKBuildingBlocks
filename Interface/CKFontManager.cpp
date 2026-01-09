@@ -3,8 +3,12 @@
 /*																		 */
 /*************************************************************************/
 #include "CKAll.h"
+#include <float.h>
+#include <limits.h>
 
 #include "CKFontManager.h"
+
+void DrawFillRectangle(CKRenderContext *dev, CKMaterial *mat, VxRect &rect, CKBOOL lighted, CKBOOL transform);
 
 #define FONTMANAGERVERSION1 1
 
@@ -15,15 +19,187 @@
 
 const char *CKFontManager::Name = "Font Manager";
 
+namespace
+{
+struct TextDrawCmd
+{
+    enum Type
+    {
+        CMD_TEXT,
+        CMD_RECT,
+        CMD_CARET
+    };
+
+    Type type;
+    CKTextureFont *font;
+    CKMaterial *material;
+    CKDWORD options;
+    VxRect clip;
+    CKBOOL useClip;
+    int indexStart;
+    int indexCount;
+    VxRect rect;
+    CKBOOL lighted;
+    CKBOOL transform;
+    CompiledTextData *geom;
+    float caretX;
+    float caretY;
+    float caretW;
+    float caretH;
+    CKDWORD caretFlags;
+    CKMaterial *caretMaterial;
+    float caretSize;
+};
+
+static CKBOOL RectEquals(const VxRect &a, const VxRect &b)
+{
+    return a.left == b.left && a.top == b.top && a.right == b.right && a.bottom == b.bottom;
+}
+
+struct TextSortKey2D
+{
+    TextData *td;
+    int z;
+    int index;
+};
+
+struct TextSortKey3D
+{
+    TextData *td;
+    float z;
+    int index;
+};
+
+static bool TextSortKey2DLess(const TextSortKey2D &a, const TextSortKey2D &b)
+{
+    if (a.z != b.z)
+        return a.z > b.z;
+    return a.index < b.index;
+}
+
+static bool TextSortKey3DLess(const TextSortKey3D &a, const TextSortKey3D &b)
+{
+    if (a.z > b.z)
+        return true;
+    if (a.z < b.z)
+        return false;
+    return a.index < b.index;
+}
+
+template <typename T>
+static void InsertionSort(T *items, int count, bool (*less)(const T &, const T &))
+{
+    for (int i = 1; i < count; ++i)
+    {
+        T value = items[i];
+        int j = i - 1;
+        while (j >= 0 && less(value, items[j]))
+        {
+            items[j + 1] = items[j];
+            --j;
+        }
+        items[j + 1] = value;
+    }
+}
+}
+
+struct CKFontManager::TextDrawBatch
+{
+    CompiledTextData data;
+    XArray<TextDrawCmd> cmds;
+
+    void Reset()
+    {
+        data.Reset();
+        cmds.Resize(0);
+    }
+};
+
+static CKDWORD HashString(CKDWORD hash, const char *str);
+
+void CKFontManager::SortTextList2D()
+{
+    int count = m_2DTexts.Size();
+    if (count < 2)
+        return;
+
+    static XArray<TextSortKey2D> keys;
+    keys.Resize(count);
+
+    for (int i = 0; i < count; ++i)
+    {
+        TextData *td = m_2DTexts[i];
+        TextSortKey2D &key = keys[i];
+        key.td = td;
+        key.index = i;
+        CK2dEntity *ent = (CK2dEntity *)m_Context->GetObject(td->m_Entity);
+        key.z = ent ? ent->GetZOrder() : INT_MIN;
+    }
+
+    InsertionSort(keys.Begin(), count, TextSortKey2DLess);
+
+    for (int i = 0; i < count; ++i)
+        m_2DTexts[i] = keys[i].td;
+}
+
+void CKFontManager::SortTextList3D(CKRenderContext *dev)
+{
+    if (!dev)
+        return;
+
+    int count = m_3DTexts.Size();
+    if (count < 2)
+        return;
+
+    CK3dEntity *viewpoint = dev->GetViewpoint();
+    if (!viewpoint)
+        return;
+
+    static XArray<TextSortKey3D> keys;
+    keys.Resize(count);
+
+    for (int i = 0; i < count; ++i)
+    {
+        TextData *td = m_3DTexts[i];
+        TextSortKey3D &key = keys[i];
+        key.td = td;
+        key.index = i;
+        CK3dEntity *ent = (CK3dEntity *)m_Context->GetObject(td->m_Entity);
+        if (ent)
+        {
+            VxVector pos;
+            VxVector view;
+            ent->GetPosition(&pos);
+            viewpoint->InverseTransform(&view, &pos);
+            key.z = view.z;
+        }
+        else
+        {
+            key.z = -FLT_MAX;
+        }
+    }
+
+    InsertionSort(keys.Begin(), count, TextSortKey3DLess);
+
+    for (int i = 0; i < count; ++i)
+        m_3DTexts[i] = keys[i].td;
+}
+
 // Post render callback
 CKFontManager::CKFontManager(CKContext *ctx) : CKBaseManager(ctx, FONT_MANAGER_GUID, (char *)Name)
 {
 	ctx->RegisterNewManager(this);
 
     m_EntityUnderMouse = NULL;
-    m_FontAttribute = 0;
+	m_FontAttribute = 0;
 	m_TextureLoaded = FALSE;
 	m_VersionUpdate = FALSE;
+	m_TextDrawBatch2D = new TextDrawBatch;
+	m_TextBatchCmds2D = 0;
+	m_TextBatchTextCmds2D = 0;
+	m_TextBatchCaretCmds2D = 0;
+	m_TextBatchRectCmds2D = 0;
+	m_TextBatchIndices2D = 0;
 
 #ifndef FONTMANAGER_NOSYSFONT
 	// System font device context initialisation
@@ -45,6 +221,8 @@ CKFontManager::~CKFontManager()
 	m_FontArray.Clear();
 
 	ClearTextData();
+	delete m_TextDrawBatch2D;
+	m_TextDrawBatch2D = NULL;
 
 #ifndef FONTMANAGER_NOSYSFONT
 	// Release memory device context
@@ -458,6 +636,25 @@ int CKFontManager::CreateTextureFont(CKSTRING fontName, CKTexture *fontTexture, 
 	{
 		// we delete the old one
 		CKTextureFont *old = m_FontArray[index - 1];
+		if (old)
+		{
+			DeleteFontHandle(old->m_FontName);
+			CKTexture *tex = old->GetFontTexture();
+			if (tex && tex->IsDynamic() && tex != fontTexture)
+			{
+				CKBOOL used = FALSE;
+				for (CKTextureFont **it = m_FontArray.Begin(); it != m_FontArray.End(); ++it)
+				{
+					if (*it != old && (*it)->GetFontTexture() == tex)
+					{
+						used = TRUE;
+						break;
+					}
+				}
+				if (!used)
+					CKDestroyObject(tex);
+			}
+		}
 		delete old;
 
 		// we store the new one
@@ -773,16 +970,20 @@ void CKFontManager::DrawText(CK_ID entity, int fontIndex, CKSTRING string, Vx2DV
 		// we don't use COMPILED setting
 		if (!(textFlags & TEXT_COMPILED))
 		{
-			// overwrite old values
 			td->m_FontIndex = fontIndex;
-			CKDeletePointer(td->m_String); // The string length can change, don't overwrite directly
-			td->m_String = CKStrdup(string);
+			if (!td->m_String || strcmp(td->m_String, string) != 0)
+			{
+				CKDeletePointer(td->m_String); // The string length can change, don't overwrite directly
+				td->m_String = CKStrdup(string);
+				td->m_StringHash = HashString(2166136261u, td->m_String);
+			}
 			td->m_Scale = scale;
 			td->m_StartColor = startColor;
 			td->m_EndColor = endColor;
 			td->m_Align = align;
 			td->m_TextZone = textZone;
 			td->m_Mat = mat;
+			td->m_TextFlags = textFlags;
 		}
 		// for now, if COMPILED setting is used, we don't change the text data content
 		// changes goes here
@@ -791,6 +992,7 @@ void CKFontManager::DrawText(CK_ID entity, int fontIndex, CKSTRING string, Vx2DV
 	{
 		// No TextData for this entity, create a new structure and add it to the list
 		td = new TextData(entity, fontIndex, string, scale, startColor, endColor, align, textZone, mat, textFlags);
+		td->m_StringHash = HashString(2166136261u, td->m_String);
 		m_Texts.Insert(entity, td, TRUE);
 	}
 
@@ -824,6 +1026,12 @@ void CKFontManager::DrawText(CKRenderContext *iRC, int iFontIndex, const char *i
 	if (!font)
 		return;
 
+	Vx2DVector oldScale = font->m_Scale;
+	CKDWORD oldStartColor = font->m_StartColor;
+	CKDWORD oldEndColor = font->m_EndColor;
+	float oldLeadingX = font->m_Leading.x;
+	CKDWORD oldProperties = font->m_Properties;
+
 	font->m_Scale = iScale;
 	font->m_StartColor = iStartColor;
 	font->m_EndColor = iEndColor;
@@ -832,6 +1040,12 @@ void CKFontManager::DrawText(CKRenderContext *iRC, int iFontIndex, const char *i
 
 	// draw the text
 	font->DrawStringEx(iRC, iText, VxRect(iPosition.x, iPosition.y, (float)iRC->GetWidth(), (float)iRC->GetHeight()), 0);
+
+	font->m_Scale = oldScale;
+	font->m_StartColor = oldStartColor;
+	font->m_EndColor = oldEndColor;
+	font->m_Leading.x = oldLeadingX;
+	font->m_Properties = oldProperties;
 }
 
 void CKFontManager::DrawRectanglesCallback(CKRenderContext *dev)
@@ -909,6 +1123,577 @@ inline CKBOOL parent3DHidden(CK3dEntity *ent)
 	return FALSE;
 }
 
+static const CKDWORD TEXT_SCISSOR = 4096;
+
+struct TextEmitContext
+{
+	CKFontManager::TextDrawBatch *batch;
+	CKTextureFont *font;
+	CKDWORD options;
+	VxRect clip;
+	CKBOOL useClip;
+};
+
+static CKDWORD HashAdd(CKDWORD hash, const void *data, int size)
+{
+	const unsigned char *ptr = (const unsigned char *)data;
+	for (int i = 0; i < size; ++i)
+	{
+		hash ^= ptr[i];
+		hash *= 16777619u;
+	}
+	return hash;
+}
+
+static CKDWORD HashString(CKDWORD hash, const char *str)
+{
+	const unsigned char *ptr = (const unsigned char *)(str ? str : "");
+	while (*ptr)
+	{
+		hash ^= *ptr++;
+		hash *= 16777619u;
+	}
+	return hash;
+}
+
+static CKDWORD BuildTextCacheKey(CKTextureFont *font, TextData *td, CKRenderContext *dev)
+{
+	CKDWORD hash = td->m_StringHash ? td->m_StringHash : HashString(2166136261u, td->m_String);
+
+	hash = HashAdd(hash, &td->m_FontIndex, sizeof(td->m_FontIndex));
+	hash = HashAdd(hash, &td->m_Align, sizeof(td->m_Align));
+	hash = HashAdd(hash, &td->m_TextZone, sizeof(td->m_TextZone));
+	hash = HashAdd(hash, &td->m_Scale, sizeof(td->m_Scale));
+	hash = HashAdd(hash, &td->m_StartColor, sizeof(td->m_StartColor));
+	hash = HashAdd(hash, &td->m_EndColor, sizeof(td->m_EndColor));
+	hash = HashAdd(hash, &td->m_Margins, sizeof(td->m_Margins));
+	hash = HashAdd(hash, &td->m_Offset, sizeof(td->m_Offset));
+	hash = HashAdd(hash, &td->m_ParagraphIndentation, sizeof(td->m_ParagraphIndentation));
+	hash = HashAdd(hash, &td->m_TextFlags, sizeof(td->m_TextFlags));
+
+	hash = HashAdd(hash, &font->m_Leading, sizeof(font->m_Leading));
+	hash = HashAdd(hash, &font->m_ItalicOffset, sizeof(font->m_ItalicOffset));
+	hash = HashAdd(hash, &font->m_Properties, sizeof(font->m_Properties));
+	hash = HashAdd(hash, &font->m_ShadowColor, sizeof(font->m_ShadowColor));
+	hash = HashAdd(hash, &font->m_ShadowOffset, sizeof(font->m_ShadowOffset));
+	hash = HashAdd(hash, &font->m_ShadowScale, sizeof(font->m_ShadowScale));
+	hash = HashAdd(hash, &font->m_FontTexture, sizeof(font->m_FontTexture));
+	hash = HashAdd(hash, &font->m_FontManager->m_VersionUpdate, sizeof(font->m_FontManager->m_VersionUpdate));
+
+	if ((td->m_TextFlags & TEXT_SCREEN) && dev)
+	{
+		int width = dev->GetWidth();
+		int height = dev->GetHeight();
+		hash = HashAdd(hash, &width, sizeof(width));
+		hash = HashAdd(hash, &height, sizeof(height));
+	}
+
+	return hash;
+}
+
+static void EmitCaretCommand(void *user, float x, float y, float w, float h, CKDWORD flags)
+{
+	TextEmitContext *ctx = (TextEmitContext *)user;
+
+	TextDrawCmd cmd;
+	cmd.type = TextDrawCmd::CMD_CARET;
+	cmd.font = ctx->font;
+	cmd.material = NULL;
+	cmd.options = ctx->options;
+	cmd.clip = ctx->clip;
+	cmd.useClip = ctx->useClip;
+	cmd.indexStart = 0;
+	cmd.indexCount = 0;
+	cmd.rect = VxRect(0.0f, 0.0f, 0.0f, 0.0f);
+	cmd.lighted = FALSE;
+	cmd.transform = FALSE;
+	cmd.geom = NULL;
+	cmd.caretX = x;
+	cmd.caretY = y;
+	cmd.caretW = w;
+	cmd.caretH = h;
+	cmd.caretFlags = flags;
+	cmd.caretMaterial = ctx->font->m_CaretMaterial;
+	cmd.caretSize = ctx->font->m_CaretSize;
+
+	ctx->batch->cmds.PushBack(cmd);
+}
+
+static void PushTextCommand(CKFontManager::TextDrawBatch &batch, const TextDrawCmd &cmd)
+{
+    int count = batch.cmds.Size();
+    if (count > 0)
+    {
+        TextDrawCmd &last = batch.cmds[count - 1];
+        if (last.type == TextDrawCmd::CMD_TEXT && cmd.type == TextDrawCmd::CMD_TEXT &&
+            last.font == cmd.font && last.options == cmd.options && last.geom == cmd.geom &&
+            last.useClip == cmd.useClip && (!cmd.useClip || RectEquals(last.clip, cmd.clip)) &&
+            (last.indexStart + last.indexCount) == cmd.indexStart)
+        {
+            last.indexCount += cmd.indexCount;
+            return;
+        }
+    }
+
+    batch.cmds.PushBack(cmd);
+}
+
+static int AppendStringShadowedBatch(CKTextureFont *font, CKRenderContext *dev, CKSTRING string, int slen, VxVector position, VxRect &textZone, CKDWORD options, CompiledTextData *data, TextDrawEmitter *emitter)
+{
+	int indices = 0;
+	if (ColorGetAlpha(font->m_ShadowColor))
+	{
+		VxVector shadowoffset(font->m_ShadowOffset.x, font->m_ShadowOffset.y, 0);
+		VxVector shadowpos = position + shadowoffset;
+
+		CKDWORD oldproperties = font->m_Properties;
+		font->m_Properties &= ~FONT_GRADIENT;
+
+		CKDWORD oldstartcolor = font->m_StartColor;
+		font->m_StartColor = font->m_ShadowColor;
+
+		Vx2DVector oldscale = font->m_Scale;
+		font->m_Scale = font->m_ShadowScale;
+
+		indices += font->AppendStringGeometry(dev, string, slen, shadowpos, textZone, options, data, emitter);
+
+		font->m_StartColor = oldstartcolor;
+		font->m_Properties = oldproperties;
+		font->m_Scale = oldscale;
+	}
+
+	indices += font->AppendStringGeometry(dev, string, slen, position, textZone, options, data, emitter);
+
+	return indices;
+}
+
+static CKBOOL BuildTextBatch2D(CKRenderContext *dev, CKBeObject *obj, TextData *td, CKTextureFont *font, CKFontManager::TextDrawBatch &batch, CompiledTextData *targetData)
+{
+	CompiledTextData *geomData = targetData ? targetData : &batch.data;
+	if (targetData)
+		geomData->Reset();
+
+	if (!td || !font || !td->m_String)
+		return FALSE;
+
+	int align = td->m_Align;
+	CKDWORD options = td->m_TextFlags;
+	const CKBOOL doWrap = (options & (TEXT_JUSTIFIED | TEXT_WORDWRAP)) != 0;
+	const CKBOOL alignLeft = (align & HALIGN_LEFT) != 0;
+	const CKBOOL alignRight = (align & HALIGN_RIGHT) != 0;
+	const CKBOOL alignTop = (align & VALIGN_TOP) != 0;
+	const CKBOOL alignBottom = (align & VALIGN_BOTTOM) != 0;
+
+	VxRect drawzone = td->m_TextZone;
+	VxRect textZone = td->m_TextZone;
+	textZone.left += font->m_Margins.left;
+	textZone.right -= font->m_Margins.right;
+	textZone.top += font->m_Margins.top;
+	textZone.bottom -= font->m_Margins.bottom;
+
+	// We choose the relative coordinates (screen or textures)
+	if (options & TEXT_SCREEN)
+	{
+		font->m_ScreenExtents.Set((float)dev->GetWidth(), (float)dev->GetHeight());
+	}
+	else
+	{
+		CKTexture *fonttexture = font->GetFontTexture();
+		if (fonttexture)
+			font->m_ScreenExtents.Set((float)fonttexture->GetWidth(), (float)fonttexture->GetHeight());
+	}
+
+	if (doWrap)
+	{
+		if (textZone.GetWidth() < font->m_FontZone.GetWidth() / (font->m_Scale.x * font->m_ScreenExtents.x * font->m_CharNumber.x))
+			return FALSE;
+	}
+
+	const CharacterTextureCoordinates *coords = font->m_FontCoordinates;
+	float width = font->m_Scale.x * font->m_ScreenExtents.x;
+	float height = font->m_Scale.y * font->m_ScreenExtents.y;
+	float hlead = font->m_Leading.x;
+	if (font->m_FontManager->m_VersionUpdate)
+	{
+		float spaceadvance = coords[' '].uprewidth + coords[' '].uwidth + coords[' '].upostwidth;
+		hlead = 0.1f * width * spaceadvance * font->m_Leading.x;
+	}
+	float spacesize = width * (coords[' '].uprewidth + coords[' '].uwidth + coords[' '].upostwidth) + hlead;
+	float zonewidth = textZone.GetWidth();
+	float paragraphIndentX = font->m_ParagraphIndentation.x * coords[0].uwidth * width;
+	float paragraphIndentY = font->m_ParagraphIndentation.y * coords[0].vwidth * height;
+	float verticalspace = coords[0].vwidth * height + font->m_Leading.y;
+
+	// We clear the line array
+	font->m_FontManager->ClearLines();
+
+	// Line Data Variables
+	LineData ldata;
+
+	// Wrapping variables
+	char *string = td->m_String;
+	char *lastword = "\n";
+	int lastlen = 0;
+	float lastwidth = 0.0f;
+	CKBOOL lastcharacterwasspace = TRUE;
+	CKBOOL paragraphstart = TRUE;
+	int linecount = 0;
+	float textwidth = 0.0f;
+	float textheight = 0.0f;
+
+	// String cutting, LineData Array filling
+	while (*string)
+	{
+		ldata.string = string;
+		ldata.len = 0;
+		ldata.nbspace = 0;
+		if (paragraphstart)
+		{
+			ldata.stringwidth = paragraphIndentX;
+		}
+		else
+			ldata.stringwidth = 0.0f;
+
+		// we iterate line by line
+		while (*string && *string != '\n')
+		{
+			// We encounter a space
+			if (*string == ' ')
+			{
+				if (!lastcharacterwasspace) // we already encounter a space
+					lastcharacterwasspace = TRUE;
+
+				lastlen = ldata.len;
+				lastword = string + 1;
+				lastwidth = ldata.stringwidth;
+
+				ldata.nbspace++;
+				ldata.stringwidth += spacesize;
+			}
+			else // we encounter a character
+			{
+				if (lastcharacterwasspace) // Is it a word start ?
+				{
+					lastcharacterwasspace = FALSE;
+					lastlen = ldata.len - 1;
+					lastword = string;
+					lastwidth = ldata.stringwidth - spacesize;
+				}
+				const CharacterTextureCoordinates *tctc = &coords[(unsigned char)*string];
+				ldata.stringwidth += (tctc->uprewidth + tctc->uwidth + tctc->upostwidth) * width + hlead;
+			}
+
+			// If wordwrap, whe have to see if the text fit in the line
+			if (doWrap)
+			{
+				if (ldata.stringwidth > zonewidth) // it does not : we break the line
+				{
+					if (lastlen > 0) // the word was not on the beginning of the line
+					{
+						ldata.len = lastlen;
+						ldata.stringwidth = lastwidth;
+						// We drop the last character before this word
+						ldata.nbspace--;
+						string = lastword;
+					}
+					else // first word of the line : we have to break it
+					{
+						if (*string != ' ') // the character length was already added : we subtract it
+						{
+							const CharacterTextureCoordinates *tctc = &coords[(unsigned char)*string];
+							ldata.stringwidth -= (tctc->uprewidth + tctc->uwidth + tctc->upostwidth) * width + hlead;
+							if (lastword == string)
+								string++;
+							lastword = string;
+						}
+					}
+					lastcharacterwasspace = TRUE;
+					break;
+				}
+			}
+
+			ldata.len++;
+			string++;
+		}
+
+		if (paragraphstart)
+		{
+			ldata.len = -ldata.len;
+			paragraphstart = FALSE;
+		}
+
+		if (*string == '\n')
+		{
+			paragraphstart = TRUE;
+			// Patch for infinite loop
+			if (*lastword == '\n')
+				string++;
+		}
+		// end of a line (or text)
+		if (ldata.stringwidth > textwidth)
+			textwidth = ldata.stringwidth;
+		if ((ldata.len < 0) && (linecount != 0))
+			textheight += paragraphIndentY;
+		textheight += verticalspace;
+		linecount++;
+
+		font->m_FontManager->AddLine(ldata);
+
+		if (*string && string != lastword && *lastword != '\n')
+			string++;
+	}
+
+	// now we have to draw the strings
+	VxVector pos(textZone.left, textZone.top, 0.0f);
+
+	font->m_LineCount = linecount;
+
+	///
+	// Vertical Alignment Calculation
+	if (alignTop) // Top
+	{
+		pos.y = textZone.top;
+	}
+	else if (alignBottom) // Bottom
+	{
+		pos.y = textZone.bottom - textheight;
+	}
+	else // Center
+	{
+		pos.y = (textZone.bottom + textZone.top) * 0.5f - textheight * 0.5f;
+	}
+
+	///
+	// Horizontal Alignment Calculation
+	if (alignLeft) // Top
+	{
+		pos.x = textZone.left;
+	}
+	else if (alignRight) // Bottom
+	{
+		pos.x = textZone.right - textwidth;
+	}
+	else // Center
+	{
+		pos.x = (textZone.right + textZone.left) * 0.5f - textwidth * 0.5f;
+	}
+
+	font->m_TextExtents.SetDimension(pos.x, pos.y, textwidth, textheight);
+
+	VxRect backgroundRect = font->m_TextExtents;
+	if (options & TEXT_JUSTIFIED)
+	{
+		backgroundRect.left = textZone.left;
+		backgroundRect.right = textZone.right;
+	}
+
+	///
+	// Resize
+	if (obj) // Entity to resize ?
+	{
+		if (options & (TEXT_RESIZE_VERT | TEXT_RESIZE_HORI))
+		{
+			drawzone.top = pos.y;
+			if (options & TEXT_JUSTIFIED) // Only vertically
+			{
+				drawzone.bottom = drawzone.top + textheight;
+			}
+			else
+			{
+				if (options & TEXT_RESIZE_HORI)
+					drawzone.right = drawzone.left + textwidth;
+				if (options & TEXT_RESIZE_VERT)
+					drawzone.bottom = drawzone.top + textheight;
+			}
+
+			Vx2DVector v;
+			((CK2dEntity *)obj)->GetSize(v);
+			if (options & TEXT_RESIZE_HORI)
+				v.x = drawzone.right - drawzone.left;
+			if (options & (TEXT_RESIZE_VERT | TEXT_JUSTIFIED))
+				v.y = drawzone.bottom - drawzone.top;
+			((CK2dEntity *)obj)->SetSize(v);
+		}
+	}
+
+	///
+	// Scroll Vertical
+	if (alignTop || alignBottom) // Top|Bottom
+	{
+		pos.y += font->m_Offset.y;
+	}
+
+	VxRect clipRect = textZone;
+	if (options & TEXT_SCREENCLIP)
+	{
+		if (!clipRect.Clip(font->m_ClippingRect))
+			return FALSE;
+	}
+	CKBOOL useClip = (options & TEXT_CLIP) != 0;
+
+	///
+	// Background
+	if (options & TEXT_BACKGROUND)
+	{
+		TextDrawCmd rectCmd;
+		rectCmd.type = TextDrawCmd::CMD_RECT;
+		rectCmd.font = font;
+		rectCmd.material = td->m_Mat;
+		rectCmd.options = options;
+		rectCmd.clip = VxRect(0.0f, 0.0f, 0.0f, 0.0f);
+		rectCmd.useClip = FALSE;
+		rectCmd.indexStart = 0;
+		rectCmd.indexCount = 0;
+		rectCmd.rect = backgroundRect;
+		rectCmd.lighted = (font->m_Properties & FONT_LIGHTING) != 0;
+		rectCmd.transform = FALSE;
+		rectCmd.geom = NULL;
+		rectCmd.caretX = 0.0f;
+		rectCmd.caretY = 0.0f;
+		rectCmd.caretW = 0.0f;
+		rectCmd.caretH = 0.0f;
+		rectCmd.caretFlags = 0;
+		rectCmd.caretMaterial = NULL;
+		rectCmd.caretSize = 0.0f;
+		batch.cmds.PushBack(rectCmd);
+	}
+
+	TextEmitContext emitCtx;
+	emitCtx.batch = &batch;
+	emitCtx.font = font;
+	emitCtx.options = options;
+	emitCtx.clip = clipRect;
+	emitCtx.useClip = useClip;
+
+	TextDrawEmitter emitter;
+	emitter.EmitCaret = EmitCaretCommand;
+	emitter.user = &emitCtx;
+
+	// The actual Drawing
+	for (int i = 0; i < linecount; ++i)
+	{
+		// current line
+		LineData *data = font->m_FontManager->GetLine(i);
+
+		font->m_SpaceSize = spacesize;
+		font->m_HLeading = hlead;
+		// We update the line width
+		font->m_LineWidth = data->stringwidth;
+
+		///
+		// Horizontal Alignment Calculation and spacing
+		if (options & TEXT_JUSTIFIED)
+		{
+			if (data->nbspace) // there is space, so we work on them
+			{
+				float delta = data->stringwidth - zonewidth;
+				if (delta > 0)
+				{
+					font->m_SpaceSize = spacesize - delta / data->nbspace;
+				}
+				else
+				{
+					font->m_SpaceSize = spacesize + -delta / data->nbspace;
+				}
+			}
+			else // no space, we adjust leading
+			{
+				float delta = zonewidth - data->stringwidth;
+				int dlen = data->len;
+				if (dlen < 0)
+					dlen = -dlen;
+				if (dlen > 1)
+				{
+					if (delta > 0)
+					{
+						font->m_HLeading = hlead + delta / (dlen - 1);
+					}
+					else
+					{
+						font->m_HLeading = hlead - -delta / (dlen - 1);
+					}
+				}
+			}
+			// the text has to be on the extreme left side
+			pos.x = textZone.left;
+		}
+		else // The text is not justified, so we have to calculate where it should be horizontally
+		{
+			if (alignLeft) // Left
+			{
+				pos.x = textZone.left + font->m_Offset.x;
+			}
+			else if (alignRight) // Right
+			{
+				pos.x = font->m_Offset.x + textZone.right - data->stringwidth;
+			}
+			else // Center
+			{
+				pos.x = (textZone.right + textZone.left) * 0.5f - data->stringwidth * 0.5f;
+			}
+		}
+
+		// Paragraph Indentation
+		if (data->len < 0)
+		{
+			data->len = -data->len;
+			if (alignLeft)
+			{
+				pos.x += paragraphIndentX;
+			}
+			if (i != 0)
+				pos.y += paragraphIndentY;
+		}
+
+		if (data->len > 0)
+		{
+			CKDWORD buildOptions = options;
+			if (useClip)
+				buildOptions |= TEXT_SCISSOR;
+
+			int indexStart = geomData->GetIndexCount();
+			if (font->m_Properties & FONT_SHADOW)
+				AppendStringShadowedBatch(font, dev, data->string, data->len, pos, textZone, buildOptions, geomData, &emitter);
+			else
+				font->AppendStringGeometry(dev, data->string, data->len, pos, textZone, buildOptions, geomData, &emitter);
+
+			int indexCount = geomData->GetIndexCount() - indexStart;
+			if (indexCount > 0)
+			{
+				TextDrawCmd textCmd;
+				textCmd.type = TextDrawCmd::CMD_TEXT;
+				textCmd.font = font;
+				textCmd.material = NULL;
+				textCmd.options = options;
+				textCmd.clip = clipRect;
+				textCmd.useClip = useClip;
+				textCmd.indexStart = indexStart;
+				textCmd.indexCount = indexCount;
+				textCmd.rect = VxRect(0.0f, 0.0f, 0.0f, 0.0f);
+				textCmd.lighted = FALSE;
+				textCmd.transform = FALSE;
+				textCmd.geom = targetData;
+				textCmd.caretX = 0.0f;
+				textCmd.caretY = 0.0f;
+				textCmd.caretW = 0.0f;
+				textCmd.caretH = 0.0f;
+				textCmd.caretFlags = 0;
+				textCmd.caretMaterial = NULL;
+				textCmd.caretSize = 0.0f;
+
+				PushTextCommand(batch, textCmd);
+			}
+		}
+
+		pos.y += verticalspace;
+	}
+
+	if (targetData)
+		targetData->m_DrawZone = backgroundRect;
+
+	return TRUE;
+}
+
 /*************************************************
 Name: DrawTextCallback
 
@@ -929,38 +1714,24 @@ void CKFontManager::DrawTextCallback2D(CKRenderContext *dev, void *arg)
 {
 	CKFontManager *fm = (CKFontManager *)arg;
 
-	CK2dEntity *ent1, *ent2;
 	CKBeObject *obj;
     TextData *td;
 
 	int i, limit = fm->m_2DTexts.Size();
-	// Sort by z-order, bubble sort
-	for (i = 0; i < limit - 1; i++)
-	{
-		for (int j = i + 1; j < limit; j++)
-		{
-			ent1 = (CK2dEntity *)fm->m_Context->GetObject(fm->m_2DTexts[i]->m_Entity);
-			if (ent1)
-			{
-				ent2 = (CK2dEntity *)fm->m_Context->GetObject(fm->m_2DTexts[j]->m_Entity);
-				if (ent2)
-				{
-					// Swap data if not in the good order
-					if (ent1->GetZOrder() < ent2->GetZOrder())
-					{
-						memcpy(&td, &(fm->m_2DTexts[i]), sizeof(struct TextData *));
-						memcpy(&(fm->m_2DTexts[i]), &(fm->m_2DTexts[j]), sizeof(struct TextData *));
-						memcpy(&(fm->m_2DTexts[j]), &td, sizeof(struct TextData *));
-					}
-				}
-			}
-		}
-	}
+	fm->SortTextList2D();
 
 	// Draw pending 2D texts
+	TextDrawBatch &batch = *fm->m_TextDrawBatch2D;
+	batch.Reset();
+	fm->m_TextBatchCmds2D = 0;
+	fm->m_TextBatchTextCmds2D = 0;
+	fm->m_TextBatchCaretCmds2D = 0;
+	fm->m_TextBatchRectCmds2D = 0;
+	fm->m_TextBatchIndices2D = 0;
+
 	for (i = 0; i < limit; i++)
 	{
-        td = fm->m_2DTexts[i];
+		td = fm->m_2DTexts[i];
 		obj = (CKBeObject *)fm->m_Context->GetObject(td->m_Entity);
 		if (obj)
 		{
@@ -969,6 +1740,8 @@ void CKFontManager::DrawTextCallback2D(CKRenderContext *dev, void *arg)
 				continue;
 			// Restore entity parameters in texture font
 			CKTextureFont *font = fm->GetFont(td->m_FontIndex);
+			if (!font)
+				continue;
 
 			font->m_Scale = td->m_Scale;
 			font->m_StartColor = td->m_StartColor;
@@ -981,10 +1754,243 @@ void CKFontManager::DrawTextCallback2D(CKRenderContext *dev, void *arg)
 			font->m_CaretSize = td->m_CaretSize;
 			font->m_ClippingRect = td->m_ClippingRect;
 
-			// draw the text
-			font->DrawCKText(dev, obj, td->m_String, td->m_Align, td->m_TextZone, td->m_Mat, td->m_TextFlags, TRUE);
+			const CKBOOL wantsCompiled = (td->m_TextFlags & TEXT_COMPILED) != 0;
+			const CKBOOL canCompile = (td->m_TextFlags & TEXT_SHOWCARET) == 0;
+			if (canCompile)
+			{
+				CompiledTextData *ctdata = fm->GetCompiledText(td->m_Entity);
+				CKBOOL useCached = FALSE;
+				CKBOOL built = FALSE;
+
+				if (wantsCompiled)
+				{
+					if (!ctdata)
+						ctdata = fm->AddCompiledText(td->m_Entity);
+					if (td->m_AutoCacheValid && ctdata)
+					{
+						useCached = TRUE;
+					}
+					else
+					{
+						CKBOOL builtNow = BuildTextBatch2D(dev, obj, td, font, batch, ctdata);
+						td->m_AutoCacheValid = builtNow;
+						built = TRUE;
+					}
+				}
+				else
+				{
+					CKDWORD key = BuildTextCacheKey(font, td, dev);
+					CKBOOL cacheMatch = (td->m_AutoCacheValid && td->m_AutoCacheKey == key && ctdata);
+					if (cacheMatch)
+					{
+						useCached = TRUE;
+					}
+					else if (td->m_AutoCacheKey == key)
+					{
+						if (!ctdata)
+							ctdata = fm->AddCompiledText(td->m_Entity);
+						CKBOOL builtNow = BuildTextBatch2D(dev, obj, td, font, batch, ctdata);
+						if (builtNow)
+						{
+							td->m_AutoCacheValid = TRUE;
+						}
+						else
+						{
+							td->m_AutoCacheValid = FALSE;
+						}
+						built = TRUE;
+					}
+					else
+					{
+						td->m_AutoCacheKey = key;
+						td->m_AutoCacheValid = FALSE;
+						BuildTextBatch2D(dev, obj, td, font, batch, NULL);
+						built = TRUE;
+					}
+				}
+
+				if (useCached && ctdata)
+				{
+					VxRect textZone = td->m_TextZone;
+					textZone.left += font->m_Margins.left;
+					textZone.right -= font->m_Margins.right;
+					textZone.top += font->m_Margins.top;
+					textZone.bottom -= font->m_Margins.bottom;
+
+					VxRect clipRect = textZone;
+					if (td->m_TextFlags & TEXT_SCREENCLIP)
+					{
+						if (!clipRect.Clip(font->m_ClippingRect))
+							continue;
+					}
+					CKBOOL useClip = (td->m_TextFlags & TEXT_CLIP) != 0;
+
+					if (td->m_TextFlags & TEXT_BACKGROUND)
+					{
+						TextDrawCmd rectCmd;
+						rectCmd.type = TextDrawCmd::CMD_RECT;
+						rectCmd.font = font;
+						rectCmd.material = td->m_Mat;
+						rectCmd.options = td->m_TextFlags;
+						rectCmd.clip = VxRect(0.0f, 0.0f, 0.0f, 0.0f);
+						rectCmd.useClip = FALSE;
+						rectCmd.indexStart = 0;
+						rectCmd.indexCount = 0;
+						rectCmd.rect = ctdata->m_DrawZone;
+						rectCmd.lighted = (font->m_Properties & FONT_LIGHTING) != 0;
+						rectCmd.transform = FALSE;
+						rectCmd.geom = NULL;
+						rectCmd.caretX = 0.0f;
+						rectCmd.caretY = 0.0f;
+						rectCmd.caretW = 0.0f;
+						rectCmd.caretH = 0.0f;
+						rectCmd.caretFlags = 0;
+						rectCmd.caretMaterial = NULL;
+						rectCmd.caretSize = 0.0f;
+						batch.cmds.PushBack(rectCmd);
+					}
+
+					if (ctdata->GetIndexCount() > 0)
+					{
+						TextDrawCmd textCmd;
+						textCmd.type = TextDrawCmd::CMD_TEXT;
+						textCmd.font = font;
+						textCmd.material = NULL;
+						textCmd.options = td->m_TextFlags;
+						textCmd.clip = clipRect;
+						textCmd.useClip = useClip;
+						textCmd.indexStart = 0;
+						textCmd.indexCount = ctdata->GetIndexCount();
+						textCmd.rect = VxRect(0.0f, 0.0f, 0.0f, 0.0f);
+						textCmd.lighted = FALSE;
+						textCmd.transform = FALSE;
+						textCmd.geom = ctdata;
+						textCmd.caretX = 0.0f;
+						textCmd.caretY = 0.0f;
+						textCmd.caretW = 0.0f;
+						textCmd.caretH = 0.0f;
+						textCmd.caretFlags = 0;
+						textCmd.caretMaterial = NULL;
+						textCmd.caretSize = 0.0f;
+
+						PushTextCommand(batch, textCmd);
+					}
+				}
+				else if (!built)
+				{
+					BuildTextBatch2D(dev, obj, td, font, batch, NULL);
+				}
+			}
+			else
+			{
+				BuildTextBatch2D(dev, obj, td, font, batch, NULL);
+			}
 		}
 	}
+
+	fm->m_TextBatchCmds2D = batch.cmds.Size();
+	fm->m_TextBatchIndices2D = 0;
+	for (i = 0; i < batch.cmds.Size(); ++i)
+	{
+		switch (batch.cmds[i].type)
+		{
+		case TextDrawCmd::CMD_TEXT:
+			fm->m_TextBatchTextCmds2D++;
+			fm->m_TextBatchIndices2D += batch.cmds[i].indexCount;
+			break;
+		case TextDrawCmd::CMD_CARET:
+			fm->m_TextBatchCaretCmds2D++;
+			break;
+		case TextDrawCmd::CMD_RECT:
+			fm->m_TextBatchRectCmds2D++;
+			break;
+		}
+	}
+
+	if (!batch.cmds.Size())
+		return;
+
+	VxRect oldclip;
+	dev->GetViewRect(oldclip);
+	VxRect currentClip = oldclip;
+	CKBOOL clipActive = FALSE;
+	CKTextureFont *lastFont = NULL;
+	CKDWORD lastOptions = 0;
+	CKBOOL lastStateValid = FALSE;
+
+	dev->SetState(VXRENDERSTATE_ALPHABLENDENABLE, TRUE);
+	dev->SetState(VXRENDERSTATE_ZWRITEENABLE, FALSE);
+
+	for (i = 0; i < batch.cmds.Size(); ++i)
+	{
+		TextDrawCmd &cmd = batch.cmds[i];
+		const CKBOOL needsClip = cmd.useClip && (cmd.type == TextDrawCmd::CMD_TEXT || cmd.type == TextDrawCmd::CMD_CARET);
+
+		if (needsClip)
+		{
+			VxRect clip = oldclip;
+			if (!clip.Clip(cmd.clip))
+				continue;
+
+			if (!clipActive || !RectEquals(clip, currentClip))
+			{
+				dev->SetViewRect(clip);
+				currentClip = clip;
+				clipActive = TRUE;
+			}
+		}
+		else if (clipActive)
+		{
+			dev->SetViewRect(oldclip);
+			currentClip = oldclip;
+			clipActive = FALSE;
+		}
+
+		switch (cmd.type)
+		{
+		case TextDrawCmd::CMD_RECT:
+			DrawFillRectangle(dev, cmd.material, cmd.rect, cmd.lighted, cmd.transform);
+			lastFont = NULL;
+			lastStateValid = FALSE;
+			break;
+		case TextDrawCmd::CMD_TEXT:
+			if (!lastStateValid || lastFont != cmd.font || lastOptions != cmd.options)
+			{
+				cmd.font->SetRenderStates(dev, cmd.options);
+				lastFont = cmd.font;
+				lastOptions = cmd.options;
+				lastStateValid = TRUE;
+			}
+			{
+				CompiledTextData *geom = cmd.geom ? cmd.geom : &batch.data;
+				const CKWORD *indices = geom->GetIndexPtr() + cmd.indexStart;
+				dev->DrawPrimitive(VX_TRIANGLELIST, (CKWORD *)indices, cmd.indexCount, geom->GetDrawPrimitiveData());
+			}
+			break;
+		case TextDrawCmd::CMD_CARET:
+			if (!lastStateValid || lastFont != cmd.font || lastOptions != cmd.options)
+			{
+				cmd.font->SetRenderStates(dev, cmd.options);
+				lastFont = cmd.font;
+				lastOptions = cmd.options;
+				lastStateValid = TRUE;
+			}
+			{
+				CKMaterial *oldMat = cmd.font->m_CaretMaterial;
+				float oldSize = cmd.font->m_CaretSize;
+				cmd.font->m_CaretMaterial = cmd.caretMaterial;
+				cmd.font->m_CaretSize = cmd.caretSize;
+				cmd.font->DrawCaret(dev, cmd.caretX, cmd.caretY, cmd.caretW, cmd.caretH, cmd.caretFlags);
+				cmd.font->m_CaretMaterial = oldMat;
+				cmd.font->m_CaretSize = oldSize;
+			}
+			lastStateValid = FALSE;
+			break;
+		}
+	}
+
+	if (clipActive)
+		dev->SetViewRect(oldclip);
 }
 
 void CKFontManager::DrawTextCallback3D(CKRenderContext *dev, void *arg)
@@ -993,42 +1999,11 @@ void CKFontManager::DrawTextCallback3D(CKRenderContext *dev, void *arg)
 
 	CKBeObject *obj;
     TextData *td;
-
-	CK3dEntity *ent3, *ent4;
-	VxVector viewpos;
-	CK3dEntity *viewpoint = dev->GetViewpoint();
-	viewpoint->GetPosition(&viewpos);
+	CK3dEntity *ent3;
 
 	int limit = fm->m_3DTexts.Size();
 	int i;
-	// Sort by z-order
-	for (i = 0; i < limit - 1; i++)
-	{
-		for (int j = i + 1; j < limit; j++)
-		{
-			ent3 = (CK3dEntity *)fm->m_Context->GetObject(fm->m_3DTexts[i]->m_Entity);
-			if (ent3)
-			{
-				ent4 = (CK3dEntity *)fm->m_Context->GetObject(fm->m_3DTexts[j]->m_Entity);
-				if (ent4)
-				{
-					// Retrieve position
-					VxVector v1, v2, pos1, pos2;
-					ent3->GetPosition(&pos1);
-					viewpoint->InverseTransform(&v1, &pos1);
-					ent4->GetPosition(&pos2);
-					viewpoint->InverseTransform(&v2, &pos2);
-					// Swap values if not in the good order
-					if (v1.z < v2.z)
-					{
-						memcpy(&td, &(fm->m_3DTexts[i]), sizeof(struct TextData *));
-						memcpy(&(fm->m_3DTexts[i]), &(fm->m_3DTexts[j]), sizeof(struct TextData *));
-						memcpy(&(fm->m_3DTexts[j]), &td, sizeof(struct TextData *));
-					}
-				}
-			}
-		}
-	}
+	fm->SortTextList3D(dev);
 
 	// Draw pending 3D texts
 	for (i = 0; i < limit; i++)
@@ -1058,6 +2033,8 @@ void CKFontManager::DrawTextCallback3D(CKRenderContext *dev, void *arg)
 
 				// Restore the entity parameter in the font texture
 				CKTextureFont *font = fm->GetFont(td->m_FontIndex);
+				if (!font)
+					continue;
 				font->m_Scale = td->m_Scale;
 				font->m_StartColor = td->m_StartColor;
 				font->m_EndColor = td->m_EndColor;
