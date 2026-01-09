@@ -65,10 +65,6 @@ PLUGIN_EXPORT void RegisterBehaviorDeclarations(XObjectDeclarationArray *reg);
 /**********************************************************************************/
 void RegisterBehaviorDeclarations(XObjectDeclarationArray *reg)
 {
-#ifdef WIN32
-    RegisterBehavior(reg, FillBehaviorCDPlayer2Decl);
-#endif
-
     RegisterBehavior(reg, FillBehaviorWavePlayDecl);
     RegisterBehavior(reg, FillBehaviorPlaySoundInstanceDecl);
     // Control
