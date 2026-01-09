@@ -77,13 +77,18 @@ set(NEMO_BUILDING_BLOCKS
         3DTrans
         BuildingBlocksAddons1
         Cameras
+		Characters
         Collision
         Controllers
+		Grids
         Interface
         Lights
         Logics
         Materials-Textures
+		MeshModifiers
+		MidiManager
         Narratives
+		ParticlesSystem
         Sounds
         Visuals
         WorldEnvironment
