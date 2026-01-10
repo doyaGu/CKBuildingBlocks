@@ -236,6 +236,7 @@ CKERROR DaUCharacterCB(const CKBehaviorContext &behcontext)
                 if (CKM_BEHAVIORLOAD == behcontext.CallbackMessage)
                 {
                     // Do Swap For Mac
+#if !defined(WIN32) && !defined(_WIN32)
                     ENDIANSWAP32(params[i].IndexAnimation);
                     ENDIANSWAP32(params[i].StartFrame);
                     ENDIANSWAP32(params[i].Priority);
@@ -249,6 +250,7 @@ CKERROR DaUCharacterCB(const CKBehaviorContext &behcontext)
 
                     ENDIANSWAP16(params[i].flags);
                     ENDIANSWAP16(params[i].LoopCount);
+#endif
                 }
 
                 params[i].AnimationPtr = NULL;
@@ -283,6 +285,7 @@ CKERROR DaUCharacterCB(const CKBehaviorContext &behcontext)
                 if (CKM_BEHAVIORLOAD == behcontext.CallbackMessage)
                 {
                     // Do Swap For Mac
+#if !defined(WIN32) && !defined(_WIN32)
                     ENDIANSWAP32(params[i].IndexAnimation);
                     ENDIANSWAP32(params[i].StartFrame);
                     ENDIANSWAP32(params[i].Priority);
@@ -296,6 +299,7 @@ CKERROR DaUCharacterCB(const CKBehaviorContext &behcontext)
 
                     ENDIANSWAP16(params[i].flags);
                     ENDIANSWAP16(params[i].LoopCount);
+#endif
                 }
 
                 params[i].AnimationPtr = NULL;
