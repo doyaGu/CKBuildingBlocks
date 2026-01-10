@@ -1,6 +1,7 @@
 # BuildingBlocksAddons1
-
-add_library(BuildingBlocksAddons1 SHARED
+aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/Behaviors BEHAVIORS_SRCS)
+ckbb_add_module(BuildingBlocksAddons1
+        SOURCES
         BuildingBlocksAddons1.cpp
         LightmapGenerator.cpp
         LightmapGenerator.h
@@ -10,10 +11,6 @@ add_library(BuildingBlocksAddons1 SHARED
         PolyhedronConstructor.h
         TextureProcessing.cpp
         TextureProcessing.h
-        BuildingBlocksAddons.rc)
-aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/Behaviors BUILDINGBLOCKSADDONS1_BEHAVIORS_SRCS)
-target_sources(BuildingBlocksAddons1 PRIVATE ${BUILDINGBLOCKSADDONS1_BEHAVIORS_SRCS})
-target_include_directories(BuildingBlocksAddons1 PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(BuildingBlocksAddons1 PRIVATE CK2 VxMath)
-
-install(TARGETS BuildingBlocksAddons1 RUNTIME DESTINATION BuildingBlocks)
+        BuildingBlocksAddons.rc
+        ${BEHAVIORS_SRCS}
+)

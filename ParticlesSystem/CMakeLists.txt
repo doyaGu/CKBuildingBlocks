@@ -1,6 +1,6 @@
 # ParticlesSystem
-
-add_library(ParticlesSystem SHARED
+ckbb_add_module(ParticlesSystem
+        SOURCES
         ParticleSystems.cpp
         CubicEmitter.cpp
         CubicEmitter.h
@@ -47,8 +47,5 @@ add_library(ParticlesSystem SHARED
         SphericalParticleSystem.cpp
         BlockingQueue.h
         fvec.h
-        ThreadSafeQueue.h)
-target_include_directories(ParticlesSystem PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(ParticlesSystem PRIVATE CK2 VxMath)
-
-install(TARGETS ParticlesSystem RUNTIME DESTINATION BuildingBlocks)
+        ThreadSafeQueue.h
+)
