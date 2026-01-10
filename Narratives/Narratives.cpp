@@ -63,7 +63,6 @@ void RegisterBehaviorDeclarations(XObjectDeclarationArray *reg)
     RegisterBehavior(reg, FillObjectCopierDecl);
     RegisterBehavior(reg, FillObjectDeleterDecl);
     RegisterBehavior(reg, FillObjectRenameDecl);
-    RegisterBehavior(reg, FillObsoleteObjectRenamerDecl);
     RegisterBehavior(reg, FillDynamicDeleterDecl);
 
     RegisterBehavior(reg, FillTextureLoaderDecl);
