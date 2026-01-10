@@ -77,45 +77,14 @@ CKERROR CreateObjectLoaderProto(CKBehaviorPrototype **pproto)
 CKERROR ObjectLoaderCB(const CKBehaviorContext &behcontext)
 {
     CKBehavior *beh = behcontext.Behavior;
-    CKContext *ctx = behcontext.Context;
 
-    switch (behcontext.CallbackMessage)
-    {
-    case CKM_BEHAVIORRESET:
+    if (behcontext.CallbackMessage == CKM_BEHAVIORRESET)
     {
         XObjectArray *oarray = *(XObjectArray **)beh->GetOutputParameterWriteDataPtr(0);
-
-        /* Should but, what for the not dynamic???
-        BOOL dynamic = TRUE;
-        beh->GetLocalParameterValue(0,&dynamic);
-        if (dynamic)
-        */
-
-        oarray->Clear();
+        if (oarray)
+            oarray->Clear();
         beh->GetOutputParameter(0)->DataChanged();
     }
-    break;
-
-    // Delete Every Loaded Object on a delete or detach
-
-    case CKM_BEHAVIORACTIVATESCRIPT:
-    {
-        //	Load(beh,CKGetCurrentScene());
-    }
-    break;
-
-    case CKM_BEHAVIORDEACTIVATESCRIPT:
-    {
-        //	CleanUp(beh);
-    }
-    break;
-
-    case CKM_BEHAVIORNEWSCENE:
-    {
-    }
-    break;
-
-    } // Switch
 
     return CK_OK;
 }
@@ -124,6 +93,8 @@ int ObjectLoader(const CKBehaviorContext &behcontext)
 {
     CKBehavior *beh = behcontext.Behavior;
     CKContext *ctx = behcontext.Context;
+
+    XObjectArray *oarray = *(XObjectArray **)beh->GetOutputParameterWriteDataPtr(0);
 
     // Loading
     if (beh->IsInputActive(0))
@@ -173,15 +144,16 @@ int ObjectLoader(const CKBehaviorContext &behcontext)
             beh->ActivateOutput(0);
         }
 
-        XObjectArray *oarray = *(XObjectArray **)beh->GetOutputParameterWriteDataPtr(0);
-        oarray->Clear();
+        // Clear previously stored objects (but do not destroy objects; Unload does that)
+        if (oarray)
+            oarray->Clear();
 
         CKLevel *level = behcontext.CurrentLevel;
         CKObject *masterobject = NULL;
 
         CKLevel *loadedLevel = NULL;
 
-        // If there is a level in the Loaded Object
+        // If there is a level in the loaded objects
         for (array->Reset(); !array->EndOfList(); array->Next())
         {
             CKObject *o = array->GetData(ctx);
@@ -216,15 +188,13 @@ int ObjectLoader(const CKBehaviorContext &behcontext)
                 }
             }
 
-            oarray->PushBack(o->GetID());
+            if (oarray)
+                oarray->PushBack(o->GetID());
         }
 
         if (loadedLevel) // If a level is loaded, do a merge
         {
-
             level->Merge(loadedLevel, FALSE);
-            oarray->RemoveObject(loadedLevel);
-            behcontext.Context->DestroyObject(loadedLevel);
         }
         else // else add everything to the level / scene
         {
@@ -251,7 +221,6 @@ int ObjectLoader(const CKBehaviorContext &behcontext)
         }
 
         DeleteCKObjectArray(array);
-        int ocount = oarray->Size();
         beh->SetOutputParameterObject(1, masterobject);
     }
 
@@ -261,9 +230,11 @@ int ObjectLoader(const CKBehaviorContext &behcontext)
         beh->ActivateInput(1, FALSE);
         beh->ActivateOutput(1);
 
-        XObjectArray *oarray = *(XObjectArray **)beh->GetOutputParameterWriteDataPtr(0);
-        ctx->DestroyObjects(oarray->Begin(), oarray->Size());
-        oarray->Clear();
+        if (oarray && oarray->Size() > 0)
+        {
+            ctx->DestroyObjects(oarray->Begin(), oarray->Size());
+            oarray->Clear();
+        }
     }
 
     beh->GetOutputParameter(0)->DataChanged();
