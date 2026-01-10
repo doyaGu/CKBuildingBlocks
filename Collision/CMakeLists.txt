@@ -1,6 +1,8 @@
 # Collision
-
-add_library(Collision SHARED
+aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/Behaviors BEHAVIORS_SRCS)
+aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/Managers MANAGERS_SRCS)
+ckbb_add_module(Collision
+        SOURCES
         CollisionBehaviors.cpp
         CollisionManager.cpp
         CollisionManager.h
@@ -17,12 +19,8 @@ add_library(Collision SHARED
         N3dGraph.h
         CalcCollision.cpp
         CalcCollision.h
-        CollisionBehaviors.rc)
-set_target_properties(Collision PROPERTIES OUTPUT_NAME "Collisions")
-aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/Behaviors COLLISION_BEHAVIORS_SRCS)
-aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/Managers COLLISION_MANAGERS_SRCS)
-target_sources(Collision PRIVATE ${COLLISION_BEHAVIORS_SRCS} ${COLLISION_MANAGERS_SRCS})
-target_include_directories(Collision PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(Collision PRIVATE CK2 VxMath)
-
-install(TARGETS Collision RUNTIME DESTINATION BuildingBlocks)
+        CollisionBehaviors.rc
+        ${BEHAVIORS_SRCS}
+        ${MANAGERS_SRCS}
+        OUTPUT_NAME Collisions
+)

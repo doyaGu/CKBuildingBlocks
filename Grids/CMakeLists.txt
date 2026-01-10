@@ -1,6 +1,7 @@
 # Grids
-
-add_library(Grids SHARED
+aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/Behaviors BEHAVIORS_SRCS)
+ckbb_add_module(Grids
+        SOURCES
         Grids.cpp
         CharacterGridPathFollow.cpp
         ComputePath.h
@@ -31,10 +32,6 @@ add_library(Grids SHARED
         PathProblem.cpp
         PathProblem.h
         PFUtils.h
-        Sliceable.h)
-aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/Behaviors GRIDS_BEHAVIORS_SRCS)
-target_sources(Grids PRIVATE ${GRIDS_BEHAVIORS_SRCS})
-target_include_directories(Grids PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(Grids PRIVATE CK2 VxMath)
-
-install(TARGETS Grids RUNTIME DESTINATION BuildingBlocks)
+        Sliceable.h
+        ${BEHAVIORS_SRCS}
+)
