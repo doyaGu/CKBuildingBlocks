@@ -155,7 +155,6 @@ set(CKBB_ALL_MODULES
         MeshModifiers
         MidiManager
         Narratives
-        ParticlesSystem
         Sounds
         Visuals
         WorldEnvironment
