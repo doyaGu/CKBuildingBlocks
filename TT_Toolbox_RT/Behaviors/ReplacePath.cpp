@@ -69,8 +69,8 @@ int ReplacePath(const CKBehaviorContext &behcontext)
         return CKBR_OK;
     }
 
-    char path1[260];
-    char path2[260];
+    char path1[MAX_PATH];
+    char path2[MAX_PATH];
     strcpy(path1, curDir);
     strcpy(path2, curDir);
     strcat(path1, oldPath);
@@ -83,7 +83,7 @@ int ReplacePath(const CKBehaviorContext &behcontext)
         return CKBR_OK;
     }
 
-    XString pathName(260);
+    XString pathName(MAX_PATH);
     for (int pathIdx = 0; pathIdx < pathCount; ++pathIdx)
     {
         pm->GetPathName(catIdx, pathIdx, pathName);
