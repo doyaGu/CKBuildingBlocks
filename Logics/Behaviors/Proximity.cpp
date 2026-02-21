@@ -124,7 +124,7 @@ CKERROR ProximityCallBack(const CKBehaviorContext &behcontext)
         for (a = 0; a < 4; ++a)
         {
 
-            char *name = A_outputname[a];
+            const char *name = A_outputname[a];
 
             io = beh->GetOutput(b);
             if (!io)

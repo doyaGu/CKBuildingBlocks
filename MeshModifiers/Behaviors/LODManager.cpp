@@ -42,7 +42,7 @@ float CalcInvScreenWidth(CKContext *ctx, CKRenderContext *rc)
 /*****************************************************/
 
 /*-- LOD Options string conversion function --*/
-int LODOptionsStringFunc(CKParameter *p, CKSTRING value, CKBOOL ReadFrom)
+int LODOptionsStringFunc(CKParameter *p, char *value, CKBOOL ReadFrom)
 {
     if (!p)
         return 0;

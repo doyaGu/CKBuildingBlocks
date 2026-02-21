@@ -59,7 +59,7 @@ int ReverseString(const CKBehaviorContext &behcontext)
 
     beh->ActivateInput(0, FALSE);
 
-    CKSTRING string = (CKSTRING)beh->GetInputParameterReadDataPtr(0);
+    char *string = (char*)beh->GetInputParameterReadDataPtr(0);
     int len, i, lim;
     char tmp;
 

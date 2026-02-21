@@ -39,7 +39,7 @@ extern CRITICAL_SECTION  gMidiCS;
 		 return MCIERR_INVALID_FILE;
 	 }
 
-	pSeq->pstrFile=CKStrdup((char *)name);
+	pSeq->pstrFile=CKStrdup(name);
 	return OpenFile();
 }
 

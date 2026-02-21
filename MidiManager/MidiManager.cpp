@@ -239,7 +239,7 @@ MidiManager::GetSoundFileName(void* source)
 	MidiSound* ms = (MidiSound*)source;
 	if (!ms) return NULL;
 
-	return (CKSTRING)ms->GetSoundFileName();
+	return ms->GetSoundFileName();
 }
 
 CKERROR 

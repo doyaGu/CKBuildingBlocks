@@ -100,7 +100,7 @@ int TextDisplay(const CKBehaviorContext &behcontext)
 
     CKSpriteText *tt = (CKSpriteText *)beh->GetLocalParameterObject(0);
 
-    char *string = tt->GetText();
+    const char *string = tt->GetText();
 
     if (beh->IsInputActive(1))
     {

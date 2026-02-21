@@ -42,7 +42,7 @@ PLUGIN_EXPORT int CKGetPluginInfoCount() { return 2; }
 void LayerTypeGetLayerByNameString(CKContext *context, CKParameterOut *res, CKParameterIn *p1, CKParameterIn *p2)
 {
     CKGridManager *gm = (CKGridManager *)context->GetManagerByGuid(GRID_MANAGER_GUID);
-    int layerType = gm->GetTypeFromName((char *)p1->GetReadDataPtr());
+    int layerType = gm->GetTypeFromName((const char *)p1->GetReadDataPtr());
     res->SetValue(&layerType);
 }
 

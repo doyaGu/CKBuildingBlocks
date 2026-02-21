@@ -60,7 +60,7 @@ public:
         CREATED = 4
     };
 
-    CKTextureFont(CKFontManager *fm, CKContext *ctx, char *name);
+    CKTextureFont(CKFontManager *fm, CKContext *ctx, CKSTRING name);
     ~CKTextureFont();
 
     // Font Access

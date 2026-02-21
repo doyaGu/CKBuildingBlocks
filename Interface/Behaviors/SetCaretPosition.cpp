@@ -74,8 +74,8 @@ int SetCaretPosition(const CKBehaviorContext &behcontext)
 
     int count = strlen(string);
 
-    CKSTRING news = new char[2 + count];
-    CKSTRING newp = news;
+    char *news = new char[2 + count];
+    char *newp = news;
 
     // we remove an eventual caret
     CKSTRING s = string;

@@ -3,7 +3,7 @@
 
 static const CKDWORD TEXT_SCISSOR = 4096;
 
-CKTextureFont::CKTextureFont(CKFontManager *fm, CKContext *ctx, char *name)
+CKTextureFont::CKTextureFont(CKFontManager *fm, CKContext *ctx, CKSTRING name)
 {
     // Font Visual Properties
     m_Leading.Set(0.0f, 0.0f);
@@ -1326,7 +1326,7 @@ void CKTextureFont::DrawCKText(CKRenderContext *dev, CKBeObject *obj, CKSTRING s
     LineData ldata;
 
     // Wrapping variables
-    char *lastword = "\n";
+    const char *lastword = "\n";
     int lastlen = 0;
     float lastwidth = 0.0f;
     CKBOOL lastcharacterwasspace = TRUE;
@@ -1689,5 +1689,5 @@ void CKTextureFont::DrawStringEx(CKRenderContext *iRC, const char *iString, cons
     // We update the line width
     pos.x = textzone.left + m_Offset.x;
 
-    DrawString(iRC, (CKSTRING)iString, strlen(iString), pos, textzone, iOptions);
+    DrawString(iRC, iString, strlen(iString), pos, textzone, iOptions);
 }

@@ -130,7 +130,7 @@ protected:
     int m_GridClassificationCatego; // id of the 'Grid Classification" Catego
 
     int m_LayerTypeCount;
-    CKSTRING *m_LayerTypeName;  // Name of layer types (eg: "collision", "rugosity", ...)
+    char **m_LayerTypeName;  // Name of layer types (eg: "collision", "rugosity", ...)
     VxColor *m_LayerTypeColor;  // Associated Color with the Layer Type
     CKGUID *m_AssociatedParam;  // Associated Parameter Type (eg: FLOAT, INT, SOUND, ...)
     int *m_LayerAttributeIndex; // Associated Attribute Index

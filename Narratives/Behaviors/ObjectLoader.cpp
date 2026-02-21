@@ -167,7 +167,7 @@ int ObjectLoader(const CKBehaviorContext &behcontext)
             {
                 if (mastername && *mastername != 0)
                 {
-                    char *objectName = o->GetName();
+                    const char *objectName = o->GetName();
                     if (objectName && !strcmp(objectName, mastername))
                     {
                         masterobject = o;
