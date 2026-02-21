@@ -118,11 +118,11 @@ CKERROR SetMaterialEffectCallback(const CKBehaviorContext &context)
             if (beh->GetInputParameterCount() > 4)
             {
                 CKParameterIn *pIn = beh->GetInputParameter(4);
-                pIn->SetGUID(desc.ParameterType, TRUE, (char *)desc.ParameterDescription.CStr());
+                pIn->SetGUID(desc.ParameterType, TRUE, desc.ParameterDescription.CStr());
             }
             else
             {
-                beh->CreateInputParameter((char *)desc.ParameterDescription.CStr(), desc.ParameterType);
+                beh->CreateInputParameter(desc.ParameterDescription.CStr(), desc.ParameterType);
             }
         }
         else

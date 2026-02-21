@@ -328,7 +328,7 @@ int EditString(const CKBehaviorContext &behcontext)
         }
     }
 
-    char *str = (CKSTRING)local->GetWriteDataPtr();
+    char *str = (char*)local->GetWriteDataPtr();
 
     int size = 32;
     beh->GetLocalParameterValue(LOCAL_MAXSIZE, &size);
@@ -389,7 +389,7 @@ int EditString(const CKBehaviorContext &behcontext)
         beh->GetLocalParameterValue(LOCAL_KEYBREP, &keybrep);
         input->EnableKeyboardRepetition(keybrep);
         beh->ActivateInput(IN_ON, FALSE);
-        char *resetstr = (CKSTRING)beh->GetInputParameterReadDataPtr(PIN_STRING);
+        char *resetstr = (char*)beh->GetInputParameterReadDataPtr(PIN_STRING);
         RemoveAllCaret(resetstr);
         int len = strlen(resetstr);
         if (len < size)
@@ -780,7 +780,7 @@ CKERROR EditStringCB(const CKBehaviorContext &behcontext)
         CKParameterLocal *local = beh->GetLocalParameter(LOCAL_STR);
         if (local)
         {
-            char *lstr = (CKSTRING)local->GetReadDataPtr();
+            char *lstr = (char*)local->GetReadDataPtr();
             if (behcontext.CallbackMessage == CKM_BEHAVIORSETTINGSEDITED)
             {
                 if ((strlen(lstr) + 1) > (size_t)(size + 2))

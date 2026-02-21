@@ -145,7 +145,7 @@ int AddAnimation(const CKBehaviorContext &behcontext)
 							// Does name exactly match ?
 							if ((Length + 3) == BpartLength)
 							{
-								char *NameEnd = part->GetName() + BpartLength - 3;
+								const char *NameEnd = part->GetName() + BpartLength - 3;
 								if ((NameEnd[0] >= '0') && (NameEnd[0] <= '9') &&
 									(NameEnd[1] >= '0') && (NameEnd[1] <= '9') &&
 									(NameEnd[1] >= '0') && (NameEnd[1] <= '9'))

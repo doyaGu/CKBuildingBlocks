@@ -53,7 +53,7 @@ int GetFileNameFromPath(const CKBehaviorContext &behcontext)
 {
     CKBehavior *beh = behcontext.Behavior;
 
-    CKSTRING path = (CKSTRING)beh->GetInputParameterReadDataPtr(0);
+    char *path = (char*)beh->GetInputParameterReadDataPtr(0);
     CKBOOL useSlash = FALSE;
     beh->GetLocalParameterValue(0, &useSlash);
     char sep = (useSlash) ? '/' : '\\';

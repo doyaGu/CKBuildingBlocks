@@ -102,7 +102,7 @@ int CutString(const CKBehaviorContext &behcontext)
         pout->SetValue(NULL, cutlen + 1);
     }
 
-    CKSTRING result = (CKSTRING)pout->GetWriteDataPtr();
+    char *result = (char*)pout->GetWriteDataPtr();
     if (cutstart < 0)
     {
         cutlen += cutstart;

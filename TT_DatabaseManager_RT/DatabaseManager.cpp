@@ -52,7 +52,7 @@ int DatabaseManager::Register(CKSTRING arrayName)
             return 21;
 
     int nameSize = strlen(arrayName) + 1;
-    CKSTRING str = new char[strlen(arrayName) + 1];
+    char *str = new char[strlen(arrayName) + 1];
     strncpy(str, arrayName, nameSize);
     m_ArrayNames.PushBack(str);
     return 1;

@@ -35,7 +35,7 @@ void GridManager::InitData()
     m_RemapCount = 0;
 
     m_LayerTypeCount = 2;
-    m_LayerTypeName = new CKSTRING[2];
+    m_LayerTypeName = new char*[2];
     m_LayerTypeName[0] = new char[20];
     strcpy(m_LayerTypeName[0], "invalid layer type");
     m_LayerTypeName[1] = new char[4];
@@ -275,8 +275,8 @@ int GridManager::RegisterType(CKSTRING TypeName)
     {
 
         //---
-        CKSTRING *tmp1 = new CKSTRING[m_LayerTypeCount + 1];
-        memcpy(tmp1, m_LayerTypeName, sizeof(CKSTRING) * m_LayerTypeCount);
+        char **tmp1 = new char*[m_LayerTypeCount + 1];
+        memcpy(tmp1, m_LayerTypeName, sizeof(char*) * m_LayerTypeCount);
         delete[] m_LayerTypeName;
         m_LayerTypeName = tmp1;
         m_LayerTypeName[m_LayerTypeCount] = NULL;

@@ -39,7 +39,7 @@
 // Struct containing line information for a multi line text
 struct LineData
 {
-    char *string;
+    const char *string;
     int len;
     int nbspace;
     float stringwidth;
@@ -102,7 +102,7 @@ struct TextData
 {
     CK_ID m_Entity;
     int m_FontIndex;
-    CKSTRING m_String;
+    char *m_String;
     CKDWORD m_StringHash;
     Vx2DVector m_Scale;
     CKDWORD m_StartColor;

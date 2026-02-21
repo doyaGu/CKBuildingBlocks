@@ -236,7 +236,7 @@ int InputString(const CKBehaviorContext &behcontext)
     if (!local)
         return CKBR_PARAMETERERROR;
 
-    char *str = (CKSTRING)local->GetWriteDataPtr();
+    char *str = (char*)local->GetWriteDataPtr();
     if (!str)
         return CKBR_PARAMETERERROR;
 
@@ -280,7 +280,7 @@ int InputString(const CKBehaviorContext &behcontext)
         beh->GetLocalParameterValue(LOCAL_KEYBREP, &keybrep);
         input->EnableKeyboardRepetition(keybrep);
         beh->ActivateInput(IN_ON, FALSE);
-        char *resetstr = (CKSTRING)beh->GetInputParameterReadDataPtr(PIN_STRING);
+        char *resetstr = (char*)beh->GetInputParameterReadDataPtr(PIN_STRING);
         if (!resetstr)
             resetstr = (char*)"";
         CKParameterOut *pout = beh->GetOutputParameter(POUT_STRINGWITHOUTCARET);

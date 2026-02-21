@@ -87,13 +87,13 @@ int ListAllCurrentUsedTextures(const CKBehaviorContext &behcontext)
         int slotCount = texture->GetSlotCount();
         for (int slot = 0; slot < slotCount; slot++)
         {
-            char *slotFileName = texture->GetSlotFileName(slot);
+            const char *slotFileName = texture->GetSlotFileName(slot);
             if (slotFileName && slotFileName[0])
             {
                 // Add a new row and set the filename
                 array->InsertRow(-1);
                 int rowIndex = array->GetRowCount() - 1;
-                if (!array->SetElementStringValue(rowIndex, 0, slotFileName))
+                if (!array->SetElementStringValue(rowIndex, 0, const_cast<char *>(slotFileName)))
                 {
                     // If setting failed, remove the row
                     array->RemoveRow(rowIndex);

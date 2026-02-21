@@ -186,7 +186,7 @@ void CKFontManager::SortTextList3D(CKRenderContext *dev)
 }
 
 // Post render callback
-CKFontManager::CKFontManager(CKContext *ctx) : CKBaseManager(ctx, FONT_MANAGER_GUID, (char *)Name)
+CKFontManager::CKFontManager(CKContext *ctx) : CKBaseManager(ctx, FONT_MANAGER_GUID, Name)
 {
 	ctx->RegisterNewManager(this);
 
@@ -1331,8 +1331,8 @@ static CKBOOL BuildTextBatch2D(CKRenderContext *dev, CKBeObject *obj, TextData *
 	LineData ldata;
 
 	// Wrapping variables
-	char *string = td->m_String;
-	char *lastword = "\n";
+	const char *string = td->m_String;
+	const char *lastword = "\n";
 	int lastlen = 0;
 	float lastwidth = 0.0f;
 	CKBOOL lastcharacterwasspace = TRUE;

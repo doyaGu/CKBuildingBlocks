@@ -70,7 +70,7 @@ int GetTextureInfo(const CKBehaviorContext &behcontext)
     if (!texture)
         return CKERR_OUTOFMEMORY;
 
-    char *file = texture->GetMovieFileName();
+    const char *file = texture->GetMovieFileName();
     if (!file)
         file = texture->GetSlotFileName(0);
 

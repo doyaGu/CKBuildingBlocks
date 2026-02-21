@@ -190,7 +190,7 @@ inline void ThreadObjectOBS(CK3dEntity *const CurrentEntity, CK3dEntity *const b
             CKBYTE *vPos = (CKBYTE *)collballface.mesh->GetPositionsPtr(&vStride);
 
             // Ask CK for a block of preallocated memory for our flags
-            unsigned long *vFlags = new unsigned long[vcount];
+            CKDWORD *vFlags = new CKDWORD[vcount];
 
             // we create the box of the sphere, locally to the object
             VxBbox spherebox;

@@ -76,7 +76,7 @@ int LoadString(const CKBehaviorContext &behcontext)
         long size = ftell(file);
         fseek(file, 0, SEEK_SET);
 
-        CKSTRING text = new char[size + 1];
+        char *text = new char[size + 1];
         // we read from the file
         int realcount = 0;
         if (size)

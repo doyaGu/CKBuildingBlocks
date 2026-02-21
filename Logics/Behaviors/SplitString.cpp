@@ -75,7 +75,7 @@ int SplitString(const CKBehaviorContext &behcontext)
     beh->ActivateOutput(0);
 
     // We get the string
-    CKSTRING string = (CKSTRING)beh->GetInputParameterReadDataPtr(0);
+    char *string = (char*)beh->GetInputParameterReadDataPtr(0);
     if (!string)
         return CKBR_OK;
 

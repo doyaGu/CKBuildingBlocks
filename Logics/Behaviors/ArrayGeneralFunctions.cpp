@@ -187,7 +187,7 @@ void ReadInputParameters(CKDataArray *array, CKDataRow *dr, CKBehavior *beh, int
     }
 }
 
-void CreateInputParameter(CKDataArray *array, CKBehavior *beh, int c, int pos, char *pname)
+void CreateInputParameter(CKDataArray *array, CKBehavior *beh, int c, int pos, const char *pname)
 {
     if (c >= array->GetColumnCount())
         return;
@@ -234,7 +234,7 @@ void CreateInputParameter(CKDataArray *array, CKBehavior *beh, int c, int pos, c
     }
 }
 
-void CreateOutputParameter(CKDataArray *array, CKBehavior *beh, int c, int pos, char *pname)
+void CreateOutputParameter(CKDataArray *array, CKBehavior *beh, int c, int pos, const char *pname)
 {
     if (c >= array->GetColumnCount())
         return;
