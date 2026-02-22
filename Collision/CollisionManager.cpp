@@ -399,27 +399,31 @@ CK3dEntity *CollisionManager::GetObstacle(int pos, CKBOOL level)
     CKAttributeManager *attman = m_Context->GetAttributeManager();
     if (level)
     {
-        const XObjectPointerArray &array = attman->GetGlobalAttributeListPtr(m_FixedAttribute);
-        int total = array.Size();
+        const XObjectPointerArray &fixed = attman->GetGlobalAttributeListPtr(m_FixedAttribute);
+        const XObjectPointerArray &moving = attman->GetGlobalAttributeListPtr(m_MovingAttribute);
+        int fixedCount = fixed.Size();
+        int total = fixedCount + moving.Size();
         if (pos >= total)
-        {
-            pos -= total;
-            const XObjectPointerArray &array2 = attman->GetGlobalAttributeListPtr(m_MovingAttribute);
-            return (CK3dEntity *)array2[pos];
-        }
-        return (CK3dEntity *)array[pos];
+            return NULL;
+        if (pos < fixedCount)
+            return (CK3dEntity *)fixed[pos];
+
+        pos -= fixedCount;
+        return (CK3dEntity *)moving[pos];
     }
     else
     {
-        const XObjectPointerArray &array = attman->GetAttributeListPtr(m_FixedAttribute);
-        int total = array.Size();
+        const XObjectPointerArray &fixed = attman->GetAttributeListPtr(m_FixedAttribute);
+        const XObjectPointerArray &moving = attman->GetAttributeListPtr(m_MovingAttribute);
+        int fixedCount = fixed.Size();
+        int total = fixedCount + moving.Size();
         if (pos >= total)
-        {
-            pos -= total;
-            const XObjectPointerArray &array2 = attman->GetAttributeListPtr(m_MovingAttribute);
-            return (CK3dEntity *)array2[pos];
-        }
-        return (CK3dEntity *)array[pos];
+            return NULL;
+        if (pos < fixedCount)
+            return (CK3dEntity *)fixed[pos];
+
+        pos -= fixedCount;
+        return (CK3dEntity *)moving[pos];
     }
     return NULL;
 }
@@ -442,16 +446,23 @@ See also: CollisionManager, CollisionManager::GetFixedObstacleCount
 *************************************************/
 CK3dEntity *CollisionManager::GetFixedObstacle(int pos, CKBOOL level)
 {
+    if (pos < 0)
+        return NULL;
+
     CKAttributeManager *attman = m_Context->GetAttributeManager();
 
     if (level)
     {
         const XObjectPointerArray &array = attman->GetGlobalAttributeListPtr(m_FixedAttribute);
+        if (pos >= array.Size())
+            return NULL;
         return (CK3dEntity *)array[pos];
     }
     else
     {
         const XObjectPointerArray &array = attman->GetAttributeListPtr(m_FixedAttribute);
+        if (pos >= array.Size())
+            return NULL;
         return (CK3dEntity *)array[pos];
     }
     return NULL;
@@ -475,15 +486,22 @@ See also: CollisionManager, CollisionManager::GetMovingObstacleCount
 *************************************************/
 CK3dEntity *CollisionManager::GetMovingObstacle(int pos, CKBOOL level)
 {
+    if (pos < 0)
+        return NULL;
+
     CKAttributeManager *attman = m_Context->GetAttributeManager();
     if (level)
     {
         const XObjectPointerArray &array = attman->GetGlobalAttributeListPtr(m_MovingAttribute);
+        if (pos >= array.Size())
+            return NULL;
         return (CK3dEntity *)array[pos];
     }
     else
     {
         const XObjectPointerArray &array = attman->GetAttributeListPtr(m_MovingAttribute);
+        if (pos >= array.Size())
+            return NULL;
         return (CK3dEntity *)array[pos];
     }
     return NULL;

@@ -380,7 +380,7 @@ CKBOOL CollisionManager::FaceFaceIntersection(CK3dEntity *ent1, CK3dEntity *ent2
         Vx2DVector size;
         sprite->GetSize(size);
         Vx2DVector offset;
-        sprite->GetSize(size);
+        sprite->GetOffset(offset);
         spritepos1[0].x = (-1.0f + offset.x) * size.x;
         spritepos1[0].y = (-1.0f + offset.y) * size.y;
         spritepos1[1].x = (-1.0f + offset.x) * size.x;
@@ -432,7 +432,7 @@ CKBOOL CollisionManager::FaceFaceIntersection(CK3dEntity *ent1, CK3dEntity *ent2
         Vx2DVector size;
         sprite->GetSize(size);
         Vx2DVector offset;
-        sprite->GetSize(size);
+        sprite->GetOffset(offset);
         spritepos2[0].x = (-1.0f + offset.x) * size.x;
         spritepos2[0].y = (-1.0f + offset.y) * size.y;
         spritepos2[1].x = (-1.0f + offset.x) * size.x;
@@ -475,7 +475,7 @@ CKBOOL CollisionManager::FaceFaceIntersection(CK3dEntity *ent1, CK3dEntity *ent2
     intbox2.TransformFrom(lbox2, Mat21);
 
     int max = XMax(vcount1, vcount2);
-    XArray<CKDWORD> memp1(max + vcount1 * 3); // 3 for vector + 1 for vFlags
+    XArray<CKDWORD> memp1(max + vcount2 * 3); // 3 for transformed vectors + vFlags
 
     CKDWORD *avFlags = (CKDWORD *)memp1.Begin();
     VxVector *bvIn1 = (VxVector *)(avFlags + max);

@@ -62,7 +62,7 @@ struct N3DExtent
 
 struct N3DEdge
 {
-    N3DEdge() : m_Successor(-1), m_Active(TRUE), m_Difficulty(0), m_Next(NULL) {};
+    N3DEdge() : m_Successor(-1), m_Active(TRUE), m_Distance(0.0f), m_Difficulty(0), m_Next(NULL) {};
     // state successor
     int m_Successor;
     // activity

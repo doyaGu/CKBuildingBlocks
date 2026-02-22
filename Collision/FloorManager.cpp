@@ -891,8 +891,13 @@ See also:
 *************************************************/
 CK3dEntity *FloorManager::GetFloorObject(int pos)
 {
+    if (pos < 0)
+        return NULL;
+
     CKAttributeManager *attman = m_Context->GetAttributeManager();
     const XObjectPointerArray &floors = attman->GetAttributeListPtr(m_FloorAttribute);
+    if (pos >= floors.Size())
+        return NULL;
 
     return (CK3dEntity *)floors[pos];
 }
