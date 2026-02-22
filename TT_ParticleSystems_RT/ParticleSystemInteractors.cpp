@@ -451,9 +451,15 @@ void ParticleManager::ManageProjector(ParticleEmitter *em, float deltat)
         Vx2DVector size;
         ent->GetSize(size);
 
-        VxColor sprcolor = ent->GetMaterial()->GetDiffuse();
+        CKMaterial *material = ent->GetMaterial();
+        if (!material)
+            continue;
 
-        CKTexture *tex = ent->GetMaterial()->GetTexture();
+        CKTexture *tex = material->GetTexture();
+        if (!tex)
+            continue;
+
+        VxColor sprcolor = material->GetDiffuse();
         float width = (float)tex->GetWidth();
         float height = (float)tex->GetHeight();
 

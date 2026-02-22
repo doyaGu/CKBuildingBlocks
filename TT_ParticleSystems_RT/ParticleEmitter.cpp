@@ -1,5 +1,7 @@
 #include "CKAll.h"
 
+#include <stdio.h>
+
 #include "ParticleEmitter.h"
 #include "ParticleManager.h"
 #include "ParticleSystemRenderCallbacks.h"
@@ -52,7 +54,7 @@ ParticleEmitter::ParticleEmitter(CKContext *ctx, CK_ID entity, char *name)
     m_StartColor.r = 0.6f;
     m_StartColor.g = 0.6f;
     m_StartColor.b = 0.8f;
-    m_StartColor.b = 1.0f;
+    m_StartColor.a = 1.0f;
     m_StartColorVar.r = 0.0f;
     m_StartColorVar.g = 0.0f;
     m_StartColorVar.b = 0.0f;
@@ -716,6 +718,10 @@ void ParticleEmitter::AddParticles()
             {
                 p->m_Life = m_Life;
             }
+            if (p->m_Life <= 0.0f)
+            {
+                p->m_Life = 0.001f;
+            }
             float invlife = 1.0f / p->m_Life;
 
             ////////////////////////
@@ -1024,6 +1030,10 @@ void ParticleEmitter::AddParticles2()
                     {
                         p->m_Life = m_Life;
                     }
+                    if (p->m_Life <= 0.0f)
+                    {
+                        p->m_Life = 0.001f;
+                    }
                     float invlife = 1.0f / p->m_Life;
 
                     ////////////////////////
@@ -1275,6 +1285,10 @@ void ParticleEmitter::AddParticles3()
             else
             {
                 p->m_Life = m_Life;
+            }
+            if (p->m_Life <= 0.0f)
+            {
+                p->m_Life = 0.001f;
             }
             float invlife = 1.0f / p->m_Life;
 
@@ -1583,7 +1597,11 @@ void ParticleEmitter::ReadSettings(CKBehavior *beh)
     if (pl && pl->GetGUID() != CKPGUID_MESSAGE)
     {
         char buffer[256];
-        sprintf(buffer, "Wrong Particle System Version. Please Delete and Reattach : %s on object %s", beh->GetName(), beh->GetOwner()->GetName());
+#ifdef _MSC_VER
+        _snprintf_s(buffer, sizeof(buffer), _TRUNCATE, "Wrong Particle System Version. Please Delete and Reattach : %s on object %s", beh->GetName(), beh->GetOwner()->GetName());
+#else
+        snprintf(buffer, sizeof(buffer), "Wrong Particle System Version. Please Delete and Reattach : %s on object %s", beh->GetName(), beh->GetOwner()->GetName());
+#endif
         m_Context->OutputToConsole(buffer);
         return;
     }

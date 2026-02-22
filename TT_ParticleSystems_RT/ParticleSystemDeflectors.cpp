@@ -371,7 +371,7 @@ void ParticleManager::ManageSphereDeflectors(ParticleEmitter *em, float deltat)
                     intnormal.Normalize();
                     float ps = DotProduct(olddir, intnormal);
                     d = (olddir - (intnormal * ps)) * friction - intnormal * (ps * response * particle->m_Bounce);
-                    particle->pos = intpoint + d * invDeltaTime;
+                    particle->pos = intpoint + d;
                     particle->dir = d * invDeltaTime;
 
                     if (em->m_DeflectorsFlags & PD_IMPACTS)
