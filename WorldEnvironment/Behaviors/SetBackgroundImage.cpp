@@ -65,7 +65,8 @@ int SetBackgroundImage(const CKBehaviorContext &behcontext)
     // Get material
     CKRenderContext *rcontext = behcontext.CurrentRenderContext;
     CKMaterial *mat = rcontext->GetBackgroundMaterial();
-    mat->SetTexture0(texture);
+    if (mat)
+        mat->SetTexture0(texture);
 
     return CKBR_OK;
 }

@@ -159,6 +159,8 @@ int CloudsAround(const CKBehaviorContext &behcontext)
     {
         texture = (CKTexture *)beh->GetInputParameterObject(a);
         mat = mesh->GetFaceMaterial(a * 2);
+        if (!mat)
+            continue;
 
         mat->SetTexture0(texture);
         mat->SetSourceBlend((VXBLEND_MODE)srcblend);
@@ -411,7 +413,7 @@ CKERROR CloudsAroundCallBackObject(const CKBehaviorContext &behcontext)
             return CKBR_PARAMETERERROR;
 
         // remove the object from all scene it was in
-        for (int i = 0; i < efp->cube->GetSceneInCount(); i++)
+        for (int i = efp->cube->GetSceneInCount() - 1; i >= 0; --i)
         {
             CKScene *scene = efp->cube->GetSceneIn(i);
             if (scene)

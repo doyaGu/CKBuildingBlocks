@@ -95,8 +95,6 @@ int SetBackgroundMaterial(const CKBehaviorContext &behcontext)
         mat->SetFillMode(newmat->GetFillMode());
 
         mat->SetShadeMode(newmat->GetShadeMode());
-
-        mat->SetShadeMode(newmat->GetShadeMode());
     }
 
     return CKBR_OK;
