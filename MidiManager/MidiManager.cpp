@@ -11,13 +11,21 @@
 // Constructor
 MidiManager::MidiManager(CKContext *ctx):CKMidiManager(ctx,"Midi Manager")
 {
-  memset(noteState,0,sizeof(noteState));
-  ctx->RegisterNewManager(this);
+	memset(noteState, 0, sizeof(noteState));
+	midiDeviceHandle = 0;
+	midiCurrentDevice = 0;
+	DesiredmidiDevice = 0;
+	midiDeviceIsOpen = FALSE;
+	midiDeviceBBrefcount = 0;
+	InitializeCriticalSection(&m_MidiDataCS);
+	ctx->RegisterNewManager(this);
 }
 
 // Destructor
 MidiManager::~MidiManager()
 {
+	CloseMidiIn();
+	DeleteCriticalSection(&m_MidiDataCS);
 }
 
 
@@ -25,58 +33,83 @@ MidiManager::~MidiManager()
 // Midi Callback Function
 //-----------------------------
 void CALLBACK MidiInProc( HMIDIIN hMidiIn, UINT wMsg, DWORD_PTR dwInstance, DWORD_PTR dwParam1, DWORD_PTR dwParam2 ){
+	(void)hMidiIn;
 
 	MidiManager *mm = (MidiManager *) dwInstance;
-
-	if (!mm->midiDeviceIsOpen)
+	if (!mm || (wMsg != MIM_DATA && wMsg != MIM_MOREDATA))
 		return;
-	
 
-	  midiMessage tmp;
-	  tmp.channel = (BYTE)((dwParam1 & 0x0F));
-	  tmp.command = (BYTE)((dwParam1 & 0xF0) >> 4);
-	  tmp.note = (BYTE)((dwParam1 & 0xFF00) >> 8);
-	  tmp.attack = (BYTE)((dwParam1 & 0xFF0000) >> 16);
-	  tmp.time = (UINT)dwParam2;
-
-	  mm->listFromCallBack.PushBack(tmp);
-
-
-	  if( tmp.command==9 && tmp.attack!=0 ){ // note activated
-		mm->ActivateNote(tmp.note, tmp.channel, TRUE);
+	mm->LockMidiData();
+	if (!mm->midiDeviceIsOpen) {
+		mm->UnlockMidiData();
 		return;
-	  }
-	  if( tmp.command==9 || tmp.command==8 ){ // note deactivated
-		mm->ActivateNote(tmp.note, tmp.channel, FALSE);
-		return;
-	  }
+	}
+		
+
+	midiMessage tmp;
+	tmp.channel = (BYTE)((dwParam1 & 0x0F));
+	tmp.command = (BYTE)((dwParam1 & 0xF0) >> 4);
+	tmp.note = (BYTE)((dwParam1 & 0xFF00) >> 8);
+	tmp.attack = (BYTE)((dwParam1 & 0xFF0000) >> 16);
+	tmp.time = (UINT)dwParam2;
+
+	mm->listFromCallBack.PushBack(tmp);
+
+	if (tmp.command == 9 || tmp.command == 8) {
+		int note = tmp.note;
+		int channel = tmp.channel;
+		if (note < 0) note = 0;
+		if (note > 127) note = 127;
+		if (channel < 0) channel = 0;
+		if (channel > 15) channel = 15;
+
+		int dec = (channel << 4) + (note >> 3);
+		int bit = note & 0x7;
+		if (tmp.command == 9 && tmp.attack != 0) { // note activated
+			mm->noteState[dec] |= 1 << bit;
+		} else { // note deactivated
+			mm->noteState[dec] &= ~(1 << bit);
+		}
+	}
+	mm->UnlockMidiData();
 }
 
 //-------------------
 // Midi Note State
 //-------------------
 void MidiManager::ActivateNote( int note, int channel, CKBOOL state){
-  int notedec = note>>3;
-  int dec = abs( (channel<<4) + notedec );
-  
-  if( dec>=MIDI_MAXNOTES ) dec = MIDI_MAXNOTES-1;
+	if (note < 0) note = 0;
+	if (note > 127) note = 127;
+	if (channel < 0) channel = 0;
+	if (channel > 15) channel = 15;
 
-  if( state ){
-    noteState[dec] |= 1 << (note-(notedec<<3));
-  } else {
-    noteState[dec] &= ~(1 << (note-(notedec<<3)));
-  }
+	int notedec = note >> 3;
+	int dec = (channel << 4) + notedec;
+	int bit = note & 0x7;
+
+	LockMidiData();
+	if (state) {
+		noteState[dec] |= 1 << bit;
+	} else {
+		noteState[dec] &= ~(1 << bit);
+	}
+	UnlockMidiData();
 }
 
 CKBOOL MidiManager::IsNoteActive(int note, int channel){
-  int notedec = note>>3;
-  int dec = abs( (channel<<4) + notedec );
-  
-  if( dec>=MIDI_MAXNOTES ) dec = MIDI_MAXNOTES-1;
+	if (note < 0) note = 0;
+	if (note > 127) note = 127;
+	if (channel < 0) channel = 0;
+	if (channel > 15) channel = 15;
 
-  if( noteState[dec] & (1 << (note-(notedec<<3))) ) return TRUE;
+	int notedec = note >> 3;
+	int dec = (channel << 4) + notedec;
+	int bit = note & 0x7;
 
-  return FALSE;
+	LockMidiData();
+	CKBOOL isActive = (noteState[dec] & (1 << bit)) ? TRUE : FALSE;
+	UnlockMidiData();
+	return isActive;
 }
 
 
@@ -108,84 +141,106 @@ CKERROR MidiManager::OnCKPlay()
 
 CKERROR MidiManager::OnCKInit()
 {
-
-  midiDeviceHandle = 0;
-  midiDeviceIsOpen = FALSE;
-  midiCurrentDevice = 0;
-  DesiredmidiDevice = 0;
+	midiDeviceHandle = 0;
+	midiDeviceIsOpen = FALSE;
+	midiCurrentDevice = 0;
+	DesiredmidiDevice = 0;
 	midiDeviceBBrefcount = 0;
+	LockMidiData();
+	listFromCallBack.Clear();
+	listForBehaviors.Clear();
+	ZeroMemory(&noteState, MIDI_MAXNOTES);
+	UnlockMidiData();
 
-  int midiDeviceCount = midiInGetNumDevs();
-  if( !midiDeviceCount ){
-    m_Context->OutputToConsole("No Midi Device !");
-    return CK_OK;
-  }
+	int midiDeviceCount = midiInGetNumDevs();
+	if( !midiDeviceCount ){
+		m_Context->OutputToConsole("No Midi Device !");
+		return CK_OK;
+	}
 
-  MIDIINCAPS tmp; // get midi devices infos
-  for( int a=0 ; a< midiDeviceCount ; a++ ){
-    midiInGetDevCaps(a, &tmp,sizeof(tmp) );
-  }
+	MIDIINCAPS tmp; // get midi devices infos
+	for( int a=0 ; a< midiDeviceCount ; a++ ){
+		midiInGetDevCaps(a, &tmp,sizeof(tmp) );
+	}
 
-  return CK_OK;
+	return CK_OK;
 }
 
 CKERROR MidiManager::OnCKEnd()
 {
- return CK_OK;
+	return CloseMidiIn();
 }
 
 CKERROR MidiManager::OnCKReset()
 {
-  if (midiDeviceIsOpen )
 	return CloseMidiIn();
-  return CK_OK;
 }
 
 CKERROR MidiManager::CloseMidiIn() {
+	HMIDIIN handle = 0;
+	LockMidiData();
+	handle = midiDeviceHandle;
+	midiDeviceIsOpen = FALSE;
+	midiDeviceHandle = 0;
+	midiCurrentDevice = 0;
+	listFromCallBack.Clear();
+	listForBehaviors.Clear();
+	ZeroMemory(&noteState, MIDI_MAXNOTES);
+	UnlockMidiData();
 
-	if( midiDeviceHandle && midiDeviceIsOpen ){
-		if (midiInStop( midiDeviceHandle )== MMSYSERR_NOERROR) {
-
-			if (midiInClose(midiDeviceHandle) == MMSYSERR_NOERROR) {
-
-				midiDeviceIsOpen = FALSE;
-				return CK_OK;
-			}
-		}
+	if (!handle) {
+		return CK_OK;
 	}
 
-  return CKERR_INVALIDOPERATION;
+	MMRESULT stopResult = midiInStop(handle);
+	MMRESULT resetResult = midiInReset(handle);
+	MMRESULT closeResult = midiInClose(handle);
+
+	if (closeResult == MMSYSERR_NOERROR &&
+		(stopResult == MMSYSERR_NOERROR || stopResult == MMSYSERR_INVALHANDLE) &&
+		(resetResult == MMSYSERR_NOERROR || resetResult == MMSYSERR_INVALHANDLE)) {
+		return CK_OK;
+	}
+
+	return CKERR_INVALIDOPERATION;
 }
 
 CKERROR MidiManager::OpenMidiIn(int DesiredmidiDevice) {
-
-	if(midiDeviceIsOpen) {
+	if (midiDeviceIsOpen) {
 		m_Context->OutputToConsole("Midi Device Already open");
 		return CKERR_INVALIDOPERATION;
 	}
 
-      
-    MMRESULT mr;
-	//midiDeviceHandle = NULL;
-	mr = midiInOpen( &midiDeviceHandle, DesiredmidiDevice, (DWORD_PTR)MidiInProc, (DWORD_PTR)this, CALLBACK_FUNCTION|MIDI_IO_STATUS );
-	
+	UINT midiDeviceCount = midiInGetNumDevs();
+	if (DesiredmidiDevice < 0 || (UINT)DesiredmidiDevice >= midiDeviceCount) {
+		m_Context->OutputToConsole("Invalid Midi Device index");
+		return CKERR_INVALIDPARAMETER;
+	}
 
-    if(!midiDeviceHandle || (mr!=MMSYSERR_NOERROR) )	{
+	HMIDIIN handle = 0;
+	MMRESULT mr = midiInOpen(&handle, DesiredmidiDevice, (DWORD_PTR)MidiInProc, (DWORD_PTR)this, CALLBACK_FUNCTION | MIDI_IO_STATUS);
+	if (!handle || (mr != MMSYSERR_NOERROR)) {
 		m_Context->OutputToConsole("Failed to open Desired Midi Device");
 		return CKERR_INVALIDOPERATION;
 	}
 
-	midiDeviceIsOpen = TRUE;
-	midiCurrentDevice = DesiredmidiDevice;
-    ZeroMemory(&noteState, MIDI_MAXNOTES);
-    mr = midiInStart( midiDeviceHandle );
-	if (mr!=MMSYSERR_NOERROR){
+	mr = midiInStart(handle);
+	if (mr != MMSYSERR_NOERROR) {
+		midiInClose(handle);
 		m_Context->OutputToConsole("Failed to Start Desired Midi Device");
 		return CKERR_INVALIDOPERATION;
 	}
 
+	LockMidiData();
+	midiDeviceHandle = handle;
+	midiDeviceIsOpen = TRUE;
+	midiCurrentDevice = DesiredmidiDevice;
+	ZeroMemory(&noteState, MIDI_MAXNOTES);
+	listFromCallBack.Clear();
+	listForBehaviors.Clear();
+	UnlockMidiData();
+
 	return CK_OK;
-    
 }
 
 CKERROR MidiManager::PostClearAll()
@@ -196,10 +251,11 @@ CKERROR MidiManager::PostClearAll()
 
 CKERROR MidiManager::PreProcess()
 {
-  listFromCallBack.Swap(listForBehaviors);
-  
+	LockMidiData();
+	listFromCallBack.Swap(listForBehaviors);
+	UnlockMidiData();
 
-  return CK_OK;
+	return CK_OK;
 }
 
 CKERROR MidiManager::PostProcess()
@@ -275,15 +331,15 @@ MidiManager::Pause(void* source,CKBOOL pause)
 	MidiSound* ms = (MidiSound*)source;
 	if (!ms) return CKERR_INVALIDPARAMETER;
 
-	return ms->Pause();
+	return pause ? ms->Pause() : ms->Restart();
 }
 
 CKBOOL 
 MidiManager::IsPlaying(void* source) 
 {
 	MidiSound* ms = (MidiSound*)source;
-	if (!ms) return CKERR_INVALIDPARAMETER;
-	
+	if (!ms) return FALSE;
+		
 	return ms->IsPlaying();
 }
 
@@ -291,8 +347,8 @@ CKBOOL
 MidiManager::IsPaused(void* source) 
 {
 	MidiSound* ms = (MidiSound*)source;
-	if (!ms) return CKERR_INVALIDPARAMETER;
-	
+	if (!ms) return FALSE;
+		
 	return ms->IsPaused();
 }
 
@@ -305,7 +361,7 @@ MidiManager::Create(void* hwnd)
 void	
 MidiManager::Release(void* source) 
 {
-	delete source;
+	delete (MidiSound*)source;
 }
 
 CKERROR 

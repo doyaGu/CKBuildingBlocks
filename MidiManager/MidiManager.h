@@ -72,13 +72,16 @@ public :
 	~MidiManager();
 
   //----- Midi Methodes
-  void ActivateNote( int note, int channel, CKBOOL state=TRUE);
-  CKBOOL IsNoteActive( int note, int channel );
-  CKERROR OpenMidiIn(int);	//Try to open the midi device passed as paramter
-  CKERROR CloseMidiIn();
+	  void ActivateNote( int note, int channel, CKBOOL state=TRUE);
+	  CKBOOL IsNoteActive( int note, int channel );
+	  CKERROR OpenMidiIn(int);	//Try to open the midi device passed as paramter
+	  CKERROR CloseMidiIn();
+
+	  inline void LockMidiData() { EnterCriticalSection(&m_MidiDataCS); }
+	  inline void UnlockMidiData() { LeaveCriticalSection(&m_MidiDataCS); }
 	
 	inline void AddMidiBBref(){ ++midiDeviceBBrefcount; }
-	inline void RemoveMidiBBref(){ --midiDeviceBBrefcount; }
+	inline void RemoveMidiBBref(){ if (midiDeviceBBrefcount > 0) --midiDeviceBBrefcount; }
 
 
 public:
@@ -93,7 +96,10 @@ public:
   midiMessageList listForBehaviors;
 
 #define MIDI_MAXNOTES 256
-  unsigned char noteState[MIDI_MAXNOTES]; // nb of channels * nb of note = 16 * 128 = 2048 bits = 256 bytes
+	  unsigned char noteState[MIDI_MAXNOTES]; // nb of channels * nb of note = 16 * 128 = 2048 bits = 256 bytes
+
+private:
+	  CRITICAL_SECTION m_MidiDataCS;
 
 };
 

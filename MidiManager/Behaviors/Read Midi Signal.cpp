@@ -120,21 +120,23 @@ int ReadMidiSignal(const CKBehaviorContext& behcontext)
 
     }
   //_____________________________________________
-  } else { // we are interested by every commands
-    XListIt<midiMessage> it;
-    for( it = mm->listForBehaviors.Begin() ; it!=mm->listForBehaviors.End() ; it++ ){
-      if( command = (*it).command ){
-        note = (*it).note;
-        attack = (*it).attack;
-        beh->SetOutputParameterValue(0, &note);
-        beh->SetOutputParameterValue(1, &attack);
-        beh->SetOutputParameterValue(2, &command);
-        beh->ActivateOutput(0);
-        return CKBR_ACTIVATENEXTFRAME;
-      }
-    }
-    
-  }
+	  } else { // we are interested by every commands
+	    XListIt<midiMessage> it;
+	    for( it = mm->listForBehaviors.Begin() ; it!=mm->listForBehaviors.End() ; it++ ){
+	      if( (*it).channel!=channel ){
+	        continue;
+	      }
+	      command = (*it).command;
+	      note = (*it).note;
+	      attack = (*it).attack;
+	      beh->SetOutputParameterValue(0, &note);
+	      beh->SetOutputParameterValue(1, &attack);
+	      beh->SetOutputParameterValue(2, &command);
+	      beh->ActivateOutput(0);
+	      return CKBR_ACTIVATENEXTFRAME;
+	    }
+	    
+	  }
   
   return CKBR_ACTIVATENEXTFRAME;
 }

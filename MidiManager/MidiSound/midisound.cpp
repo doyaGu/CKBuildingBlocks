@@ -34,12 +34,31 @@ extern CRITICAL_SECTION  gMidiCS;
 
 // Fichier de son associe
  MMRESULT MidiSound::SetSoundFileName(const char * name) {
-	 if (name==NULL) {
-		 return MCIERR_INVALID_FILE;
-	 }
+    if (!pSeq) {
+        return MCIERR_OUT_OF_MEMORY;
+    }
+    if (name==NULL) {
+        return MCIERR_INVALID_FILE;
+    }
 
-	pSeq->pstrFile=CKStrdup(name);
-	return OpenFile();
+    if (pSeq->uState != SEQ_S_NOFILE) {
+        if (pSeq->uState != SEQ_S_OPENED) {
+            Stop();
+        }
+        if (pSeq->uState == SEQ_S_OPENED) {
+            CloseFile();
+        }
+    }
+
+    if (pSeq->pstrFile) {
+        delete[] pSeq->pstrFile;
+        pSeq->pstrFile = NULL;
+    }
+    pSeq->pstrFile=CKStrdup(name);
+    if (!pSeq->pstrFile) {
+        return MCIERR_OUT_OF_MEMORY;
+    }
+    return OpenFile();
 }
 
  const char* MidiSound::GetSoundFileName() {
@@ -983,13 +1002,17 @@ static MMRESULT  XlatSMFErr(SMFRESULT smfrc)
 }
 
 MidiSound::~MidiSound() {
-	Stop();
-	if (pSeq->pstrFile)
-		delete pSeq->pstrFile;
-	pSeq->pstrFile=NULL;
-	FreeBuffers();
-	LocalFree(pSeq);
+    if (!pSeq) {
+        return;
+    }
+    Stop();
+    if (pSeq->uState == SEQ_S_OPENED) {
+        CloseFile();
+    }
+    if (pSeq->pstrFile)
+        delete[] pSeq->pstrFile;
+    pSeq->pstrFile=NULL;
+    FreeBuffers();
+    LocalFree(pSeq);
+    pSeq = NULL;
 }
-
-
-
