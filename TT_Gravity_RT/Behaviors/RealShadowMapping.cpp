@@ -94,6 +94,8 @@ int RealShadowMapping(const CKBehaviorContext &behcontext)
 {
     CKBehavior *beh = behcontext.Behavior;
     CKRenderContext *dev = behcontext.CurrentRenderContext;
+    if (!dev)
+        return CKBR_PARAMETERERROR;
 
     if (!beh->GetTarget())
         return CKBR_OWNERERROR;
@@ -123,6 +125,8 @@ CKERROR RealShadowMappingCallBack(const CKBehaviorContext &behcontext)
         // creation of a CkMaterial
         CKMaterial *mat = (CKMaterial *)ctx->CreateObject(CKCID_MATERIAL, "SimpleShadow Material",
                                                           beh->IsDynamic() ? CK_OBJECTCREATION_DYNAMIC : CK_OBJECTCREATION_NONAMECHECK);
+        if (!mat)
+            return CKERR_OUTOFMEMORY;
         mat->SetEmissive(VxColor(255, 255, 255));
         mat->SetDiffuse(VxColor(255, 255, 255, 255));
         mat->SetSpecular(VxColor(0, 0, 0));
@@ -136,14 +140,19 @@ CKERROR RealShadowMappingCallBack(const CKBehaviorContext &behcontext)
         tss.matID = CKOBJID(mat);
         tss.texID = -1;
         tss.nb_floors_under = 0;
-        memset(tss.floor, 0, A_MAX_NUMBER_OF_FLOOR_UNDER_OBJECT * sizeof(CK_ID));
+        memset(tss.floor, 0, sizeof(tss.floor));
 
         beh->SetLocalParameterValue(0, &tss, sizeof(RealShadowStruct));
+
+        CKBOOL active = FALSE;
+        beh->SetLocalParameterValue(1, &active);
     }
     break;
     case CKM_BEHAVIORDETACH:
     {
         RealShadowStruct *tss = (RealShadowStruct *)beh->GetLocalParameterWriteDataPtr(0);
+        if (!tss)
+            return CK_OK;
 
         CKMaterial *mat = (CKMaterial *)ctx->GetObject(tss->matID);
         if (!mat)
@@ -160,6 +169,8 @@ CKERROR RealShadowMappingCallBack(const CKBehaviorContext &behcontext)
     case CKM_BEHAVIORDEACTIVATESCRIPT:
     {
         RealShadowStruct *tss = (RealShadowStruct *)beh->GetLocalParameterWriteDataPtr(0);
+        if (!tss)
+            return CK_OK;
 
         CKMaterial *mat = (CKMaterial *)ctx->GetObject(tss->matID);
         if (mat)
@@ -174,15 +185,18 @@ CKERROR RealShadowMappingCallBack(const CKBehaviorContext &behcontext)
 void RealShadowMappingRenderCallBack(CKRenderContext *dev, void *arg)
 {
     CKBehavior *beh = (CKBehavior *)arg;
+    if (!beh)
+        return;
     CKContext *context = dev->GetCKContext();
 
     CKBOOL active = FALSE;
     beh->GetLocalParameterValue(1, &active);
-    CK3dEntity *ent = (CK3dEntity*)beh->GetTarget();
-    if (!ent)
-        active = TRUE;
+    CK3dEntity *ent = (CK3dEntity *)beh->GetTarget();
 
     RealShadowStruct *tss = (RealShadowStruct *)beh->GetLocalParameterWriteDataPtr(0);
+    if (!tss)
+        return;
+    CKMaterial *mat = (CKMaterial *)context->GetObject(tss->matID);
 
     //////////////////////////////////////////////////
     //  We get the Floors that WERE under the object
@@ -190,22 +204,23 @@ void RealShadowMappingRenderCallBack(CKRenderContext *dev, void *arg)
     int old_nb_floors_under = tss->nb_floors_under;
 
 #if CKVERSION == 0x13022002
-    CKMemoryPool memoryPool(context, old_nb_floors_under);
+    CKMemoryPool memoryPool(context, old_nb_floors_under * sizeof(CK_ID));
     CK_ID *old_floor = (CK_ID *)memoryPool.Mem();
 #else
-    VxScratch memoryPool(old_nb_floors_under * sizeof(float));
-    CK_ID* old_floor = (CK_ID*)memoryPool.Mem();
+    VxScratch memoryPool(old_nb_floors_under * sizeof(CK_ID));
+    CK_ID *old_floor = (CK_ID *)memoryPool.Mem();
 #endif
 
-    memcpy(old_floor, tss->floor, old_nb_floors_under * sizeof(CK_ID));
-
-    CKMaterial *mat = (CKMaterial *)context->GetObject(tss->matID);
+    for (int i = 0; i < old_nb_floors_under; ++i)
+        old_floor[i] = tss->floor[i].id;
 
     if (beh->IsInputActive(1))
     {
         beh->ActivateInput(1, FALSE);
         beh->ActivateOutput(1, TRUE);
-        A_Delete_SoftShadow_From_Floors(tss->floor, mat, tss->nb_floors_under);
+        if (mat)
+            A_Delete_SoftShadow_From_Floors(tss->floor, mat, tss->nb_floors_under);
+        tss->nb_floors_under = 0;
         active = TRUE;
     }
 
@@ -214,6 +229,15 @@ void RealShadowMappingRenderCallBack(CKRenderContext *dev, void *arg)
         beh->ActivateInput(0, FALSE);
         beh->ActivateOutput(0, TRUE);
         active = FALSE;
+    }
+
+    if (active || !ent || !mat)
+    {
+        if (mat && tss->nb_floors_under > 0)
+            A_Delete_SoftShadow_From_Floors(tss->floor, mat, tss->nb_floors_under);
+        tss->nb_floors_under = 0;
+        beh->SetLocalParameterValue(1, &active);
+        return;
     }
 
     // we get the input texture id
@@ -261,6 +285,8 @@ void RealShadowMappingRenderCallBack(CKRenderContext *dev, void *arg)
         if (out)
         {
             o = (CK3dEntity *)context->GetObject(old_floor[a]);
+            if (!o)
+                continue;
             if (CKIsChildClassOf(o, CKCID_3DENTITY))
             {
                 dMesh = (CKMesh *)o->GetCurrentMesh();
@@ -287,6 +313,8 @@ void RealShadowMappingRenderCallBack(CKRenderContext *dev, void *arg)
     for (int a = 0; a < tss->nb_floors_under; a++)
     {
         o = (CK3dEntity *)context->GetObject(floor[a].id);
+        if (!o)
+            continue;
         VxVector floorPos;
         o->GetPosition(&floorPos);
         if (CKIsChildClassOf(o, CKCID_3DENTITY))
@@ -323,12 +351,14 @@ void RealShadowMappingRenderCallBack(CKRenderContext *dev, void *arg)
             }
         }
     }
-
-    beh->SetLocalParameterValue(0, &tss);
+    beh->SetLocalParameterValue(1, &active);
 }
 
 void A_GetFloors(RealShadowStruct *tss, CK3dEntity *ent, CKBehavior *beh)
 {
+    if (!tss || !ent || !beh)
+        return;
+
     CKContext *context = beh->GetCKContext();
 
     VxVector light;
@@ -338,9 +368,13 @@ void A_GetFloors(RealShadowStruct *tss, CK3dEntity *ent, CKBehavior *beh)
     beh->GetInputParameterValue(2, &size);
 
     CKFloorManager *FloorManager = (CKFloorManager *)context->GetManagerByGuid(FLOOR_MANAGER_GUID);
+    if (!FloorManager)
+        return;
     int floorAttribute = FloorManager->GetFloorAttribute();
 
     CKAttributeManager *attman = beh->m_Context->GetAttributeManager();
+    if (!attman)
+        return;
     const XObjectPointerArray &floor_objects = attman->GetGlobalAttributeListPtr(floorAttribute);
 
     VxVector objPos;
@@ -394,6 +428,8 @@ void A_GetFloors(RealShadowStruct *tss, CK3dEntity *ent, CKBehavior *beh)
                     {
                         float y1 = light.y - floorPos.y;
                         float y2 = light.y - objPos.y;
+                        if (fabsf(y2) < 1e-6f)
+                            continue;
                         vector[0].x = light.x + (objPos.x - floorPos.x) * y1 / y2;
                         vector[0].y = floorPos.y;
                         vector[0].z = light.z + (objPos.z - floorPos.z) * y1 / y2;
@@ -415,6 +451,8 @@ void A_GetFloors(RealShadowStruct *tss, CK3dEntity *ent, CKBehavior *beh)
                 {
                     float y1 = light.y - tmp_y;
                     float y2 = light.y - objPos.y;
+                    if (fabsf(y2) < 1e-6f)
+                        continue;
                     vector[i].x = light.x + (objPos.x - floorPos.x) * y1 / y2;
                     vector[i].y = tmp_y;
                     vector[i].z = light.z + (objPos.z - floorPos.z) * y1 / y2;

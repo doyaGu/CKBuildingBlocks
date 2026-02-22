@@ -70,9 +70,13 @@ int TextureSine(const CKBehaviorContext &behcontext)
     float velocity = 1.0f;
     beh->GetInputParameterValue(2, &velocity);
 
-    VxUV *savedUV = (VxUV *)beh->GetLocalParameterReadDataPtr(0);
-
     CKMesh *mesh = (CKMesh *)beh->GetTarget();
+    if (!mesh)
+        return CKBR_OWNERERROR;
+
+    VxUV *savedUV = (VxUV *)beh->GetLocalParameterReadDataPtr(0);
+    if (!savedUV)
+        return CKBR_PARAMETERERROR;
 
     int channel = -1;
     beh->GetInputParameterValue(3, &channel);
@@ -87,6 +91,8 @@ int TextureSine(const CKBehaviorContext &behcontext)
     CKDWORD stride;
     VxUV *uvarray = (VxUV *)mesh->GetModifierUVs(&stride, channel);
     int nbvert = mesh->GetModifierUVCount(channel);
+    if (!uvarray || nbvert <= 0)
+        return CKBR_PARAMETERERROR;
 
     float time;
     beh->GetLocalParameterValue(1, &time);
@@ -101,7 +107,7 @@ int TextureSine(const CKBehaviorContext &behcontext)
     mesh->ModifierUVMove();
 
     time += behcontext.DeltaTime * 0.001f;
-    if (time * velocity > 2 * PI)
+    if (velocity != 0.0f && fabsf(time * velocity) > 2 * PI)
         time -= (2 * PI / velocity);
     beh->SetLocalParameterValue(1, &time);
 
@@ -126,6 +132,8 @@ CKERROR TextureSineCallBack(const CKBehaviorContext &behcontext)
         CKDWORD Stride;
         VxUV *uvarray = (VxUV *)mesh->GetModifierUVs(&Stride);
         int nbvert = mesh->GetModifierUVCount();
+        if (!uvarray || nbvert <= 0)
+            return CKBR_OK;
 
         VxUV *savedUV;
         savedUV = new VxUV[nbvert];
@@ -152,6 +160,8 @@ CKERROR TextureSineCallBack(const CKBehaviorContext &behcontext)
         CKDWORD Stride;
         VxUV *uvarray = (VxUV *)mesh->GetModifierUVs(&Stride);
         int nbvert = mesh->GetModifierUVCount();
+        if (!uvarray || nbvert <= 0)
+            return CKBR_OK;
 
         VxUV *savePos = (VxUV *)beh->GetLocalParameterWriteDataPtr(0);
         if (!savePos)

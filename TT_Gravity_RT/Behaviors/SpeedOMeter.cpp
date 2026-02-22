@@ -72,6 +72,8 @@ int SpeedOMeter(const CKBehaviorContext &behcontext)
     float delta = behcontext.DeltaTime;
     if (loopFrameDelay > 1)
         delta *= loopFrameDelay;
+    if (delta <= 0.0f)
+        delta = 1.0f;
 
     VxVector lastPos;
     beh->GetLocalParameterValue(0, &lastPos);
