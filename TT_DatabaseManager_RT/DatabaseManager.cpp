@@ -1,10 +1,18 @@
 #include "DatabaseManager.h"
 
 #include <io.h>
+#include <limits.h>
 #include <string.h>
 #include <sys/stat.h>
 
 #include "CKAll.h"
+
+struct ArrayHeader
+{
+    int columnCount;
+    int rowCount;
+    int keyColumn;
+};
 
 static inline unsigned char rotl8(unsigned char val, int shift)
 {
@@ -18,12 +26,36 @@ static inline unsigned char rotr8(unsigned char val, int shift)
     return (val >> shift) | (val << (8 - shift));
 }
 
-struct ArrayHeader
+static bool ReadInt32At(const char *buffer, int bufferSize, int offset, int *outValue)
 {
-    int columnCount;
-    int rowCount;
-    int keyColumn;
-};
+    if (!buffer || !outValue || offset < 0 || offset > bufferSize - (int)sizeof(int))
+        return false;
+
+    memcpy(outValue, buffer + offset, sizeof(int));
+    return true;
+}
+
+static bool ReadFloatAt(const char *buffer, int bufferSize, int offset, float *outValue)
+{
+    if (!buffer || !outValue || offset < 0 || offset > bufferSize - (int)sizeof(float))
+        return false;
+
+    memcpy(outValue, buffer + offset, sizeof(float));
+    return true;
+}
+
+static bool FindNullTerminatedSize(const char *buffer, int bufferSize, int offset, int *outSize)
+{
+    if (!buffer || !outSize || offset < 0 || offset >= bufferSize)
+        return false;
+
+    const void *nullPos = memchr(buffer + offset, '\0', (size_t)(bufferSize - offset));
+    if (!nullPos)
+        return false;
+
+    *outSize = (int)((const char *)nullPos - (buffer + offset)) + 1;
+    return true;
+}
 
 DatabaseManager::DatabaseManager(CKContext *context)
     : CKBaseManager(context, TT_DATABASE_MANAGER_GUID, "TT Database Manager"),
@@ -83,7 +115,7 @@ int DatabaseManager::Load(CKContext *context, bool autoRegister, CKSTRING arrayN
         return 33;
     }
 
-    if (!m_Filename)
+    if (!m_Filename || m_Filename[0] == '\0')
     {
         context->OutputToConsoleExBeep("TT_LoadDatabase: database filename is NULL (arrayName='%s')", arrayName);
         return 31;
@@ -96,19 +128,35 @@ int DatabaseManager::Load(CKContext *context, bool autoRegister, CKSTRING arrayN
         return 31;
     }
 
-    fseek(fp, 0, SEEK_END);
-    long fileSize = ftell(fp);
+    if (fseek(fp, 0, SEEK_END) != 0)
+    {
+        fclose(fp);
+        return 31;
+    }
+
+    long fileSizeLong = ftell(fp);
+    if (fileSizeLong <= 0 || fileSizeLong > INT_MAX)
+    {
+        fclose(fp);
+        return 33;
+    }
+
+    int fileSize = (int)fileSizeLong;
     rewind(fp);
 
     char *fileData = new char[fileSize];
+    if (!fileData)
+    {
+        fclose(fp);
+        return 31;
+    }
 
-    fread(fileData, fileSize, sizeof(char), fp);
+    size_t readSize = fread(fileData, sizeof(char), fileSize, fp);
     fclose(fp);
-
-    if (fileSize <= 0)
+    if (readSize != (size_t)fileSize)
     {
         delete[] fileData;
-        return 33;
+        return 31;
     }
 
     if (m_Crypted)
@@ -121,19 +169,44 @@ int DatabaseManager::Load(CKContext *context, bool autoRegister, CKSTRING arrayN
     int arraySize = 0;
     int chunkSize = 0;
     int pos = 0;
-    char *chunk;
-    for (chunk = fileData; strcmp(chunk, arrayName) != 0; chunk += chunkSize)
+    char *chunk = nullptr;
+    while (pos < fileSize)
     {
-        if (pos >= fileSize)
+        if (!FindNullTerminatedSize(fileData, fileSize, pos, &nameSize))
         {
             delete[] fileData;
-            return 33;
+            return 32;
         }
 
-        nameSize = (int)strlen(chunk) + 1;
-        arraySize = *(int *)&chunk[nameSize];
+        if (!ReadInt32At(fileData, fileSize, pos + nameSize, &arraySize))
+        {
+            delete[] fileData;
+            return 32;
+        }
+
+        if (arraySize < 0)
+        {
+            delete[] fileData;
+            return 32;
+        }
+
         chunkSize = nameSize + sizeof(int) + arraySize;
+        if (chunkSize <= 0 || chunkSize > (fileSize - pos))
+        {
+            delete[] fileData;
+            return 32;
+        }
+
+        chunk = &fileData[pos];
+        if (strcmp(chunk, arrayName) == 0)
+            break;
+
         pos += chunkSize;
+    }
+    if (pos >= fileSize || !chunk || strcmp(chunk, arrayName) != 0)
+    {
+        delete[] fileData;
+        return 33;
     }
 
     CKDataArray *array = (CKDataArray *)context->GetObjectByNameAndClass(chunk, CKCID_DATAARRAY);
@@ -145,24 +218,38 @@ int DatabaseManager::Load(CKContext *context, bool autoRegister, CKSTRING arrayN
     }
 
     array->Clear();
-    for (c = array->GetColumnCount(); c >= 0; --c)
+    for (c = array->GetColumnCount() - 1; c >= 0; --c)
         array->RemoveColumn(c);
 
     if (autoRegister)
         Register(arrayName);
 
-    nameSize = (int)strlen(chunk) + 1;
-    arraySize = *(int *)&chunk[nameSize];
-    char *arrayData = new char[arraySize];
-    memcpy(arrayData, &chunk[nameSize + sizeof(int)], arraySize);
+    if (!FindNullTerminatedSize(chunk, fileSize - pos, 0, &nameSize))
+    {
+        delete[] fileData;
+        return 32;
+    }
+    if (!ReadInt32At(chunk, fileSize - pos, nameSize, &arraySize))
+    {
+        delete[] fileData;
+        return 32;
+    }
+    if (arraySize < (int)sizeof(ArrayHeader) ||
+        nameSize + (int)sizeof(int) > (fileSize - pos) ||
+        arraySize > (fileSize - pos) - (nameSize + (int)sizeof(int)))
+    {
+        delete[] fileData;
+        return 32;
+    }
 
-    ArrayHeader header = *(ArrayHeader *)&arrayData[0];
+    char *arrayData = &chunk[nameSize + sizeof(int)];
+    ArrayHeader header;
+    memcpy(&header, arrayData, sizeof(ArrayHeader));
     if (header.columnCount < 0 ||
         header.rowCount < 0 ||
         header.keyColumn < -1 ||
         header.keyColumn >= header.columnCount)
     {
-        delete[] arrayData;
         delete[] fileData;
         return 32;
     }
@@ -170,8 +257,19 @@ int DatabaseManager::Load(CKContext *context, bool autoRegister, CKSTRING arrayN
     int offset = sizeof(ArrayHeader);
     for (c = 0; c < header.columnCount; ++c)
     {
+        int colNameSize = 0;
+        if (!FindNullTerminatedSize(arrayData, arraySize, offset, &colNameSize))
+        {
+            delete[] fileData;
+            return 32;
+        }
+        if (offset > arraySize - colNameSize - (int)sizeof(CK_ARRAYTYPE))
+        {
+            delete[] fileData;
+            return 32;
+        }
+
         CKSTRING colName = (CKSTRING)&arrayData[offset];
-        int colNameSize = (int)strlen(colName) + 1;
         CK_ARRAYTYPE type = *(CK_ARRAYTYPE *)&arrayData[offset + colNameSize];
         switch (type)
         {
@@ -185,7 +283,8 @@ int DatabaseManager::Load(CKContext *context, bool autoRegister, CKSTRING arrayN
             array->InsertColumn(-1, CKARRAYTYPE_STRING, colName);
             break;
         default:
-            break;
+            delete[] fileData;
+            return 32;
         }
         offset += colNameSize + sizeof(CK_ARRAYTYPE);
     }
@@ -204,22 +303,37 @@ int DatabaseManager::Load(CKContext *context, bool autoRegister, CKSTRING arrayN
             {
             case CKARRAYTYPE_INT:
             {
-                int value = *(int *)&arrayData[offset];
+                int value = 0;
+                if (!ReadInt32At(arrayData, arraySize, offset, &value))
+                {
+                    delete[] fileData;
+                    return 32;
+                }
                 offset += sizeof(int);
                 array->SetElementValue(i, c, &value, sizeof(int));
             }
             break;
             case CKARRAYTYPE_FLOAT:
             {
-                float value = *(float *)&arrayData[offset];
+                float value = 0.0f;
+                if (!ReadFloatAt(arrayData, arraySize, offset, &value))
+                {
+                    delete[] fileData;
+                    return 32;
+                }
                 offset += sizeof(float);
                 array->SetElementValue(i, c, &value, sizeof(float));
             }
             break;
             case CKARRAYTYPE_STRING:
             {
+                int size = 0;
+                if (!FindNullTerminatedSize(arrayData, arraySize, offset, &size))
+                {
+                    delete[] fileData;
+                    return 32;
+                }
                 char *str = (char *)&arrayData[offset];
-                int size = (int)strlen(str) + 1;
                 char *nstr = new char[size];
                 strncpy(nstr, str, size);
                 offset += size;
@@ -228,18 +342,27 @@ int DatabaseManager::Load(CKContext *context, bool autoRegister, CKSTRING arrayN
             }
             break;
             default:
-                break;
+                delete[] fileData;
+                return 32;
             }
         }
     }
 
-    delete[] arrayData;
+    if (offset > arraySize)
+    {
+        delete[] fileData;
+        return 32;
+    }
+
     delete[] fileData;
     return 1;
 }
 
 int DatabaseManager::Save(CKContext *context)
 {
+    if (!m_Filename || m_Filename[0] == '\0')
+        return 41;
+
     int n, i, c;
     int fileSize = 0;
     char *fileData = NULL;
@@ -249,7 +372,10 @@ int DatabaseManager::Save(CKContext *context)
     {
         CKDataArray *array = (CKDataArray *)context->GetObjectByNameAndClass(m_ArrayNames[n], CKCID_DATAARRAY);
         if (!array)
+        {
+            delete[] fileData;
             return 42;
+        }
 
         int chunkSize = 0;
         CKSTRING arrayName = array->GetName();
@@ -307,6 +433,7 @@ int DatabaseManager::Save(CKContext *context)
         else
         {
             nameLength = 0;
+            chunk[offset] = '\0';
         }
         offset += nameLength + 1;
 
@@ -333,6 +460,7 @@ int DatabaseManager::Save(CKContext *context)
             else
             {
                 nameLength = 0;
+                chunk[offset] = '\0';
             }
             offset += nameLength + 1;
 
@@ -375,6 +503,7 @@ int DatabaseManager::Save(CKContext *context)
                     else
                     {
                         nameLength = 0;
+                        chunk[offset] = '\0';
                     }
                     offset += nameLength + 1;
                 }
@@ -412,25 +541,45 @@ int DatabaseManager::Save(CKContext *context)
     }
 
     struct _stat buf;
-    _stat(m_Filename, &buf);
+    int statRes = _stat(m_Filename, &buf);
 
-    bool readable = (buf.st_mode & _S_IREAD) != 0;
-    bool writable = (buf.st_mode & _S_IWRITE) != 0;
+    bool readable = false;
+    bool writable = false;
+    if (statRes == 0)
+    {
+        readable = (buf.st_mode & _S_IREAD) != 0;
+        writable = (buf.st_mode & _S_IWRITE) != 0;
+        _chmod(m_Filename, _S_IREAD | _S_IWRITE);
+    }
 
-    _chmod(m_Filename, _S_IREAD | _S_IWRITE);
     FILE *fp = fopen(m_Filename, "wb");
     if (!fp)
+    {
+        if (statRes == 0)
+        {
+            if (readable && writable)
+                _chmod(m_Filename, _S_IREAD | _S_IWRITE);
+            else if (readable)
+                _chmod(m_Filename, _S_IREAD);
+            else if (writable)
+                _chmod(m_Filename, _S_IWRITE);
+        }
+        delete[] fileData;
         return 41;
+    }
 
     fwrite(fileData, fileSize, sizeof(char), fp);
     fclose(fp);
 
-    if (readable)
-        _chmod(m_Filename, _S_IREAD);
-    else if (writable)
-        _chmod(m_Filename, _S_IWRITE);
-    else if (readable && writable)
-        _chmod(m_Filename, _S_IREAD | _S_IWRITE);
+    if (statRes == 0)
+    {
+        if (readable && writable)
+            _chmod(m_Filename, _S_IREAD | _S_IWRITE);
+        else if (readable)
+            _chmod(m_Filename, _S_IREAD);
+        else if (writable)
+            _chmod(m_Filename, _S_IWRITE);
+    }
 
     delete[] fileData;
     return 1;
