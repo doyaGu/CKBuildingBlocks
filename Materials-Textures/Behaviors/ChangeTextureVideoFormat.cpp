@@ -5,7 +5,8 @@
 
 #define CKPGUID_TEXTUREVIDEOFORMAT CKGUID(0x2c1e5d83, 0x37b9284b)
 
-VX_PIXELFORMAT CHTVFAllPixelFormats[14] = {_32_ARGB8888, _32_RGB888, _24_RGB888, _16_RGB565, _16_RGB555, _16_ARGB1555,
+#define TEXTURE_VIDEO_FORMAT_COUNT 14
+VX_PIXELFORMAT CHTVFAllPixelFormats[TEXTURE_VIDEO_FORMAT_COUNT] = {_32_ARGB8888, _32_RGB888, _24_RGB888, _16_RGB565, _16_RGB555, _16_ARGB1555,
                                            _16_ARGB4444, _8_RGB332, _8_ARGB2222, _DXT1, _DXT3, _DXT5, _16_V8U8, _16_L6V5U5};
 
 CKObjectDeclaration *FillBehaviorChangeVideoFormatDecl();
@@ -76,6 +77,12 @@ int ChangeVideoFormat(const CKBehaviorContext &BehContext)
         beh->ActivateInput(0, FALSE);
         int desiredformat = 0;
         beh->GetInputParameterValue(0, &desiredformat);
+        if (desiredformat < 0 || desiredformat >= TEXTURE_VIDEO_FORMAT_COUNT)
+        {
+            beh->ActivateOutput(1);
+            return CKBR_PARAMETERERROR;
+        }
+
         CKTexture *tex = (CKTexture *)beh->GetTarget();
         if (!tex)
             return CKBR_BEHAVIORERROR;
@@ -93,12 +100,15 @@ int ChangeVideoFormat(const CKBehaviorContext &BehContext)
             tex->SetDesiredVideoFormat(CHTVFAllPixelFormats[desiredformat]);
             tex->SystemToVideoMemory(rc);
             desc = rm->GetRenderDriverDescription(rc->GetDriverIndex());
-            for (int i = 0; i < desc->TextureFormats.Size(); i++)
+            if (desc)
             {
-                if (VxImageDesc2PixelFormat(desc->TextureFormats[i]) == CHTVFAllPixelFormats[desiredformat])
+                for (int i = 0; i < desc->TextureFormats.Size(); i++)
                 {
-                    formatfound = TRUE;
-                    break;
+                    if (VxImageDesc2PixelFormat(desc->TextureFormats[i]) == CHTVFAllPixelFormats[desiredformat])
+                    {
+                        formatfound = TRUE;
+                        break;
+                    }
                 }
             }
         }

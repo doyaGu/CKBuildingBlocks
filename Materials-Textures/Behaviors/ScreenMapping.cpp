@@ -134,6 +134,8 @@ int ScreenMapping(const CKBehaviorContext &behcontext)
     float invheight = rect.GetHeight() * 0.5f;
 
     CKCamera *camera = dev->GetAttachedCamera();
+    if (!camera)
+        return CKBR_OK;
     CKBOOL perspective = TRUE;
     if (camera->GetProjectionType() == CK_ORTHOGRAPHICPROJECTION)
         perspective = FALSE;
@@ -142,6 +144,8 @@ int ScreenMapping(const CKBehaviorContext &behcontext)
     beh->GetInputParameterValue(0, &channel);
     CKDWORD uStride;
     VxUV *uvs = (VxUV *)mesh->GetTextureCoordinatesPtr(&uStride, channel);
+    if (!uvs)
+        return CKBR_OK;
 #if CKVERSION == 0x13022002 || CKVERSION == 0x05082002
     VxVector *positions = (VxVector *)data->NormalPtr;
 #else
