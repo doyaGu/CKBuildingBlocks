@@ -102,9 +102,10 @@ int TextureRender(const CKBehaviorContext &behcontext)
     CKCamera *oldcam = rc->GetAttachedCamera();
 
     // we get the desired camera
-    CKCamera *cam = (CKCamera *)beh->GetInputParameterObject(0);
-    if (cam)
-        rc->AttachViewpointToCamera(cam);
+    CKCamera *inputCam = (CKCamera *)beh->GetInputParameterObject(0);
+    CKCamera *cam = inputCam ? inputCam : oldcam;
+    if (inputCam)
+        rc->AttachViewpointToCamera(inputCam);
 
     // We set the background
     CKMaterial *mat = rc->GetBackgroundMaterial();
@@ -125,6 +126,14 @@ int TextureRender(const CKBehaviorContext &behcontext)
 
     if (target_tex->IsCubeMap())
     {
+        if (!cam)
+        {
+            // Cubemap rendering needs a valid camera to orient each face.
+            mat->SetTexture0(oldtex);
+            mat->SetDiffuse(OldCol);
+            return CKBR_OWNERERROR;
+        }
+
         CKBOOL RenderFaceByFace = FALSE;
         beh->GetLocalParameterValue(4, &RenderFaceByFace);
 
@@ -216,7 +225,7 @@ int TextureRender(const CKBehaviorContext &behcontext)
         }
     }
 
-    if (cam)
+    if (inputCam)
         rc->AttachViewpointToCamera(oldcam);
 
     // restoring background attributes

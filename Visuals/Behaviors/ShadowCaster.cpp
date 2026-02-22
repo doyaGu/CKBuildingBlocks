@@ -303,7 +303,11 @@ CKBOOL RenderObjectsToTexture(CKContext *ctx, CK3dEntity *ent, CKRenderContext *
         distance = lmax;
     }
 
-    float delta = (distance - lmin) / (lmax - lmin);
+    float distanceRange = lmax - lmin;
+    if (distanceRange < 0.0001f)
+        distanceRange = 0.0001f;
+
+    float delta = (distance - lmin) / distanceRange;
     if (delta < 0.0f)
         delta = 0.0f;
     else if (delta > 1.0f)
@@ -561,7 +565,8 @@ int ShadowCaster(const CKBehaviorContext &behcontext)
         int channel = mesh->GetChannelByMaterial(tss->m_Material);
         if (allOutside)
         {
-            mesh->ActivateChannel(channel, FALSE);
+            if (channel >= 0)
+                mesh->ActivateChannel(channel, FALSE);
             continue;
         }
         else
