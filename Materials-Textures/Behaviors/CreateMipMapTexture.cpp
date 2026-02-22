@@ -100,12 +100,13 @@ int CreateMipMapTexture(const CKBehaviorContext &behcontext)
     // finalTex->UseMipmap(TRUE);
 
     // set the texture as being a user mipmap texture
-    finalTex->SetUserMipMapMode(TRUE);
+    if (!finalTex->SetUserMipMapMode(TRUE))
+    {
+        behcontext.Context->OutputToConsole("Failed to enable user mipmap mode on Full Size Texture.");
+        return CKBR_OWNERERROR;
+    }
 
-    // number of generated levels
-    int levelCount = finalTex->GetMipmapCount();
-
-    VxImageDescEx mipDesc, texDesc;
+    VxImageDescEx mipDesc;
 
     int widthFT = finalTex->GetWidth();
     int heightFT = finalTex->GetHeight();
@@ -129,9 +130,16 @@ int CreateMipMapTexture(const CKBehaviorContext &behcontext)
         }
 
         // copy texture image into corresponding mipmap level
-        CKDWORD *texPtr = (CKDWORD *)tex->LockSurfacePtr();
+        if (!finalTex->GetUserMipMapLevel(a - 1, mipDesc) || !mipDesc.Image)
+        {
+            behcontext.Context->OutputToConsoleEx("No mipmap level available for pIn: \"%s\".", beh->GetInputParameter(a)->GetName());
+            return CKBR_PARAMETERERROR;
+        }
 
-        finalTex->GetUserMipMapLevel(a - 1, mipDesc);
+        CKDWORD *texPtr = (CKDWORD *)tex->LockSurfacePtr();
+        if (!texPtr)
+            return CKBR_OWNERERROR;
+
         memcpy(mipDesc.Image, texPtr, mipDesc.Width * mipDesc.Height * 4);
 
         tex->ReleaseSurfacePtr();

@@ -85,7 +85,8 @@ void SetPixelBlend(CKDWORD *DstPtr, CKDWORD Color);
 void SetPixelAddSat(CKDWORD *DstPtr, CKDWORD Color);
 void SetPixelAdd(CKDWORD *DstPtr, CKDWORD Color);
 
-SetPixelFunction SetPixelFct[4] = {SetPixelReplace, SetPixelBlend, SetPixelAddSat, SetPixelAdd};
+static const int kSetPixelFunctionCount = 4;
+SetPixelFunction SetPixelFct[kSetPixelFunctionCount] = {SetPixelReplace, SetPixelBlend, SetPixelAddSat, SetPixelAdd};
 
 CKObjectDeclaration *FillBehaviorWriteInTextureDecl();
 CKERROR CreateWriteInTextureProto(CKBehaviorPrototype **);
@@ -193,15 +194,17 @@ int WriteInTexture(const CKBehaviorContext &behcontext)
     CKTexture *pen_tex = (CKTexture *)beh->GetInputParameterObject(3);
     int WriteMode = 0;
     beh->GetInputParameterValue(4, &WriteMode);
+    if (WriteMode < 0 || WriteMode >= kSetPixelFunctionCount)
+        WriteMode = 0;
 
     //----- Ensure Texture Coordinates are valid
     while (uv.x < 0.0f)
         uv.x += 1.0f;
-    while (uv.x > 1.0f)
+    while (uv.x >= 1.0f)
         uv.x -= 1.0f;
     while (uv.y < 0.0f)
         uv.y += 1.0f;
-    while (uv.y > 1.0f)
+    while (uv.y >= 1.0f)
         uv.y -= 1.0f;
 
 #define SetPixel(x, y, scol) ptr[y * (TexDesc.BytesPerLine >> 2) + x] = scol
@@ -248,6 +251,8 @@ int WriteInTexture(const CKBehaviorContext &behcontext)
                     for (int j = 0; j < cwidth; ++j)
                         SetPixelFct[WriteMode](ptr + j + x0, sptr[j]);
             }
+            if (sptr)
+                pen_tex->ReleaseSurfacePtr();
         }
         else if (size == 1)
             SetPixelFct[WriteMode](&ptr[sy * TexDesc.Width + sx], dcol);
