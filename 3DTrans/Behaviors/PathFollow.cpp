@@ -337,6 +337,11 @@ int PathFollow(const CKBehaviorContext &behcontext)
         float nbframes = 10.0f;
         beh->GetInputParameterValue(1, &nbframes);
 
+        // getting the 3d curve
+        CKCurve *path = (CKCurve *)beh->GetInputParameterObject(0);
+        if (!path)
+            return CKBR_PARAMETERERROR;
+
         int stepsRemaining = 0;
         float curveDeltaX = 0.0f;
 
@@ -345,6 +350,31 @@ int PathFollow(const CKBehaviorContext &behcontext)
 
         // we calculate the steps remaining
         stepsRemaining = (int)nbframes - 1;
+
+        // one frame requested: evaluate once and finish immediately
+        if (stepsRemaining <= 0)
+        {
+            CK2dCurve *accelerationCurve = NULL;
+            beh->GetInputParameterValue(2, &accelerationCurve);
+
+            float progression = 1.0f;
+            float value = accelerationCurve ? accelerationCurve->GetY(progression) : progression;
+
+            // hierarchy
+            CKBOOL k = TRUE;
+            beh->GetInputParameterValue(3, &k);
+            k = !k;
+
+            VxVector trans;
+            path->GetLocalPos(value, &trans);
+            ent->SetPosition(&trans, path, k);
+
+            beh->SetOutputParameterValue(0, &progression);
+            beh->SetOutputParameterValue(1, &value);
+            beh->ActivateOutput(0);
+            return CKBR_OK;
+        }
+
         // we calculate the curveDeltaX
         curveDeltaX = 1.0f / stepsRemaining;
 
@@ -360,11 +390,6 @@ int PathFollow(const CKBehaviorContext &behcontext)
 
         // writing the curveDeltaX
         beh->SetLocalParameterValue(2, &curveDeltaX);
-
-        // getting the 3d curve
-        CKCurve *path = (CKCurve *)beh->GetInputParameterObject(0);
-        if (!path)
-            return CKBR_PARAMETERERROR;
 
         // hierarchy
         CKBOOL k = TRUE;

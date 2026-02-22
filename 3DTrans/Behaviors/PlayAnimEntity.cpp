@@ -113,11 +113,6 @@ int PlayAnimEntity(const CKBehaviorContext &behcontext)
     CKBOOL loop = TRUE;
     beh->GetInputParameterValue(3, &loop);
 
-    // hierarchy
-    CKBOOL k = TRUE;
-    beh->GetInputParameterValue(4, &k);
-    k = !k;
-
     // Get 'Local' Current Step
     // 'local' and 'output' current_step are equal
     // we just keep the 'local' on for compatibilities

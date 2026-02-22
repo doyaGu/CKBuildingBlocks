@@ -181,11 +181,12 @@ CKERROR PortalsManager::OnPreRender(CKRenderContext *dev)
             int transPlaceObjCount = m_TransPlaceObj->GetObjectCount();
             for (int i = 0; i < transPlaceObjCount; ++i)
             {
-                CK3dEntity *tpObj = (CK3dEntity *)m_TransPlaceObj->GetObject(i);
-                if (!CKIsChildClassOf(tpObj, CKCID_3DENTITY))
+                CKObject *obj = m_TransPlaceObj->GetObject(i);
+                if (!CKIsChildClassOf(obj, CKCID_3DENTITY))
                 {
                     m_Context->OutputToConsoleEx("The TransPlace Group passed to the building block \"Portal Management\" contain invalid objects");
                     m_TransPlaceObj = NULL;
+                    break;
                 }
             }
         }
@@ -394,7 +395,11 @@ void PortalsManager::RecursePlacesFrom(int level, CKPlace *p, VxRect currentexte
 
     // TODO : this should be a method of CKPlace for efficiency
     if (m_RecursivityLevel && (level == m_RecursivityLevel - 1))
+    {
+        // keep caller stack balanced when recursion stops early
+        m_CallerStack.PopBack();
         return;
+    }
 
     for (int i = 0; i < p->GetPortalCount(); ++i)
     {
@@ -589,6 +594,8 @@ void PortalsManager::ConstructOccludingVolume(CK3dEntity *iEntity, XArray<VxPlan
     // we retreive the occluding information for this entity from the hash
     // (Hopefully already calculated)
     Occluder *occluder = RegisterOccluder(iEntity);
+    if (!occluder)
+        return;
 
     occluder->ComputeSilhouette(iEntity, iFrustum, m_SilhouetteEdges, oVolume);
 
@@ -923,7 +930,7 @@ PortalsManager::Occluder::Occluder(CKMesh *iMesh)
         randomEps = (randomEps + 1e-12f) * 1.2f;
     }
 
-    if (exitcode >= 0)
+    if (exitcode == 0)
     { // if no error
 
         unsigned int maxID = 0;

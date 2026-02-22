@@ -161,14 +161,15 @@ protected:
             VxVector normal;
             CKDWORD references;
 
-            bool operator==(const Edge &iA)
+            bool operator==(const Edge &iA) const
             {
-                return (!operator==(iA));
+                return ((vertices[0] == iA.vertices[0] && vertices[1] == iA.vertices[1]) ||
+                        (vertices[0] == iA.vertices[1] && vertices[1] == iA.vertices[0]));
             }
 
-            bool operator!=(const Edge &iA)
+            bool operator!=(const Edge &iA) const
             {
-                return ((vertices[0] != iA.vertices[0]) || (vertices[1] != iA.vertices[1]));
+                return !operator==(iA);
             }
         };
 
