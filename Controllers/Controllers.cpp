@@ -87,6 +87,9 @@ CKERROR InitInstance(CKContext *context)
     param_type = pm->GetParameterTypeDescription(CKPGUID_JOYAXIS);
     if (param_type)
         param_type->dwFlags |= CKPARAMETERTYPE_HIDDEN;
+    param_type = pm->GetParameterTypeDescription(CKPGUID_KEYBOARDPART);
+    if (param_type)
+        param_type->dwFlags |= CKPARAMETERTYPE_HIDDEN;
 
     return CK_OK;
 }
@@ -97,6 +100,7 @@ CKERROR ExitInstance(CKContext *context)
 
     pm->UnRegisterParameterType(CKPGUID_MOUSEEVENT);
     pm->UnRegisterParameterType(CKPGUID_JOYAXIS);
+    pm->UnRegisterParameterType(CKPGUID_KEYBOARDPART);
 
     return CK_OK;
 }

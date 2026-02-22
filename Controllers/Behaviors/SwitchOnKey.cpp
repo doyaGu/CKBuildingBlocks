@@ -84,7 +84,10 @@ int SwitchOnKey(const CKBehaviorContext &behcontext)
     int count_out = beh->GetOutputCount();
 
     if (count_param_in != count_out)
-        throw "Input parameter / Output mismatch";
+    {
+        behcontext.Context->OutputToConsoleEx("Switch On Key: Input parameter / Output mismatch");
+        return CKBR_GENERICERROR;
+    }
 
     CKInputManager *input = (CKInputManager *)behcontext.Context->GetManagerByGuid(INPUT_MANAGER_GUID);
     if (!input)
