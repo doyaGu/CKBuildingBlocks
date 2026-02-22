@@ -85,16 +85,26 @@ int MultiMeshMorpher(const CKBehaviorContext &behcontext)
 
     int vertice_count = mesh->GetModifierVertexCount();
 
-    CKDWORD posStride;
-    VxVector *posA, *pos, *pos_init = (VxVector *)mesh->GetModifierVertices(&posStride);
+    CKDWORD dstStride = 0;
+    VxVector *pos = NULL;
+    VxVector *posA = NULL;
+    VxVector *pos_init = (VxVector *)mesh->GetModifierVertices(&dstStride);
+    if (!pos_init)
+        return CKBR_PARAMETERERROR;
 
     //--- first mesh (initialisation)
     meshA = (CKMesh *)beh->GetInputParameterObject(0);
     if (!meshA)
         return CKBR_PARAMETERERROR;
+    if (meshA->GetModifierVertexCount() != vertice_count)
+        return CKBR_PARAMETERERROR;
+
+    CKDWORD srcStride = 0;
+    posA = (VxVector *)meshA->GetModifierVertices(&srcStride);
+    if (!posA)
+        return CKBR_PARAMETERERROR;
 
     pos = pos_init;
-    posA = (VxVector *)meshA->GetModifierVertices(&posStride);
 
     // Use Relative Morphing ?
     CKBOOL useRelativeMorph = FALSE;
@@ -108,13 +118,14 @@ int MultiMeshMorpher(const CKBehaviorContext &behcontext)
         //_________________/ use RELATIVE morphing
 
         VxVector *posN, *posNeutral = posA;
+        CKDWORD neutralStride = srcStride;
 
         //--- first mesh (initialisation)
         for (b = 0; b < vertice_count; b++)
         {
             *pos = *posA;
-            pos = (VxVector *)((CKBYTE *)pos + posStride);
-            posA = (VxVector *)((CKBYTE *)posA + posStride);
+            pos = (VxVector *)((CKBYTE *)pos + dstStride);
+            posA = (VxVector *)((CKBYTE *)posA + srcStride);
         }
 
         //--- other meshes
@@ -124,13 +135,19 @@ int MultiMeshMorpher(const CKBehaviorContext &behcontext)
             meshA = (CKMesh *)beh->GetInputParameterObject(a);
             if (!meshA)
                 continue;
+            if (meshA->GetModifierVertexCount() != vertice_count)
+                continue;
 
             beh->GetInputParameterValue(a + 1, &coef);
 
             if (coef)
             {
+                CKDWORD currentSrcStride = 0;
+                posA = (VxVector *)meshA->GetModifierVertices(&currentSrcStride);
+                if (!posA)
+                    continue;
+
                 pos = pos_init;
-                posA = (VxVector *)meshA->GetModifierVertices(&posStride);
                 posN = posNeutral;
 
                 for (b = 0; b < vertice_count; b++)
@@ -138,9 +155,9 @@ int MultiMeshMorpher(const CKBehaviorContext &behcontext)
 
                     *pos += coef * (*posA - *posN);
 
-                    pos = (VxVector *)((CKBYTE *)pos + posStride);
-                    posA = (VxVector *)((CKBYTE *)posA + posStride);
-                    posN = (VxVector *)((CKBYTE *)posN + posStride);
+                    pos = (VxVector *)((CKBYTE *)pos + dstStride);
+                    posA = (VxVector *)((CKBYTE *)posA + currentSrcStride);
+                    posN = (VxVector *)((CKBYTE *)posN + neutralStride);
                 }
             }
         }
@@ -166,8 +183,8 @@ int MultiMeshMorpher(const CKBehaviorContext &behcontext)
         for (b = 0; b < vertice_count; b++)
         {
             *pos = coef * *posA;
-            pos = (VxVector *)((CKBYTE *)pos + posStride);
-            posA = (VxVector *)((CKBYTE *)posA + posStride);
+            pos = (VxVector *)((CKBYTE *)pos + dstStride);
+            posA = (VxVector *)((CKBYTE *)posA + srcStride);
         }
 
         //--- other meshes
@@ -176,20 +193,26 @@ int MultiMeshMorpher(const CKBehaviorContext &behcontext)
             meshA = (CKMesh *)beh->GetInputParameterObject(a);
             if (!meshA)
                 continue;
+            if (meshA->GetModifierVertexCount() != vertice_count)
+                continue;
 
             beh->GetInputParameterValue(a + 1, &coef);
             if (coef)
             {
                 coef *= inv_coef_sum;
 
+                CKDWORD currentSrcStride = 0;
+                posA = (VxVector *)meshA->GetModifierVertices(&currentSrcStride);
+                if (!posA)
+                    continue;
+
                 pos = pos_init;
-                posA = (VxVector *)meshA->GetModifierVertices(&posStride);
 
                 for (b = 0; b < vertice_count; b++)
                 {
                     *pos += coef * *posA;
-                    pos = (VxVector *)((CKBYTE *)pos + posStride);
-                    posA = (VxVector *)((CKBYTE *)posA + posStride);
+                    pos = (VxVector *)((CKBYTE *)pos + dstStride);
+                    posA = (VxVector *)((CKBYTE *)posA + currentSrcStride);
                 }
             }
         }

@@ -95,6 +95,8 @@ int TextureDisplace(const CKBehaviorContext &behcontext)
 
     // we get a CKTexture (input parameter)
     CKTexture *tex = (CKTexture *)beh->GetInputParameterObject(0);
+    if (!tex)
+        return CKBR_PARAMETERERROR;
 
     int width = tex->GetWidth();
     int height = tex->GetHeight();
@@ -113,7 +115,11 @@ int TextureDisplace(const CKBehaviorContext &behcontext)
     CKBYTE *NCoords = (CKBYTE *)mesh->GetNormalsPtr(&NStride);
 
     if (!(tex_data && TCoords && VCoords))
+    {
+        if (tex_data)
+            tex->ReleaseSurfacePtr();
         return CKBR_OK;
+    }
 
     Vx2DVector tmin(0.0f, 0.0f);
     Vx2DVector tmax(-1.0f, -1.0f);
@@ -225,6 +231,12 @@ int TextureDisplace(const CKBehaviorContext &behcontext)
 
     if (Displacement3D)
     {
+        if (!NCoords)
+        {
+            tex->ReleaseSurfacePtr();
+            return CKBR_OK;
+        }
+
         for (int i = 0; i < nbv; ++i, VCoords += VStride, TCoords += TStride, NCoords += NStride)
         {
             float u = ((VxUV *)TCoords)->u;
@@ -247,7 +259,7 @@ int TextureDisplace(const CKBehaviorContext &behcontext)
     }
     else
     {
-        for (int i = 0; i < nbv; ++i, VCoords += VStride, TCoords += TStride, NCoords += NStride)
+        for (int i = 0; i < nbv; ++i, VCoords += VStride, TCoords += TStride)
         {
             float u = ((VxUV *)TCoords)->u;
             float v = ((VxUV *)TCoords)->v;
@@ -280,6 +292,7 @@ int TextureDisplace(const CKBehaviorContext &behcontext)
 
     // Notify vertex movement
     mesh->VertexMove();
+    tex->ReleaseSurfacePtr();
 
     beh->ActivateInput(0, FALSE);
     beh->ActivateOutput(0);

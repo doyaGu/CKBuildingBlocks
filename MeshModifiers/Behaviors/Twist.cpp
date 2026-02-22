@@ -90,8 +90,10 @@ int Twist(const CKBehaviorContext &behcontext)
 
     int naxis = 0;
     int i = 0;
-    while (axis[naxis] == 0.0f)
+    while (naxis < 3 && axis[naxis] == 0.0f)
         naxis++;
+    if (naxis == 3)
+        naxis = 2;
 
     // we get the mesh
     CKMesh *mesh = ent->GetCurrentMesh();

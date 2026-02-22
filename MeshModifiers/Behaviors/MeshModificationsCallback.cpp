@@ -23,8 +23,11 @@ CKERROR MeshModificationsCallBack(const CKBehaviorContext &behcontext)
         if (!mesh)
             return 0;
 
-        const VxBbox &bbox = mesh->GetLocalBox();
-        beh->SetLocalParameterValue(1, &bbox);
+        if (beh->GetLocalParameterCount() > 1)
+        {
+            const VxBbox &bbox = mesh->GetLocalBox();
+            beh->SetLocalParameterValue(1, &bbox);
+        }
     }
     break;
     case CKM_BEHAVIORDELETE:
