@@ -27,9 +27,8 @@
 
 #include "MidiSound.h"
 
-static void FAR PASCAL seqMIDICallback(HMIDISTRM hms, UINT uMsg, DWORD dwUser, DWORD dw1, DWORD dw2);
+static void FAR PASCAL seqMIDICallback(HMIDISTRM hms, UINT uMsg, DWORD_PTR dwUser, DWORD_PTR dw1, DWORD_PTR dw2);
 static MMRESULT  XlatSMFErr(SMFRESULT smfrc);
-
 
 extern CRITICAL_SECTION  gMidiCS;
 
@@ -118,7 +117,7 @@ BOOL MidiSound::IsPaused()
         ((LPMIDIHDR)lpbWork)->lpData            = (char*)lpbWork + sizeof(MIDIHDR);
         ((LPMIDIHDR)lpbWork)->dwBufferLength    = pSeq->cbBuffer;
         ((LPMIDIHDR)lpbWork)->dwBytesRecorded   = 0;
-        ((LPMIDIHDR)lpbWork)->dwUser            = (DWORD)(UINT)pSeq;
+        ((LPMIDIHDR)lpbWork)->dwUser            = (DWORD_PTR)pSeq;
         ((LPMIDIHDR)lpbWork)->dwFlags           = 0;
 
         pSeq->lpmhFree = (LPMIDIHDR)lpbWork;
@@ -379,7 +378,7 @@ Seq_Open_File_Cleanup:
 		if ((mmrc = midiStreamOpen((LPHMIDISTRM)&pSeq->hmidi,
                                    &uDeviceID,
                                    1,
-                                   (DWORD)seqMIDICallback,
+                                   (DWORD_PTR)seqMIDICallback,
                                    0,
                                    CALLBACK_FUNCTION)) != MMSYSERR_NOERROR)
         {
@@ -427,7 +426,7 @@ Seq_Open_File_Cleanup:
     lpmhPreroll->lpData            = (char*)lpmhPreroll + sizeof(MIDIHDR);
     lpmhPreroll->dwBufferLength    = cbPrerollBuffer - sizeof(MIDIHDR);
     lpmhPreroll->dwBytesRecorded   = 0;
-    lpmhPreroll->dwUser            = (DWORD)(UINT)pSeq;
+    lpmhPreroll->dwUser            = (DWORD_PTR)pSeq;
     lpmhPreroll->dwFlags           = 0;
 
     do
@@ -825,7 +824,7 @@ Preroll_Cleanup:
 * dw1                       - The buffer that has completed playback.
 *
 ***************************************************************************/
-static void FAR PASCAL seqMIDICallback(HMIDISTRM hms, UINT uMsg, DWORD dwUser, DWORD dw1, DWORD dw2)
+static void FAR PASCAL seqMIDICallback(HMIDISTRM hms, UINT uMsg, DWORD_PTR dwUser, DWORD_PTR dw1, DWORD_PTR dw2)
 {
 	LPMIDIHDR					lpmh		= (LPMIDIHDR)dw1;
     PSEQ                    pSeq;

@@ -84,7 +84,7 @@ int AddAnimation(const CKBehaviorContext &behcontext)
 	{
 		CKObjectAnimation *oanim = (CKObjectAnimation *)anim->GetAnimation(i);
 		CKSTRING Name = oanim->GetName();
-		int Length = strlen(Name);
+		int Length = (int)strlen(Name);
 		CKBodyPart *OldPart = (CKBodyPart *)oanim->Get3dEntity(); // Previous target of object animation
 
 		if (Name)
@@ -95,7 +95,7 @@ int AddAnimation(const CKBehaviorContext &behcontext)
 				CKBodyPart *part = car->GetBodyPart(k);
 				if (part && part->GetName() && OldPart != part)
 				{
-					int BpartLength = strlen(part->GetName());
+					int BpartLength = (int)strlen(part->GetName());
 					if (Length == BpartLength)
 					{
 						// Does name exactly match ?
@@ -130,7 +130,7 @@ int AddAnimation(const CKBehaviorContext &behcontext)
 			if (!(oanim->GetObjectFlags() & CK_OBJECT_TEMPMARKER))
 			{
 				CKSTRING Name = oanim->GetName();
-				int Length = strlen(Name);
+				int Length = (int)strlen(Name);
 				CKBodyPart *OldPart = (CKBodyPart *)oanim->Get3dEntity(); // Previous target of object animation
 
 				if (Name)
@@ -141,7 +141,7 @@ int AddAnimation(const CKBehaviorContext &behcontext)
 						CKBodyPart *part = car->GetBodyPart(k);
 						if (part && part->GetName() && OldPart != part)
 						{
-							int BpartLength = strlen(part->GetName());
+							int BpartLength = (int)strlen(part->GetName());
 							// Does name exactly match ?
 							if ((Length + 3) == BpartLength)
 							{

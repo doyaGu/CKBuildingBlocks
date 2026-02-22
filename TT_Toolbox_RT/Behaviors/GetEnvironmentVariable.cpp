@@ -73,7 +73,7 @@ int GetEnvironmentVariable(const CKBehaviorContext &behcontext)
         return CKBR_PARAMETERERROR;
     }
 
-    beh->SetOutputParameterValue(0, env, strlen(env) + 1);
+    beh->SetOutputParameterValue(0, env, (int)strlen(env) + 1);
     beh->ActivateOutput(0);
     return CKBR_OK;
 }

@@ -91,7 +91,7 @@ int CreateGroupFromArray(const CKBehaviorContext &behcontext)
     CK_COMPOPERATOR op = CKEQUAL;
     beh->GetInputParameterValue(2, &op);
 
-    CKDWORD key = NULL;
+    CKUINTPTR key = NULL;
 
     // we find the key
     int size = GetInputValue(array, beh, scolumn, 3, key);

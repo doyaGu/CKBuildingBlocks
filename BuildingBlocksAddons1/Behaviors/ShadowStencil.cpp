@@ -465,10 +465,10 @@ public:
         }
 
         // calculate final shadow volume vertex count
-        m_Data->VertexCount = ((CKBYTE *)dataPos - (CKBYTE *)m_DataPos) / m_DataPosStride;
+        m_Data->VertexCount = (int)(((CKBYTE *)dataPos - (CKBYTE *)m_DataPos) / m_DataPosStride);
 
         // calculate final shadow volume indices count
-        m_IndiceCount = indicesPtr - m_Indices;
+        m_IndiceCount = (int)(indicesPtr - m_Indices);
     }
 
     //---------------------------------------------------
@@ -629,7 +629,7 @@ void ShadowStencilMeshAttributeCallback(int AttribType, CKBOOL Set, CKBeObject *
 /***********************************************/
 void ShadowStencilPreRender(CKRenderContext *renderContext, void *arg)
 {
-    CKBehavior *beh = (CKBehavior *)CKGetObject(renderContext->GetCKContext(), (CK_ID)arg);
+    CKBehavior *beh = (CKBehavior *)CKGetObject(renderContext->GetCKContext(), (CK_ID)(uintptr_t)arg);
     if (!beh)
         return;
     // CKBehavior *beh = (CKBehavior *)arg;
@@ -698,7 +698,7 @@ void ShadowStencilPostRender(CKRenderContext *renderContext, void *arg)
 {
     //	renderContext->m_Context->UserProfileStart(0);
 
-    CKBehavior *beh = (CKBehavior *)CKGetObject(renderContext->GetCKContext(), (CK_ID)arg);
+    CKBehavior *beh = (CKBehavior *)CKGetObject(renderContext->GetCKContext(), (CK_ID)(uintptr_t)arg);
     if (!beh)
         return;
     // CKBehavior *beh = (CKBehavior *)arg;
@@ -984,8 +984,8 @@ int ShadowStencil(const CKBehaviorContext &behcontext)
     if (!bppStencil)
         return CKBR_ACTIVATENEXTFRAME;
 
-    behcontext.CurrentRenderContext->AddPostRenderCallBack(ShadowStencilPostRender, (void *)beh->GetID(), TRUE, TRUE);
-    behcontext.CurrentRenderContext->AddPreRenderCallBack(ShadowStencilPreRender, (void *)beh->GetID(), TRUE);
+    behcontext.CurrentRenderContext->AddPostRenderCallBack(ShadowStencilPostRender, (void *)(uintptr_t)beh->GetID(), TRUE, TRUE);
+    behcontext.CurrentRenderContext->AddPreRenderCallBack(ShadowStencilPreRender, (void *)(uintptr_t)beh->GetID(), TRUE);
 
     return CKBR_ACTIVATENEXTFRAME;
 }

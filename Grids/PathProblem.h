@@ -99,7 +99,7 @@ public:
     CKBOOL Linker2EndIsGood();
     void SetLinkerType(TypeCase, TypeCase);
     void SetLinker(NodeLinker *, NodeLinker *);
-    void InitBeforeCase2Case(CKGrid *, XSHashTable<GridInfo *, int> *);
+    void InitBeforeCase2Case(CKGrid *, XSHashTable<GridInfo *, uintptr_t> *);
 };
 //----------------------------------------------------------------------------------------------------------
 #endif

@@ -138,8 +138,8 @@ int WaterTexture(const CKBehaviorContext &behcontext)
     CKDWORD *PrevImage = (CKDWORD *)tex->LockSurfacePtr(PreviousSlot);
 
 //------------- New pixel = 2*current pixel - neighborhood (old)
-#ifdef WIN32
-    // MMX asm code
+#if defined(_M_IX86) || defined(_M_X64)
+    // MMX/x64 code
     if (GetProcessorFeatures() & PROC_WNI)
     {
         WaterEffectWillamette(CurrImage, PrevImage, TextureDesc.Width, TextureDesc.Height, BorderColor, Damping);

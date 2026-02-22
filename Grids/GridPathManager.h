@@ -41,7 +41,7 @@ protected:
     /* Path finding protected attributs */
     /************************************/
     CKAttributeManager *m_AttributManager;
-    XHashTable<int, int> m_Target2PathContext;
+    XHashTable<int, uintptr_t> m_Target2PathContext;
 
     // Num Layer to consider.
     int m_NumLayer;
@@ -94,7 +94,7 @@ public:
     XList<NodeLinker *> m_ListNodeLinker;
 
     // Array of grid's graph representation.
-    XSHashTable<GridInfo *, int> m_ListGridInfo;
+    XSHashTable<GridInfo *, uintptr_t> m_ListGridInfo;
 
     // Number of problem to search.
     int m_NumPathProblem;

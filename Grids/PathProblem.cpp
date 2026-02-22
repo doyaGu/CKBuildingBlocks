@@ -343,11 +343,11 @@ void PathProblem::SetLinker(NodeLinker *linker1, NodeLinker *linker2)
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 // InitCase2Case
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
-void PathProblem::InitBeforeCase2Case(CKGrid *grid, XSHashTable<GridInfo *, int> *listGridInfo)
+void PathProblem::InitBeforeCase2Case(CKGrid *grid, XSHashTable<GridInfo *, uintptr_t> *listGridInfo)
 {
     ResetOpenList(FALSE);
     m_GridSearch = grid;
-    m_NumGrid = (*listGridInfo->FindPtr((int)m_GridSearch))->m_Num;
+    m_NumGrid = (*listGridInfo->FindPtr((uintptr_t)m_GridSearch))->m_Num;
     m_GridW = m_GridSearch->GetWidth();
     m_GridL = m_GridSearch->GetLength();
 

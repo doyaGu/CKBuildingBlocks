@@ -84,7 +84,7 @@ int AddArray(const CKBehaviorContext &behcontext)
         int column = array->GetKeyColumn();
         if (column >= 0)
         {
-            CKDWORD key;
+            CKUINTPTR key;
             int size = GetInputValue(array, beh, column, column, key);
             CKDataRow *fit = array->FindRow(column, CKEQUAL, key, size);
             if (fit)

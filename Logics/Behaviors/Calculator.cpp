@@ -563,12 +563,12 @@ int Calculator(const CKBehaviorContext& behcontext)
       ctx->OutputToConsole("Syntax Error in CALCULATOR");
 
       char *local_expr = "#####";
-      beh->SetLocalParameterValue(0, local_expr,strlen(local_expr)+1);
+      beh->SetLocalParameterValue(0, local_expr,(int)strlen(local_expr)+1);
       
       return CKBR_OK;
     }
 
-    beh->SetLocalParameterValue(0, expression,strlen(expression)+1);
+    beh->SetLocalParameterValue(0, expression,(int)strlen(expression)+1);
   }
   
   //----------------------------------------    
@@ -605,7 +605,7 @@ CKERROR CalculatorCallBack(const CKBehaviorContext& behcontext)
   case CKM_BEHAVIORLOAD:
     {
       char *local_expr = "#####";
-      beh->SetLocalParameterValue(0, local_expr,strlen(local_expr)+1);
+      beh->SetLocalParameterValue(0, local_expr,(int)strlen(local_expr)+1);
       
       Node_Total_Struct nts;
       nts.nb_node = 0;
@@ -635,7 +635,7 @@ CKERROR CalculatorCallBack(const CKBehaviorContext& behcontext)
   case CKM_BEHAVIOREDITED:
     {
       char *local_expr = "#####";
-      beh->SetLocalParameterValue(0, local_expr,strlen(local_expr)+1);
+      beh->SetLocalParameterValue(0, local_expr,(int)strlen(local_expr)+1);
 
       int c_pin = beh->GetInputParameterCount();
       
@@ -724,7 +724,7 @@ int CreateNodeStack(char *line, Node_Total_Struct *nts, CKBehavior *beh){
     case 0: // Expecting Expression
       if( NULL != (str = GetExpression( ptr )) ){
         
-        if( NULL != (op = GetOp(str)) && strlen(str) == op->taglen ){
+        if( NULL != (op = GetOp(str)) && (int)strlen(str) == op->taglen ){
           
           PushOp(op->token);
           ptr += op->taglen;
@@ -781,7 +781,7 @@ int CreateNodeStack(char *line, Node_Total_Struct *nts, CKBehavior *beh){
           
           PushNode(arg);
         }
-        ptr += strlen(str);
+        ptr += (int)strlen(str);
         
       } else return CREATION_ERROR;
       

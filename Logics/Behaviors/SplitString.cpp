@@ -88,7 +88,7 @@ int SplitString(const CKBehaviorContext &behcontext)
         delim = " ";
     if (*delim == '\0')
         delim = " ";
-    int delimsize = strlen(delim);
+    int delimsize = (int)strlen(delim);
 
     int elts = 0;
     CKSTRING str = string;
@@ -107,7 +107,7 @@ int SplitString(const CKBehaviorContext &behcontext)
             if (!pout)
                 break;
 
-            int size = del - str;
+            int size = (int)(del - str);
             if (size)
             {
                 // we copy the characters to the buffer
@@ -122,7 +122,7 @@ int SplitString(const CKBehaviorContext &behcontext)
     }
 
     // Now the last element
-    int sizeleft = strlen(str);
+    int sizeleft = (int)strlen(str);
     if (sizeleft)
     {
         // found a new item

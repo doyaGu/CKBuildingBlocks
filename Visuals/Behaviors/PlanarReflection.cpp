@@ -88,7 +88,7 @@ int PlanarReflection(const CKBehaviorContext &behcontext)
 
     CK3dEntity *ent = (CK3dEntity *)beh->GetTarget();
     if (ent)
-        ent->AddPreRenderCallBack(PlanarReflectionPreRenderCallBack, (void *)beh->GetID(), TRUE);
+        ent->AddPreRenderCallBack(PlanarReflectionPreRenderCallBack, (void *)(uintptr_t)beh->GetID(), TRUE);
 
     return CKBR_ACTIVATENEXTFRAME;
 }
@@ -105,7 +105,7 @@ int PlanarReflectionPreRenderCallBack(CKRenderContext *rc, CKRenderObject *obj, 
 
     CKContext *ctx = rc->GetCKContext();
     CK3dEntity *plane = (CK3dEntity *)obj;
-    CKBehavior *beh = (CKBehavior *)ctx->GetObject((CK_ID)arg);
+    CKBehavior *beh = (CKBehavior *)ctx->GetObject((CK_ID)(uintptr_t)arg);
     if (!beh)
         return TRUE;
 

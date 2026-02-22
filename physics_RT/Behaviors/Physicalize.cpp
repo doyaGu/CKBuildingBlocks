@@ -241,7 +241,7 @@ CKERROR PhysicalizeCallBack(const CKBehaviorContext &behcontext)
         if (!collSurfaceParam)
             return CKBR_OK;
 
-        collSurfaceParam->SetValue(mesh->GetName(), strlen(mesh->GetName()) + 1);
+        collSurfaceParam->SetValue(mesh->GetName(), (int)strlen(mesh->GetName()) + 1);
     }
     break;
     case CKM_BEHAVIORSETTINGSEDITED:

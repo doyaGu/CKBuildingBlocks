@@ -237,7 +237,7 @@ int PushButton(const CKBehaviorContext &behcontext)
 
     // we add the render callback
     if (frame)
-        frame->AddPreRenderCallBack(PushButtonRenderCallback, (void *)beh->GetID(), TRUE);
+        frame->AddPreRenderCallBack(PushButtonRenderCallback, (void *)(uintptr_t)beh->GetID(), TRUE);
 
     return CKBR_ACTIVATENEXTFRAME;
 }
@@ -247,7 +247,7 @@ CKBOOL PushButtonRenderCallback(CKRenderContext *dev, CKRenderObject *ent, void 
     static VxRect fulluv(0, 0, 1.0f, 1.0f);
 
     CKContext *ctx = dev->GetCKContext();
-    CKBehavior *beh = (CKBehavior *)ctx->GetObject((CK_ID)iArg);
+    CKBehavior *beh = (CKBehavior *)ctx->GetObject((CK_ID)(uintptr_t)iArg);
     if (!beh)
         return TRUE;
 

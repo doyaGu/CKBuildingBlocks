@@ -86,7 +86,7 @@ int CameraColorFilter(const CKBehaviorContext &behcontext)
         beh->ActivateOutput(0);
     }
 
-    behcontext.CurrentRenderContext->AddPostRenderCallBack(CameraColorFilterRender, (void *)beh->GetID(), TRUE);
+    behcontext.CurrentRenderContext->AddPostRenderCallBack(CameraColorFilterRender, (void *)(uintptr_t)beh->GetID(), TRUE);
     // behcontext.CurrentRenderContext->AddPostRenderCallBack(CameraColorFilterRender,beh,TRUE);
 
     return CKBR_ACTIVATENEXTFRAME;
@@ -95,7 +95,7 @@ int CameraColorFilter(const CKBehaviorContext &behcontext)
 void CameraColorFilterRender(CKRenderContext *rc, void *arg)
 {
 
-    CKBehavior *beh = (CKBehavior *)CKGetObject(rc->GetCKContext(), (CK_ID)arg);
+    CKBehavior *beh = (CKBehavior *)CKGetObject(rc->GetCKContext(), (CK_ID)(uintptr_t)arg);
     if (!beh)
         return;
     //	CKBehavior* beh = (CKBehavior*)arg;

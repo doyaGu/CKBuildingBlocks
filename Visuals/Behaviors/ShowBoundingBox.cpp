@@ -90,14 +90,14 @@ int ShowBoundingBox(const CKBehaviorContext &behcontext)
     if (ent)
     {
         CKRenderContext* rc = behcontext.CurrentRenderContext;
-        rc->AddPostRenderCallBack(ShowBoundingBoxRenderCallBack,(void *)beh->GetID(),TRUE);
+        rc->AddPostRenderCallBack(ShowBoundingBoxRenderCallBack,(void *)(uintptr_t)beh->GetID(),TRUE);
     }
     return CKBR_OK;
 }
 
 void ShowBoundingBoxRenderCallBack(CKRenderContext *rc, void *arg)
 {
-    CKBehavior *beh = (CKBehavior *)CKGetObject(rc->GetCKContext(), (CK_ID)arg);
+    CKBehavior *beh = (CKBehavior *)CKGetObject(rc->GetCKContext(), (CK_ID)(uintptr_t)arg);
     CK3dEntity *ent = (CK3dEntity *)beh->GetTarget();
     if (!beh || !ent)
         return;

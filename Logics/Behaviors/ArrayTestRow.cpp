@@ -84,7 +84,7 @@ int ArrayTestRow(const CKBehaviorContext &behcontext)
     beh->GetInputParameterValue(2, &op);
 
     // we find the key
-    CKDWORD key = NULL;
+    CKUINTPTR key = NULL;
     int size = GetInputValue(array, beh, column, 3, key);
 
     // the test itself

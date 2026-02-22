@@ -610,12 +610,12 @@ int MarkSystemFun(const CKBehaviorContext &behcontext)
             box.Min.Set(-10000.0f, -10000.0f, -10000.0f);
             renderframe->SetBoundingBox(&box, TRUE);
         }
-        renderframe->AddPostRenderCallBack(RenderMarkFrame, (void *)beh->GetID(), TRUE);
+        renderframe->AddPostRenderCallBack(RenderMarkFrame, (void *)(uintptr_t)beh->GetID(), TRUE);
     }
     else
     {
         // we add the render callback
-        behcontext.CurrentRenderContext->AddPostRenderCallBack(MarkSystem::RenderMarkSystem, (void *)beh->GetID(), TRUE);
+        behcontext.CurrentRenderContext->AddPostRenderCallBack(MarkSystem::RenderMarkSystem, (void *)(uintptr_t)beh->GetID(), TRUE);
     }
 
     CKBOOL endmark = FALSE;
@@ -748,7 +748,7 @@ void MarkSystem::RenderMarkSystem(CKRenderContext *dev, void *arg)
     static float singleuvs[8] = {0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f};
 
     CKContext *ctx = dev->GetCKContext();
-    CKBehavior *beh = (CKBehavior *)ctx->GetObject((CK_ID)arg);
+    CKBehavior *beh = (CKBehavior *)ctx->GetObject((CK_ID)(uintptr_t)arg);
     if (!beh)
         return;
 

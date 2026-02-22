@@ -24,7 +24,7 @@ MidiManager::~MidiManager()
 //-----------------------------
 // Midi Callback Function
 //-----------------------------
-void CALLBACK MidiInProc( HMIDIIN hMidiIn, UINT wMsg, DWORD dwInstance, DWORD dwParam1, DWORD dwParam2 ){
+void CALLBACK MidiInProc( HMIDIIN hMidiIn, UINT wMsg, DWORD_PTR dwInstance, DWORD_PTR dwParam1, DWORD_PTR dwParam2 ){
 
 	MidiManager *mm = (MidiManager *) dwInstance;
 
@@ -37,7 +37,7 @@ void CALLBACK MidiInProc( HMIDIIN hMidiIn, UINT wMsg, DWORD dwInstance, DWORD dw
 	  tmp.command = (BYTE)((dwParam1 & 0xF0) >> 4);
 	  tmp.note = (BYTE)((dwParam1 & 0xFF00) >> 8);
 	  tmp.attack = (BYTE)((dwParam1 & 0xFF0000) >> 16);
-	  tmp.time = dwParam2;
+	  tmp.time = (UINT)dwParam2;
 
 	  mm->listFromCallBack.PushBack(tmp);
 
@@ -167,7 +167,7 @@ CKERROR MidiManager::OpenMidiIn(int DesiredmidiDevice) {
       
     MMRESULT mr;
 	//midiDeviceHandle = NULL;
-	mr = midiInOpen( &midiDeviceHandle, DesiredmidiDevice, (DWORD)MidiInProc, (unsigned long)this, CALLBACK_FUNCTION|MIDI_IO_STATUS );
+	mr = midiInOpen( &midiDeviceHandle, DesiredmidiDevice, (DWORD_PTR)MidiInProc, (DWORD_PTR)this, CALLBACK_FUNCTION|MIDI_IO_STATUS );
 	
 
     if(!midiDeviceHandle || (mr!=MMSYSERR_NOERROR) )	{

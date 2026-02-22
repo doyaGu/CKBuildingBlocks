@@ -86,9 +86,9 @@ int ArraySetLine(const CKBehaviorContext &behcontext)
         int column = array->GetKeyColumn();
         if (column >= 0)
         {
-            CKDWORD key;
+            CKUINTPTR key;
             int size = GetInputValue(array, beh, column, column + 1, key);
-            int ind = array->FindRowIndex(column, CKEQUAL, key, size);
+            int ind = (int)array->FindRowIndex(column, CKEQUAL, key, size);
             if (ind != -1 && ind != line)
             {
                 // Set IO states

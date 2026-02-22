@@ -143,7 +143,7 @@ int CreateString(const CKBehaviorContext &behcontext)
                         XAP<char> paramtemp(new char[paramsize]);
                         pout->GetStringValue(paramtemp, FALSE);
                         paramstring = new char[paramsize];
-                        if (format[strlen(format) - 1] != 's')
+                        if (format[(int)strlen(format) - 1] != 's')
                             sprintf(paramstring, "%s", &(*paramtemp));
                         else
                             sprintf(paramstring, format, &(*paramtemp));
@@ -194,7 +194,7 @@ int CreateString(const CKBehaviorContext &behcontext)
 
             if (!string)
                 string = "";
-            int size = strlen(string) + buffer.Length() + 2;
+            int size = (int)strlen(string) + buffer.Length() + 2;
             char *temp = new char[size];
             if (!beh->GetLocalParameter(0) || string[0] != '\0') // Old Version if no local param
             {
@@ -270,7 +270,7 @@ CKERROR CreateStringCallBack(const CKBehaviorContext &behcontext)
                 }
 
                 // We set the format string
-                plocal->SetValue(buffer, strlen(buffer) + 1);
+                plocal->SetValue(buffer, (int)strlen(buffer) + 1);
             }
         }
         i -= 1; // offset the local to the input (delimiter)

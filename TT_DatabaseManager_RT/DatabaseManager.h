@@ -56,7 +56,7 @@ protected:
     CKContext *m_Context;
     bool field_2C;
     XArray<CKSTRING> m_ArrayNames;
-    CKSTRING m_Filename;
+    char *m_Filename;   // owned copy, freed in Clear()
     CKBOOL m_Crypted;
 };
 

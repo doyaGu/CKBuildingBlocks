@@ -99,17 +99,29 @@ int CreateFontEx(const CKBehaviorContext &behcontext)
     if (!texFont)
         return CKBR_PARAMETERERROR;
 
+    if (!fontCoordData)
+        return CKBR_OK;
+
+    const int columnCount = fontCoordData->GetColumnCount();
+    const int rowCount = fontCoordData->GetRowCount();
+    if (columnCount < 6 || rowCount <= 0)
+        return CKBR_OK;
+
     CharacterTextureCoordinates *fontCoords = texFont->m_FontCoordinates;
-    CharacterTextureCoordinates fontCoord = {0};
-    for (int i = 0; i < 256; ++i)
+    const int limit = (rowCount < 256) ? rowCount : 256;
+    for (int i = 0; i < limit; ++i)
     {
-        fontCoordData->GetElementValue(i, 0, &fontCoord.ustart);
-        fontCoordData->GetElementValue(i, 1, &fontCoord.vstart);
-        fontCoordData->GetElementValue(i, 2, &fontCoord.uwidth);
-        fontCoordData->GetElementValue(i, 3, &fontCoord.uprewidth);
-        fontCoordData->GetElementValue(i, 4, &fontCoord.upostwidth);
-        fontCoordData->GetElementValue(i, 5, &fontCoord.vwidth);
-        fontCoords[i] = fontCoord;
+        CharacterTextureCoordinates coord = fontCoords[i];
+        float v = 0.0f;
+
+        if (fontCoordData->GetElementValue(i, 0, &v)) coord.ustart = v;
+        if (fontCoordData->GetElementValue(i, 1, &v)) coord.vstart = v;
+        if (fontCoordData->GetElementValue(i, 2, &v)) coord.uwidth = v;
+        if (fontCoordData->GetElementValue(i, 3, &v)) coord.uprewidth = v;
+        if (fontCoordData->GetElementValue(i, 4, &v)) coord.upostwidth = v;
+        if (fontCoordData->GetElementValue(i, 5, &v)) coord.vwidth = v;
+
+        fontCoords[i] = coord;
     }
 
     return CKBR_OK;

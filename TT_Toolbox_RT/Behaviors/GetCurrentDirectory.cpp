@@ -56,7 +56,7 @@ int GetCurrentDirectory(const CKBehaviorContext &behcontext)
     CKBehavior *beh = behcontext.Behavior;
     CHAR buffer[MAX_PATH];
     BOOL success = ::GetCurrentDirectoryA(MAX_PATH, buffer);
-    beh->SetOutputParameterValue(0, buffer, strlen(buffer) + 1);
+    beh->SetOutputParameterValue(0, buffer, (int)strlen(buffer) + 1);
     if (success)
     {
         beh->ActivateOutput(0, TRUE);

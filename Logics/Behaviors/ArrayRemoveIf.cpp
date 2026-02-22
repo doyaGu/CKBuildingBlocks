@@ -86,7 +86,7 @@ int ArrayRemoveIf(const CKBehaviorContext &behcontext)
     beh->GetInputParameterValue(1, &op);
 
     // we find the key
-    CKDWORD key = NULL;
+    CKUINTPTR key = NULL;
     int size = GetInputValue(array, beh, column, 2, key);
 
     int i = 0;
@@ -94,7 +94,7 @@ int ArrayRemoveIf(const CKBehaviorContext &behcontext)
     while (i != -1)
     {
         // the getting itself
-        i = array->FindRowIndex(column, op, key, size, i);
+        i = (int)array->FindRowIndex(column, op, key, size, i);
         if (i != -1)
         {
             array->RemoveRow(i);

@@ -83,7 +83,7 @@ int ArrayGetElement(const CKBehaviorContext &behcontext)
     beh->GetInputParameterValue(1, &column);
 
     // the search itself
-    CKDWORD *e = array->GetElement(line, column);
+    CKUINTPTR *e = array->GetElement(line, column);
     if (!e)
     {
         // Set IO states
@@ -120,7 +120,7 @@ int ArrayGetElement(const CKBehaviorContext &behcontext)
         {
             char *ns = (char *)*e;
             if (ns)
-                pout->SetValue(ns, strlen(ns) + 1);
+                pout->SetValue(ns, (int)strlen(ns) + 1);
             else
             {
                 char *s = "";
@@ -134,7 +134,7 @@ int ArrayGetElement(const CKBehaviorContext &behcontext)
         CK_CLASSID cid;
         if (cid = pout->GetParameterClassID())
         {
-            CKObject *obj = behcontext.Context->GetObject(*e);
+            CKObject *obj = behcontext.Context->GetObject((CK_ID)*e);
             if (CKIsChildClassOf(obj, cid))
                 pout->SetValue(e);
             else

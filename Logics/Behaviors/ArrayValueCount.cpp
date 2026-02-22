@@ -76,7 +76,7 @@ int ArrayValueCount(const CKBehaviorContext &behcontext)
     int column = 1;
     beh->GetInputParameterValue(0, &column);
 
-    CKDWORD key = NULL;
+    CKUINTPTR key = NULL;
 
     // we find the key
     int size = GetInputValue(array, beh, column, 2, key);

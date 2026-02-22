@@ -71,6 +71,7 @@ int SetDatabaseProperties(const CKBehaviorContext &behcontext)
     {
         context->OutputToConsoleExBeep("TT_SetDatabaseProperties: No file specified");
         beh->ActivateOutput(1);
+        return CKBR_OK;
     }
 
     man->SetProperty(filename, crypted);

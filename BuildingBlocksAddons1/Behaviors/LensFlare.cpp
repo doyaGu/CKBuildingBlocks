@@ -106,7 +106,7 @@ CKObjectDeclaration *FillBehaviorLensFlareDecl()
     <FONT COLOR=#000077>Fade In Time (Integer): </FONT>time in ms for the flare to appear.<BR>
     <FONT COLOR=#000077>Fade Out Time (Integer): </FONT>time in ms for the flare to disappear.<BR>
     <FONT COLOR=#000077>Visibility Angle (Parameter Angle): </FONT>angle from the center of the camera in which the flare is visible.
-    0 means in fact 90 degree so the entire half space before the camera. Use different values between 10 and 30� for the rings
+    0 means in fact 90 degree so the entire half space before the camera. Use different values between 10 and 30�?for the rings
     to see them disappear one after one.<BR>
     */
     od->SetType(CKDLL_BEHAVIORPROTOTYPE);
@@ -181,7 +181,7 @@ int LensFlare(const CKBehaviorContext &behcontext)
         }
     }
 
-    behcontext.CurrentRenderContext->AddPostRenderCallBack(RenderLensFlare, (void *)beh->GetID(), TRUE);
+    behcontext.CurrentRenderContext->AddPostRenderCallBack(RenderLensFlare, (void *)(uintptr_t)beh->GetID(), TRUE);
 
     if (readarray)
     {
@@ -386,7 +386,7 @@ void RenderLensFlare(CKRenderContext *dev, void *arg)
     FunctionCaller fc;
 
     CKContext *ctx = dev->GetCKContext();
-    CKBehavior *beh = (CKBehavior *)ctx->GetObject((CK_ID)arg);
+    CKBehavior *beh = (CKBehavior *)ctx->GetObject((CK_ID)(uintptr_t)arg);
     if (!beh)
         return;
 

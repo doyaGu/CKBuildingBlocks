@@ -117,7 +117,7 @@ int BitmapFont(const CKBehaviorContext &behcontext)
     beh->GetInputParameterValue(7, &color);
 
     float *uvTable = *(float **)beh->GetLocalParameterReadDataPtr(0);
-    int textLen = strlen(text);
+    int textLen = (int)strlen(text);
 
     // Create mesh and entity for rendering
     CKMesh *mesh = (CKMesh *)context->CreateObject(CKCID_MESH, "Mesh");

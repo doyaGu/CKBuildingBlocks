@@ -119,15 +119,10 @@ CKERROR DoOperaCallBack(const CKBehaviorContext &behcontext)
 {
     CKBehavior *beh = behcontext.Behavior;
 
-    CKBOOL k = FALSE;
-    A_LocalOpStruct *opstructtmp;
-    opstructtmp = (A_LocalOpStruct *)beh->GetLocalParameterReadDataPtr(0);
-
-    // Mac
-    ENDIANSWAP32(opstructtmp->swap);
-
-    if (opstructtmp)
-        k = opstructtmp->swap;
+    // NOTE: On x86, A_LocalOpStruct contained a 32-bit function pointer + CKBOOL.
+    // On x64, the function pointer is 64-bit, changing the struct size/layout.
+    // The old serialized data can no longer be trusted to contain a valid 'swap' flag.
+    // Recompute swap deterministically during CKM_BEHAVIORLOAD instead of using persisted data.
 
     switch (behcontext.CallbackMessage)
     {
@@ -174,7 +169,7 @@ CKERROR DoOperaCallBack(const CKBehaviorContext &behcontext)
         A_LocalOpStruct opstruct;
         opstruct.opfct = pm->GetOperationFunction(opg, og, i1g, i2g);
         opstruct.swap = FALSE;
-        if (!opstruct.opfct || k)
+        if (!opstruct.opfct)
         {
             opstruct.opfct = pm->GetOperationFunction(opg, og, i2g, i1g);
             opstruct.swap = TRUE;

@@ -51,8 +51,8 @@ int DatabaseManager::Register(CKSTRING arrayName)
         if (!strcmp(*it++, arrayName))
             return 21;
 
-    int nameSize = strlen(arrayName) + 1;
-    char *str = new char[strlen(arrayName) + 1];
+    int nameSize = (int)strlen(arrayName) + 1;
+    char *str = new char[(int)strlen(arrayName) + 1];
     strncpy(str, arrayName, nameSize);
     m_ArrayNames.PushBack(str);
     return 1;
@@ -66,6 +66,10 @@ int DatabaseManager::Clear()
             delete[] * it++;
 
     m_ArrayNames.Clear();
+
+    delete[] m_Filename;
+    m_Filename = nullptr;
+
     return true;
 }
 
@@ -74,14 +78,26 @@ int DatabaseManager::Load(CKContext *context, bool autoRegister, CKSTRING arrayN
     int i, c;
 
     if (!arrayName)
+    {
+        context->OutputToConsoleExBeep("TT_LoadDatabase: arrayName is NULL");
         return 33;
+    }
+
+    if (!m_Filename)
+    {
+        context->OutputToConsoleExBeep("TT_LoadDatabase: database filename is NULL (arrayName='%s')", arrayName);
+        return 31;
+    }
 
     FILE *fp = fopen(m_Filename, "rb");
     if (!fp)
+    {
+        context->OutputToConsoleExBeep("TT_LoadDatabase: Error when opening file '%s' (errno=%d)", m_Filename, errno);
         return 31;
+    }
 
     fseek(fp, 0, SEEK_END);
-    int fileSize = ftell(fp);
+    long fileSize = ftell(fp);
     rewind(fp);
 
     char *fileData = new char[fileSize];
@@ -114,7 +130,7 @@ int DatabaseManager::Load(CKContext *context, bool autoRegister, CKSTRING arrayN
             return 33;
         }
 
-        nameSize = strlen(chunk) + 1;
+        nameSize = (int)strlen(chunk) + 1;
         arraySize = *(int *)&chunk[nameSize];
         chunkSize = nameSize + sizeof(int) + arraySize;
         pos += chunkSize;
@@ -135,7 +151,7 @@ int DatabaseManager::Load(CKContext *context, bool autoRegister, CKSTRING arrayN
     if (autoRegister)
         Register(arrayName);
 
-    nameSize = strlen(chunk) + 1;
+    nameSize = (int)strlen(chunk) + 1;
     arraySize = *(int *)&chunk[nameSize];
     char *arrayData = new char[arraySize];
     memcpy(arrayData, &chunk[nameSize + sizeof(int)], arraySize);
@@ -155,7 +171,7 @@ int DatabaseManager::Load(CKContext *context, bool autoRegister, CKSTRING arrayN
     for (c = 0; c < header.columnCount; ++c)
     {
         CKSTRING colName = (CKSTRING)&arrayData[offset];
-        int colNameSize = strlen(colName) + 1;
+        int colNameSize = (int)strlen(colName) + 1;
         CK_ARRAYTYPE type = *(CK_ARRAYTYPE *)&arrayData[offset + colNameSize];
         switch (type)
         {
@@ -203,7 +219,7 @@ int DatabaseManager::Load(CKContext *context, bool autoRegister, CKSTRING arrayN
             case CKARRAYTYPE_STRING:
             {
                 char *str = (char *)&arrayData[offset];
-                int size = strlen(str) + 1;
+                int size = (int)strlen(str) + 1;
                 char *nstr = new char[size];
                 strncpy(nstr, str, size);
                 offset += size;
@@ -237,7 +253,7 @@ int DatabaseManager::Save(CKContext *context)
 
         int chunkSize = 0;
         CKSTRING arrayName = array->GetName();
-        chunkSize += (arrayName) ? strlen(arrayName) : 0;
+        chunkSize += (arrayName) ? (int)strlen(arrayName) : 0;
         chunkSize += 1 + sizeof(int) + sizeof(ArrayHeader);
 
         const int columnCount = array->GetColumnCount();
@@ -246,7 +262,7 @@ int DatabaseManager::Save(CKContext *context)
         for (c = 0; c < columnCount; ++c)
         {
             CKSTRING colName = array->GetColumnName(c);
-            chunkSize += (colName) ? strlen(colName) : 0;
+            chunkSize += (colName) ? (int)strlen(colName) : 0;
             chunkSize += 1 + sizeof(int);
         }
 
@@ -268,7 +284,7 @@ int DatabaseManager::Save(CKContext *context)
                 {
                     array->GetElementValue(i, c, &str);
                     if (str)
-                        chunkSize += strlen(str);
+                        chunkSize += (int)strlen(str);
                     chunkSize += 1;
                 }
             }
@@ -285,7 +301,7 @@ int DatabaseManager::Save(CKContext *context)
         arrayName = array->GetName();
         if (arrayName)
         {
-            nameLength = strlen(arrayName);
+            nameLength = (int)strlen(arrayName);
             strncpy(&chunk[offset], arrayName, nameLength + 1);
         }
         else
@@ -311,7 +327,7 @@ int DatabaseManager::Save(CKContext *context)
             CKSTRING colName = array->GetColumnName(c);
             if (colName)
             {
-                nameLength = strlen(colName);
+                nameLength = (int)strlen(colName);
                 strncpy(&chunk[offset], colName, nameLength + 1);
             }
             else
@@ -353,7 +369,7 @@ int DatabaseManager::Save(CKContext *context)
                     array->GetElementValue(i, c, &str);
                     if (str)
                     {
-                        nameLength = strlen(str);
+                        nameLength = (int)strlen(str);
                         strncpy(&chunk[offset], str, nameLength + 1);
                     }
                     else
@@ -425,8 +441,12 @@ bool DatabaseManager::SetProperty(CKSTRING filename, CKBOOL crypted)
     if (!filename || filename[0] == '\0')
         return false;
 
-    m_Filename = filename;
-    m_Crypted = crypted;
+    // Copy the filename so we own it independent of behavior parameter lifetime
+    delete[] m_Filename;
+    int len = (int)strlen(filename) + 1;
+    m_Filename = new char[len];
+    strncpy(m_Filename, filename, len);
 
+    m_Crypted = crypted;
     return true;
 }

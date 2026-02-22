@@ -200,14 +200,14 @@ int BitmapTextDisplay(const CKBehaviorContext &behcontext)
         char *oldString = (char *)beh->GetLocalParameterReadDataPtr(1);
         if (oldString)
         {
-            finalString = new char[buffer.Length() + strlen(oldString) + 2];
+            finalString = new char[buffer.Length() + (int)strlen(oldString) + 2];
             sprintf(finalString, "%s\n%s", oldString, buffer.Str());
         }
         update = TRUE;
     }
 
     if (update)
-        beh->SetLocalParameterValue(1, finalString, strlen(finalString) + 1);
+        beh->SetLocalParameterValue(1, finalString, (int)strlen(finalString) + 1);
     if (buffer != finalString)
         delete[] finalString;
 

@@ -100,7 +100,7 @@ int RenderCurve(const CKBehaviorContext &behcontext)
 
     if (!ent)
         return CKBR_OK;
-    ent->AddPostRenderCallBack(CurveRenderCallback, (void *)beh->GetID(), TRUE);
+    ent->AddPostRenderCallBack(CurveRenderCallback, (void *)(uintptr_t)beh->GetID(), TRUE);
 
     return CKBR_ACTIVATENEXTFRAME;
 }
@@ -642,7 +642,7 @@ void RenderTwoDim(CKRenderContext *dev, CKCurve *curve, Vx2DVector &size, Vx2DVe
 int CurveRenderCallback(CKRenderContext *rc, CKRenderObject *obj, void *arg)
 {
 
-    CKBehavior *beh = (CKBehavior *)CKGetObject(rc->GetCKContext(), (CK_ID)arg);
+    CKBehavior *beh = (CKBehavior *)CKGetObject(rc->GetCKContext(), (CK_ID)(uintptr_t)arg);
     if (!beh)
         return 0;
 

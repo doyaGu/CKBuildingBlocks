@@ -108,7 +108,7 @@ CKBOOL CheckArrayFormat(CKDataArray *array)
 void EnumerateResolutions(CKDataArray *array, VxDriverDesc *desc)
 {
     Vx2DVector res;
-    CKDWORD key = (CKDWORD)(&res);
+    CKUINTPTR key = (CKUINTPTR)(&res);
     int bpp = 0;
     int row = 0;
 
@@ -132,7 +132,7 @@ void EnumerateResolutions(CKDataArray *array, VxDriverDesc *desc)
             int rowbpp = 0;
             while (index != -1)
             {
-                index = array->FindRowIndex(0, CKEQUAL, key, sizeof(Vx2DVector), index);
+                index = (int)array->FindRowIndex(0, CKEQUAL, key, sizeof(Vx2DVector), index);
                 if (index != -1)
                 {
                     array->GetElementValue(index, 1, &rowbpp);

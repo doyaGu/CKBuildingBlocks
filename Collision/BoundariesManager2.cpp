@@ -408,7 +408,7 @@ const XArray<CKObject *> &BoundariesManager::FindOverlapping(VxBbox &box)
             }
         }
 
-        int beforebox = sbound - m_Axis[axis].Begin();
+        int beforebox = (int)(sbound - m_Axis[axis].Begin());
 
         // during the box, we flag the min and DO NOT unflag the max
 
@@ -432,7 +432,7 @@ const XArray<CKObject *> &BoundariesManager::FindOverlapping(VxBbox &box)
             }
         }
 
-        int objectsCrossed = sbound - m_Axis[axis].Begin();
+        int objectsCrossed = (int)(sbound - m_Axis[axis].Begin());
         if (!objectsCrossed)
         { // No crossing on this axis, we are safe to go !
 

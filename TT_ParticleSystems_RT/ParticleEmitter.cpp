@@ -7,7 +7,7 @@
 // 128 Bytes to have 16 bytes aligned data for Pentium3 optimisations 32 DWORDS
 CKBYTE _PS_AlignedMemory[128];
 
-CKDWORD *g_PS_AlignZone = (CKDWORD *)((CKDWORD)(_PS_AlignedMemory + 15) & 0xFFFFFFF0);
+CKDWORD *g_PS_AlignZone = (CKDWORD *)(((uintptr_t)(_PS_AlignedMemory + 15)) & ~(uintptr_t)15);
 float *g_Min = (float *)g_PS_AlignZone;			 // 16  Bytes  (4 floats)	+4
 float *g_Max = (float *)(g_PS_AlignZone + 4);	 // 16  Bytes  (4 floats)	+8
 float *g_One = (float *)(g_PS_AlignZone + 8);	 // 16  Bytes  (4 floats)	+12 (1.0f,1.0f,1.0f,1.0f);
@@ -112,7 +112,7 @@ void ParticleEmitter::InitParticleSystem()
     }
     m_BackPool = new CKBYTE[m_MaximumParticles * sizeof(Particle) + 16];
 
-    m_Pool = (Particle *)((CKDWORD)(m_BackPool + 15) & 0xFFFFFFF0);
+    m_Pool = (Particle *)(((uintptr_t)(m_BackPool + 15)) & ~(uintptr_t)15);
     for (int loop = 0; loop < m_MaximumParticles - 1; loop++)
     {
         m_Pool[loop].next = &m_Pool[loop + 1];
