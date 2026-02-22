@@ -10,11 +10,26 @@
 
 #include <math.h>
 #include <stdlib.h>
+#include <string.h>
 
 // Random in range helper
 static float RippleRandomRange(float min, float max)
 {
     return min + (float)rand() / (float)RAND_MAX * (max - min);
+}
+
+static void FreeRippleWaveBuffer(CKBehavior *beh)
+{
+    if (!beh)
+        return;
+
+    float **waveBufferPtr = (float **)beh->GetLocalParameterReadDataPtr(0);
+    if (!waveBufferPtr || !*waveBufferPtr)
+        return;
+
+    delete[] *waveBufferPtr;
+    float *nullBuffer = NULL;
+    beh->SetLocalParameterValue(0, &nullBuffer, sizeof(float *));
 }
 
 CKObjectDeclaration *FillBehaviorRippleWaveDecl();
@@ -97,7 +112,7 @@ int RippleWave(const CKBehaviorContext &behcontext)
     beh->GetInputParameterValue(1, &viscosity);
 
     float speed = 0.0f;
-    beh->GetInputParameterValue(1, &speed);  // Note: original code gets param 1 twice, likely a bug
+    beh->GetInputParameterValue(2, &speed);
 
     // Handle Off input
     if (beh->IsInputActive(2))
@@ -112,6 +127,8 @@ int RippleWave(const CKBehaviorContext &behcontext)
     {
         beh->ActivateInput(0, FALSE);
         beh->ActivateOutput(0, TRUE);
+
+        FreeRippleWaveBuffer(beh);
 
         // Get current vertex positions
         CKDWORD stride = 0;
@@ -132,20 +149,27 @@ int RippleWave(const CKBehaviorContext &behcontext)
         float *waveBuffer = new float[bufferSize];
         memset(waveBuffer, 0, bufferSize * sizeof(float));
         beh->SetLocalParameterValue(0, &waveBuffer, sizeof(float*));
-        // Note: buffer is stored as pointer, will need to free later
     }
 
     // Get wave buffer
     float **waveBufferPtr = (float **)beh->GetLocalParameterReadDataPtr(0);
-    float *waveBuffer = *waveBufferPtr;
+    float *waveBuffer = waveBufferPtr ? *waveBufferPtr : NULL;
 
     // Get original vertices
     VxVector *origVertices = (VxVector *)beh->GetLocalParameterReadDataPtr(1);
+    if (!waveBuffer || !origVertices)
+    {
+        if (beh->IsInputActive(1))
+            beh->ActivateInput(1, FALSE);
+        return CKBR_OK;
+    }
 
     // Handle Drop input
     if (beh->IsInputActive(1))
     {
         beh->ActivateInput(1, FALSE);
+        if (gridSize < 3)
+            return CKBR_ACTIVATENEXTFRAME;
 
         // Create a drop at random position (avoiding edges)
         float maxPos = (float)(gridSize - 1);
@@ -238,6 +262,15 @@ int RippleWave(const CKBehaviorContext &behcontext)
 CKERROR RippleWaveCallBack(const CKBehaviorContext &behcontext)
 {
     CKBehavior *beh = behcontext.Behavior;
-    // Callback for cleanup - in full implementation would free wave buffer
+
+    switch (behcontext.CallbackMessage)
+    {
+    case CKM_BEHAVIORDETACH:
+    case CKM_BEHAVIORDELETE:
+    case CKM_BEHAVIORRESET:
+        FreeRippleWaveBuffer(beh);
+        break;
+    }
+
     return CKBR_OK;
 }

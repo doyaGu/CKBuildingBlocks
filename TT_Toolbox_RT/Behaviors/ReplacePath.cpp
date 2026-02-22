@@ -55,6 +55,12 @@ int ReplacePath(const CKBehaviorContext &behcontext)
     CKContext *context = behcontext.Context;
 
     CKPathManager *pm = context->GetPathManager();
+    if (!pm)
+    {
+        context->OutputToConsoleExBeep("TT_ReplacePath: path manager unavailable");
+        beh->ActivateOutput(1, TRUE);
+        return CKBR_OK;
+    }
 
     CKSTRING oldPath = (CKSTRING)beh->GetInputParameterReadDataPtr(0);
     CKSTRING newPath = (CKSTRING)beh->GetInputParameterReadDataPtr(1);
@@ -62,19 +68,24 @@ int ReplacePath(const CKBehaviorContext &behcontext)
     int catIdx;
     beh->GetInputParameterValue(3, &catIdx);
 
-    if (catIdx > SOUND_PATH_IDX)
+    if (!oldPath || !newPath || !curDir)
+    {
+        context->OutputToConsoleExBeep("TT_ReplacePath: invalid path parameters");
+        beh->ActivateOutput(1, TRUE);
+        return CKBR_OK;
+    }
+
+    if (catIdx < 0 || catIdx > SOUND_PATH_IDX)
     {
         context->OutputToConsoleExBeep("TT_ReplacePath: invalid PathIDX");
         beh->ActivateOutput(1, TRUE);
         return CKBR_OK;
     }
 
-    char path1[_MAX_PATH];
-    char path2[_MAX_PATH];
-    strcpy(path1, curDir);
-    strcpy(path2, curDir);
-    strcat(path1, oldPath);
-    strcat(path2, newPath);
+    XString path1 = curDir;
+    path1 += oldPath;
+    XString path2 = curDir;
+    path2 += newPath;
 
     int pathCount = pm->GetPathCount(catIdx);
     if (pathCount <= 0)
@@ -87,9 +98,9 @@ int ReplacePath(const CKBehaviorContext &behcontext)
     for (int pathIdx = 0; pathIdx < pathCount; ++pathIdx)
     {
         pm->GetPathName(catIdx, pathIdx, pathName);
-        if (pathName == path1)
+        if (pathName == path1.CStr())
         {
-            pathName = path2;
+            pathName = path2.CStr();
             pm->RenamePath(catIdx, pathIdx, pathName);
             break;
         }

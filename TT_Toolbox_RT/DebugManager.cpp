@@ -11,20 +11,19 @@ DebugManager::DebugManager(CKContext *context) : CKBaseManager(context, TT_DEBUG
 DebugManager::~DebugManager() {}
 
 void DebugManager::WriteToLogFile(const char *filename, const char *format, ...) {
-    if (m_LogFileNotOpened)
-    {
-        m_LogFile = fopen(filename, "w");
-        m_LogFileNotOpened = false;
-    }
-    else
-    {
-        m_LogFile = fopen(filename, "a");
-    }
+    if (!filename || !format)
+        return;
+
+    m_LogFile = fopen(filename, m_LogFileNotOpened ? "w" : "a");
+    if (!m_LogFile)
+        return;
+
+    m_LogFileNotOpened = false;
 
     va_list ap;
-        va_start(ap, format);
+    va_start(ap, format);
     vfprintf(m_LogFile, format, ap);
-        va_end(ap);
+    va_end(ap);
 
     fclose(m_LogFile);
     m_LogFile = NULL;
