@@ -317,11 +317,18 @@ int InitializeExtra(const CKBehaviorContext &behcontext)
     }
 
     CK3dEntity *child = ball0->GetChild(0);
+    if (!child)
+    {
+        context->OutputToConsole("There is no Frame at Centerbillboard.", FALSE);
+        return CKBR_PARAMETERERROR;
+    }
     CKBehavior *script = child->GetScript(0);
-    if (script)
-        scene->DeActivate(script);
-    else
-        context->OutputToConsoleEx("1Script not found %s", child->GetName());
+    if (!script)
+    {
+        context->OutputToConsole("There is no Script at Centerbillboard frame.", FALSE);
+        return CKBR_PARAMETERERROR;
+    }
+    scene->DeActivate(script);
     ball0->Show(CKHIDE);
 
     float force;
@@ -343,22 +350,6 @@ int InitializeExtra(const CKBehaviorContext &behcontext)
         }
 
         child = ball->GetChild(0);
-        script = child->GetScript(0);
-        if (script)
-            scene->DeActivate(script);
-        else
-            context->OutputToConsoleEx("2Script not found %s", child->GetName());
-        ball->Show(CKHIDE);
-
-        VxVector pos;
-        ball->GetPosition(&pos);
-
-        force += forceWidth;
-        SmallBall *current = new SmallBall(NULL, ball, pos, force, true);
-        if (i == 0)
-            smallBalls = current;
-
-        child = ball->GetChild(0);
         if (!child)
         {
             context->OutputToConsole("There is no Frame at one of the Billboards.", FALSE);
@@ -371,6 +362,17 @@ int InitializeExtra(const CKBehaviorContext &behcontext)
             context->OutputToConsole("There is no Script at one of the Billboardframes.", FALSE);
             return CKBR_PARAMETERERROR;
         }
+
+        scene->DeActivate(script);
+        ball->Show(CKHIDE);
+
+        VxVector pos;
+        ball->GetPosition(&pos);
+
+        force += forceWidth;
+        SmallBall *current = new SmallBall(NULL, ball, pos, force, true);
+        if (i == 0)
+            smallBalls = current;
 
         script->Activate(FALSE, FALSE);
 
@@ -528,7 +530,7 @@ int ExecuteExtraOnIdle(const CKBehaviorContext &behcontext)
             Vx3DMatrixFromRotation(mat, vec, rotationSpeed);
             Vx3DRotateVector(&newPos, mat, &pos);
             float m = newPos.Magnitude();
-            if (m != 2.0f)
+            if (m > 0.0f && m != 2.0f)
                 newPos *= (1.0f / m) * 2;
             node->ball->SetPosition(&newPos, target);
         }
@@ -554,11 +556,15 @@ int ExecuteExtraOnIdle(const CKBehaviorContext &behcontext)
         if (centerObject)
         {
             CK3dEntity *child = centerObject->GetChild(0);
-            CKBehavior *script = child->GetScript(0);
-            if (script)
-                scene->DeActivate(script);
-            else
-                context->OutputToConsoleEx("14Script not found %s", child->GetName());
+            CKBehavior *script = NULL;
+            if (child)
+            {
+                script = child->GetScript(0);
+                if (script)
+                    scene->DeActivate(script);
+                else
+                    context->OutputToConsoleEx("14Script not found %s", child->GetName());
+            }
             centerObject->Show(CKHIDE);
 
             child = centerObject->GetChild(0);
@@ -691,7 +697,7 @@ int ExecuteExtraOnHit(const CKBehaviorContext &behcontext)
 
         float collDistance = 2.0f;
         beh->GetInputParameterValue(EXTRA_POINTS_COLLDISTANCE, &collDistance);
-        if (SquareMagnitude(ballPos - pos) <= collDistance)
+        if (SquareMagnitude(ballPos - pos) <= collDistance * collDistance)
         {
             ++activatedBallCount;
             node->flag = false;

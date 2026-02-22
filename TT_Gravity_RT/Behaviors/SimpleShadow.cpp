@@ -31,6 +31,30 @@ typedef struct
 
 void A_GetFloors(SimpleShadowStruct *tss, CK3dEntity *ent, CKBehavior *beh, VxVector *pos_rel, VxVector *scale, float maxHeight);
 void A_Delete_SoftShadow_From_Floors(CK_ID *floor, CKMaterial *cmat, int nb_floors);
+static void A_ResetSimpleShadowData(CKBehavior *beh, CKContext *context);
+
+static void A_ResetSimpleShadowData(CKBehavior *beh, CKContext *context)
+{
+    if (!beh || !context)
+        return;
+
+    SimpleShadowStruct *tss = NULL;
+    beh->GetLocalParameterValue(0, &tss);
+    if (!tss)
+        return;
+
+    CKMaterial *mat = (CKMaterial *)context->GetObject(tss->matID);
+    if (mat)
+    {
+        A_Delete_SoftShadow_From_Floors(tss->floor, mat, tss->nb_floors_under);
+        mat->SetTexture0(NULL);
+        context->DestroyObject(mat);
+    }
+
+    delete tss;
+    tss = NULL;
+    beh->SetLocalParameterValue(0, &tss);
+}
 
 CKObjectDeclaration *FillBehaviorSimpleShadowDecl()
 {
@@ -80,6 +104,8 @@ int SimpleShadow(const CKBehaviorContext &behcontext)
     CKBehavior *beh = behcontext.Behavior;
     CKRenderContext *dev = behcontext.CurrentRenderContext;
     CKContext *context = behcontext.Context;
+    if (!dev || !context)
+        return CKBR_PARAMETERERROR;
 
     if (!beh->GetTarget())
         return CKBR_OWNERERROR;
@@ -89,24 +115,7 @@ int SimpleShadow(const CKBehaviorContext &behcontext)
         beh->ActivateInput(1, FALSE);
         beh->ActivateOutput(1, TRUE);
 
-        SimpleShadowStruct *tss = NULL;
-        beh->GetLocalParameterValue(0, &tss);
-        if (tss)
-        {
-            CKMaterial *shadow = (CKMaterial *)context->GetObjectByNameAndClass("TT_SimpleShadow Material", CKCID_MATERIAL);
-            CKMaterial *mat = (CKMaterial *)context->GetObject(tss->matID);
-            if (!mat)
-                return CKBR_PARAMETERERROR;
-            if (shadow == mat)
-            {
-                A_Delete_SoftShadow_From_Floors(tss->floor, mat, tss->nb_floors_under);
-                mat->SetTexture0(NULL);
-                context->DestroyObject(mat);
-            }
-        }
-
-        tss = NULL;
-        beh->SetLocalParameterValue(0, &tss);
+        A_ResetSimpleShadowData(beh, context);
         return CKBR_OK;
     }
 
@@ -115,16 +124,13 @@ int SimpleShadow(const CKBehaviorContext &behcontext)
         beh->ActivateInput(0, FALSE);
         beh->ActivateOutput(0, TRUE);
 
-        CKMaterial *shadow = (CKMaterial *)context->GetObjectByNameAndClass("TT_SimpleShadow Material", CKCID_MATERIAL);
-        if (shadow)
-        {
-            shadow->SetTexture0(NULL);
-            context->DestroyObject(shadow);
-        }
+        A_ResetSimpleShadowData(beh, context);
 
         // creation of a CkMaterial
         CKMaterial *mat = (CKMaterial *)context->CreateObject(CKCID_MATERIAL, "TT_SimpleShadow Material",
                                                               beh->IsDynamic() ? CK_OBJECTCREATION_DYNAMIC : CK_OBJECTCREATION_NONAMECHECK);
+        if (!mat)
+            return CKBR_PARAMETERERROR;
         mat->SetEmissive(VxColor(255, 255, 255));
         mat->SetDiffuse(VxColor(255, 255, 255, 255));
         mat->SetSpecular(VxColor(0, 0, 0));
@@ -132,20 +138,12 @@ int SimpleShadow(const CKBehaviorContext &behcontext)
         mat->SetTextureAddressMode(VXTEXTURE_ADDRESSCLAMP);
         mat->SetTextureBlendMode(VXTEXTUREBLEND_COPY);
 
-        SimpleShadowStruct *tss = NULL;
-        beh->GetLocalParameterValue(0, &tss);
-        if (tss)
-        {
-            A_Delete_SoftShadow_From_Floors(tss->floor, mat, tss->nb_floors_under);
-            tss = NULL;
-        }
-
-        tss = new SimpleShadowStruct;
+        SimpleShadowStruct *tss = new SimpleShadowStruct;
         tss->matID = CKOBJID(mat);
         tss->texID = -1;
         tss->zoom = 2.0f;
         tss->nb_floors_under = 0;
-        memset(tss->floor, 0, A_MAX_NUMBER_OF_FLOOR_UNDER_OBJECT * sizeof(CK_ID));
+        memset(tss->floor, 0, sizeof(tss->floor));
 
         beh->SetLocalParameterValue(0, &tss);
     }
@@ -158,14 +156,26 @@ CKERROR SimpleShadowCallBack(const CKBehaviorContext &behcontext)
 {
     CKBehavior *beh = behcontext.Behavior;
     CKRenderContext *dev = behcontext.CurrentRenderContext;
+    CKContext *context = behcontext.Context;
 
     switch (behcontext.CallbackMessage)
     {
+    case CKM_BEHAVIORDELETE:
+    case CKM_BEHAVIORDETACH:
+    case CKM_BEHAVIORRESET:
+    case CKM_BEHAVIORNEWSCENE:
+    case CKM_BEHAVIORDEACTIVATESCRIPT:
+        if (dev)
+            dev->RemovePreRenderCallBack(SimpleShadowRenderCallback, beh);
+        A_ResetSimpleShadowData(beh, context);
+        break;
     case CKM_BEHAVIORPAUSE:
-        dev->RemovePreRenderCallBack(SimpleShadowRenderCallback, beh);
+        if (dev)
+            dev->RemovePreRenderCallBack(SimpleShadowRenderCallback, beh);
         break;
     case CKM_BEHAVIORRESUME:
-        dev->AddPreRenderCallBack(SimpleShadowRenderCallback, beh, TRUE);
+        if (dev)
+            dev->AddPreRenderCallBack(SimpleShadowRenderCallback, beh, TRUE);
         break;
     }
 
@@ -175,9 +185,13 @@ CKERROR SimpleShadowCallBack(const CKBehaviorContext &behcontext)
 void SimpleShadowRenderCallback(CKRenderContext *dev, void *arg)
 {
     CKBehavior *beh = (CKBehavior *)arg;
+    if (!beh)
+        return;
     CKContext *context = dev->GetCKContext();
 
     CK3dEntity *entity = (CK3dEntity *)beh->GetTarget();
+    if (!entity)
+        return;
 
     SimpleShadowStruct *tss = NULL;
     beh->GetLocalParameterValue(0, &tss);
@@ -185,6 +199,8 @@ void SimpleShadowRenderCallback(CKRenderContext *dev, void *arg)
         return;
 
     CKMaterial *mat = (CKMaterial *)context->GetObject(tss->matID);
+    if (!mat)
+        return;
 
     //////////////////////////////////////////////////
     //  We get the Floors that WERE under the object
@@ -192,11 +208,11 @@ void SimpleShadowRenderCallback(CKRenderContext *dev, void *arg)
     int old_nb_floors_under = tss->nb_floors_under;
 
 #if CKVERSION == 0x13022002
-    CKMemoryPool memoryPool1(context, old_nb_floors_under);
+    CKMemoryPool memoryPool1(context, old_nb_floors_under * sizeof(CK_ID));
     CK_ID *old_floor = (CK_ID *)memoryPool1.Mem();
 #else
-    VxScratch mempool1(old_nb_floors_under * sizeof(float));
-    CK_ID* old_floor = (CK_ID*)mempool1.Mem();
+    VxScratch mempool1(old_nb_floors_under * sizeof(CK_ID));
+    CK_ID *old_floor = (CK_ID *)mempool1.Mem();
 #endif
 
     memcpy(old_floor, tss->floor, old_nb_floors_under * sizeof(CK_ID));
@@ -223,7 +239,10 @@ void SimpleShadowRenderCallback(CKRenderContext *dev, void *arg)
 
     // bbox local multiply by world scale
     const VxBbox &Bbox_obj = entity->GetBoundingBox(TRUE);
-    float inv_zoom = 1.0f / (zoom * (Bbox_obj.Max.x - Bbox_obj.Min.x) * Magnitude(entity->GetWorldMatrix()[0]));
+    float width = (Bbox_obj.Max.x - Bbox_obj.Min.x) * Magnitude(entity->GetWorldMatrix()[0]);
+    if (zoom == 0.0f || width == 0.0f)
+        return;
+    float inv_zoom = 1.0f / (zoom * width);
 
     //////////////////////////////////////////////////
     //  We get the Floors that ARE under the object
