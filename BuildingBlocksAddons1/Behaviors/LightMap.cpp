@@ -33,6 +33,7 @@ struct LMThreadParams
 
     HANDLE beginEvent;
     HANDLE doneEvent;
+    HANDLE quitEvent;
     // need padding?  probably not, might need it in LightmapGenerator if allocated
     // consecutively
 };
@@ -42,6 +43,7 @@ struct ThreadedLightmapGenerator
     LightmapGenerator lg1;
     LightmapGenerator lg2;
     ThreadedLightmapGenerator(CKContext *ctx);
+    ~ThreadedLightmapGenerator();
 
     void ShowPolygons(CKBOOL s)
     {
@@ -114,6 +116,7 @@ struct ThreadedLightmapGenerator
     HANDLE hThreads[MAXTHREADS - 1];
     HANDLE beginEvents[MAXTHREADS - 1];
     HANDLE doneEvents[MAXTHREADS - 1];
+    HANDLE quitEvents[MAXTHREADS - 1];
     LMThreadParams thrParams[MAXTHREADS - 1];
 };
 
@@ -122,15 +125,62 @@ ThreadedLightmapGenerator::ThreadedLightmapGenerator(CKContext *ctx)
 {
 
     assert(MAXTHREADS == 2); // right now we only want 2 threads
+    for (int i = 0; i < MAXTHREADS - 1; ++i)
+    {
+        hThreads[i] = NULL;
+        beginEvents[i] = NULL;
+        doneEvents[i] = NULL;
+        quitEvents[i] = NULL;
+    }
+
     beginEvents[0] = CreateEvent(NULL, FALSE, FALSE, NULL);
     doneEvents[0] = CreateEvent(NULL, FALSE, FALSE, NULL);
+    quitEvents[0] = CreateEvent(NULL, TRUE, FALSE, NULL);
 
     thrParams[0].mLG = &lg1; // We give it lg1, because in the case of one receiver than
                              // lg2 does the work and lg1 does nothing.  Quicker this way
     thrParams[0].beginEvent = beginEvents[0];
     thrParams[0].doneEvent = doneEvents[0];
-    hThreads[0] = CreateThread(NULL, NULL, LMG_WorkerThreadFunc, &thrParams[0],
-                               0, NULL); // w2k/xp specific
+    thrParams[0].quitEvent = quitEvents[0];
+    if (beginEvents[0] && doneEvents[0] && quitEvents[0])
+    {
+        hThreads[0] = CreateThread(NULL, NULL, LMG_WorkerThreadFunc, &thrParams[0],
+                                   0, NULL); // w2k/xp specific
+    }
+}
+
+ThreadedLightmapGenerator::~ThreadedLightmapGenerator()
+{
+    for (int i = 0; i < MAXTHREADS - 1; ++i)
+    {
+        if (quitEvents[i])
+            SetEvent(quitEvents[i]);
+    }
+
+    for (int i = 0; i < MAXTHREADS - 1; ++i)
+    {
+        if (hThreads[i])
+        {
+            WaitForSingleObject(hThreads[i], INFINITE);
+            CloseHandle(hThreads[i]);
+            hThreads[i] = NULL;
+        }
+        if (beginEvents[i])
+        {
+            CloseHandle(beginEvents[i]);
+            beginEvents[i] = NULL;
+        }
+        if (doneEvents[i])
+        {
+            CloseHandle(doneEvents[i]);
+            doneEvents[i] = NULL;
+        }
+        if (quitEvents[i])
+        {
+            CloseHandle(quitEvents[i]);
+            quitEvents[i] = NULL;
+        }
+    }
 }
 
 DWORD WINAPI ThreadedLightmapGenerator::LMG_WorkerThreadFunc(PVOID param)
@@ -140,11 +190,17 @@ DWORD WINAPI ThreadedLightmapGenerator::LMG_WorkerThreadFunc(PVOID param)
 
     HANDLE myBeginEvent = lParam->beginEvent;
     HANDLE myDoneEvent = lParam->doneEvent;
+    HANDLE myQuitEvent = lParam->quitEvent;
     LightmapGenerator *myLG = lParam->mLG;
+    HANDLE waitHandles[2] = {myBeginEvent, myQuitEvent};
 
     for (;;)
     {
-        WaitForSingleObject(myBeginEvent, INFINITE);
+        DWORD waitResult = WaitForMultipleObjects(2, waitHandles, FALSE, INFINITE);
+        if (waitResult == WAIT_OBJECT_0 + 1)
+            return 0;
+        if (waitResult != WAIT_OBJECT_0)
+            return 0;
 
         // Copy particular params
         float Density = lParam->Density;
@@ -170,14 +226,17 @@ void ThreadedLightmapGenerator::Generate(float Density, float Threshold,
     lg1.Clean();
     lg2.Clean();
     // Signal other thread to start
-    for (int i = 0; i < MAXTHREADS - 1; i++)
-        SetEvent(beginEvents[i]);
+    if (hThreads[0] && beginEvents[0] && doneEvents[0])
+        SetEvent(beginEvents[0]);
 
     // Main thread reuse
     lg2.Generate(Density, Threshold, SuperSampling, Blur);
 
     // Now wait for other thread to finish
-    WaitForMultipleObjects(MAXTHREADS - 1, doneEvents, TRUE, INFINITE);
+    if (hThreads[0] && beginEvents[0] && doneEvents[0])
+        WaitForSingleObject(doneEvents[0], INFINITE);
+    else
+        lg1.Generate(Density, Threshold, SuperSampling, Blur);
 
     // Need to be serial
     lg1.PackAllTextures();
