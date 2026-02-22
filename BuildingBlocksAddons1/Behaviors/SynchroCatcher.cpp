@@ -213,7 +213,7 @@ CKERROR SynchroCatcherCallBackObject(const CKBehaviorContext &behcontext)
             if (pin->GetGUID() != CKPGUID_KEY)
             {
                 pin->SetGUID(CKPGUID_KEY);
-                sprintf(str, "Key %d", a - 3);
+                snprintf(str, sizeof(str), "Key %d", a - 3);
                 pin->SetName(str);
                 if (pout = pin->GetRealSource())
                 {

@@ -16,7 +16,8 @@ using namespace BBAddons1;
 
 PolyhedronConstructor::~PolyhedronConstructor()
 {
-    m_Edges;
+    delete[] m_Edges;
+    m_Edges = NULL;
 
     for (PolyhedronArray::Iterator it = m_Polyhedrons.Begin(); it != m_Polyhedrons.End(); ++it)
     {
@@ -198,6 +199,7 @@ void PolyhedronConstructor::WeldVertices()
 #ifdef ADJACENCYMETHOD
 
 PolyhedronConstructor::PolyhedronConstructor(CKMesh *mesh)
+    : m_Mesh(NULL), m_Edges(NULL), m_EdgeCount(0)
 {
     if (!mesh)
         return;
@@ -217,7 +219,7 @@ PolyhedronConstructor::PolyhedronConstructor(CKMesh *mesh)
     BuildFaceAdjacency();
 }
 
-void PolyhedronConstructor::Simplify(float threshold)
+void PolyhedronConstructor::Simplify(float threshold) throw()
 {
     int faceCount = m_Mesh->GetFaceCount();
 
@@ -327,6 +329,7 @@ void PolyhedronConstructor::Simplify(float threshold)
 #else
 
 PolyhedronConstructor::PolyhedronConstructor(CKMesh *mesh)
+    : m_Mesh(NULL), m_Edges(NULL), m_EdgeCount(0)
 {
     if (!mesh)
         return;
@@ -495,11 +498,12 @@ void PolyhedronConstructor::RSimplify(float threshold, Polyhedron &reference, Ed
 
     //	XASSERT(p.m_Edges.Size() != 0);
 
-    m_DeletedPolyhedrons.PushBack(&p);
-    delete &p;
+    Polyhedron *deletedPolyhedron = &p;
+    m_DeletedPolyhedrons.PushBack(deletedPolyhedron);
+    delete deletedPolyhedron;
 }
 
-void PolyhedronConstructor::Simplify(float threshold)
+void PolyhedronConstructor::Simplify(float threshold) throw()
 {
     CKContext *ctx = m_Mesh->GetCKContext();
 

@@ -133,7 +133,7 @@ public:
             tmpent = (CK3dEntity *)grp->GetObject(a);
             if (tmpent)
             {
-                sprintf(subanim_name, "%s_%s", tmpent->GetName(), anim_name);
+                snprintf(subanim_name, sizeof(subanim_name), "%s_%s", tmpent->GetName(), anim_name);
                 SetObjAnim(a, subanim_name, tmpent, ctx);
                 keyedanim->AddAnimation(anim[a]);
             }

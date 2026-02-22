@@ -161,16 +161,20 @@ void ApplyMatrixToTextureInsides(CKTexture *tex, int matrix[3][3], int sum)
     }
 
     memcpy(image, newcolors, width * height * 4);
+    tex->ReleaseSurfacePtr();
 }
 
 LightmapGenerator::LightmapGenerator(CKContext *ctx)
 {
     m_Context = ctx;
     m_ShowPolygons = FALSE;
+    m_PolygonConstructor = NULL;
 }
 
 LightmapGenerator::~LightmapGenerator()
 {
+    delete m_PolygonConstructor;
+    m_PolygonConstructor = NULL;
     Clean();
 }
 
@@ -512,6 +516,8 @@ void LightmapGenerator::Generate(float Density, float Threshold, int SuperSampli
         catch(...)
         {
             m_Context->OutputToConsoleEx("Lightmap does not support object : %s", m_CurrentEntity->GetName());
+            delete m_PolygonConstructor;
+            m_PolygonConstructor = NULL;
             continue;
         }
 
@@ -565,7 +571,7 @@ void LightmapGenerator::Generate(float Density, float Threshold, int SuperSampli
             float invtheight = 1.0f / theight;
 
             // We create the light map
-            sprintf(buffer, "%s - face %d", m_CurrentEntity->GetName(), p);
+            snprintf(buffer, sizeof(buffer), "%s - face %d", m_CurrentEntity->GetName(), p);
             CKTexture *tex = (CKTexture *)m_Context->CreateObject(CKCID_TEXTURE, buffer);
 
             // We create the light map face with vertex in the world coordinates
@@ -896,6 +902,7 @@ void LightmapGenerator::DuplicateBorderTexture(CKTexture *tex)
 
     // and the last line
     memcpy(texImage + texWidth * i, texImage + texWidth * (i - 1), texWidth * sizeof(CKDWORD));
+    tex->ReleaseSurfacePtr();
 }
 
 void LightmapGenerator::ExtendBorderTexture(CKTexture *tex)
@@ -1016,6 +1023,7 @@ void LightmapGenerator::ExtendBorderTexture(CKTexture *tex)
             *(texImage + (texHeight - 1) * texWidth + i) = RGBAITOCOLOR(r, g, b, 255);
         }
     }
+    tex->ReleaseSurfacePtr();
 }
 
 void LightmapGenerator::PackAllTextures()
@@ -1069,7 +1077,7 @@ void LightmapGenerator::PackTextures(LightMapFaces &ObjectMaps)
     int finalWidth = XMax(approximateWidth, maxWidth);
 
     char buffer[64];
-    sprintf(buffer, "LightMap %s", object->GetName());
+    snprintf(buffer, sizeof(buffer), "LightMap %s", object->GetName());
     CKTexture *finalTexture = (CKTexture *)m_Context->CreateObject(CKCID_TEXTURE, buffer);
     finalTexture->Create(finalWidth, finalWidth);
     CKDWORD *destImage = (CKDWORD *)finalTexture->LockSurfacePtr();
@@ -1130,6 +1138,7 @@ void LightmapGenerator::PackTextures(LightMapFaces &ObjectMaps)
         {
             memcpy(destImage + finalWidth * (int(fp.y) + i) + int(fp.x), srcImage + texWidth * i, texWidth * sizeof(CKDWORD));
         }
+        tex->ReleaseSurfacePtr();
 
         ///
         // Copy Information
@@ -1193,6 +1202,7 @@ void LightmapGenerator::PackTextures(LightMapFaces &ObjectMaps)
         CKDWORD *newData = new CKDWORD[newWidth * finalWidth];
         for (int i = 0; i < finalWidth; ++i)
             memcpy(newData + newWidth * i, destImage + finalWidth * i, newWidth * sizeof(CKDWORD));
+        finalTexture->ReleaseSurfacePtr();
         finalTexture->Create(newWidth, finalWidth);
         destImage = (CKDWORD *)finalTexture->LockSurfacePtr();
         memcpy(destImage, newData, newWidth * finalWidth * sizeof(CKDWORD));
@@ -1217,6 +1227,7 @@ void LightmapGenerator::PackTextures(LightMapFaces &ObjectMaps)
         CKDWORD *newData = new CKDWORD[newHeight * finalWidth];
         for (int i = 0; i < newHeight; ++i)
             memcpy(newData + newWidth * i, destImage + newWidth * i, newWidth * sizeof(CKDWORD));
+        finalTexture->ReleaseSurfacePtr();
         finalTexture->Create(newWidth, newHeight);
         destImage = (CKDWORD *)finalTexture->LockSurfacePtr();
         memcpy(destImage, newData, newWidth * newHeight * sizeof(CKDWORD));
