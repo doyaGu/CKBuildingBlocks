@@ -216,7 +216,7 @@ void ProcessKeyboardInputs(VxVector *RotationAngles, CKBehavior *beh, CKInputMan
     // Zoom Update
     ////////////////
 
-    if ((input->IsKeyDown(key_Zin)) || (input->IsKeyDown(key_Zout)) && !stopping)
+    if ((input->IsKeyDown(key_Zin) || input->IsKeyDown(key_Zout)) && !stopping)
     {
         float ZoomSpeed = 40.0f;
         beh->GetInputParameterValue(IN_SPEED_ZOOM, &ZoomSpeed);

@@ -71,12 +71,17 @@ int SetCameraTarget(const CKBehaviorContext &behcontext)
 
     // Get target
     CK3dEntity *ent = (CK3dEntity *)beh->GetInputParameterObject(0);
-    if (beh->GetVersion() == 0x0001000)
+    if (beh->GetVersion() == 0x00010000)
     {
+        if (!ent)
+            return CKBR_PARAMETERERROR;
         VxVector pos(0, 0, 0);
         ent->GetPosition(&pos);
         CK3dEntity *target = cam->GetTarget();
-        target->SetPosition(&pos);
+        if (target)
+            target->SetPosition(&pos);
+        else
+            cam->SetTarget(ent);
         return CKBR_OK;
     }
     if (ent && (ent->GetClassID() == CKCID_3DENTITY))
