@@ -113,8 +113,7 @@ int KeyboardMapper(const CKBehaviorContext &behcontext)
     if (!input)
     {
         behcontext.Context->OutputToConsoleEx("Can't get the Input Manager");
-        if (!beo)
-            return CKBR_GENERICERROR;
+        return CKBR_GENERICERROR;
     }
 
     mappedKey *keyBinded = (mappedKey *)beh->GetLocalParameterWriteDataPtr(0);

@@ -126,24 +126,24 @@ int DigitalJoystickMapper(const CKBehaviorContext &behcontext)
     if (!input)
     {
         behcontext.Context->OutputToConsoleEx("Can't get the Input Manager");
-        if (!beo) return CKBR_GENERICERROR;
+        return CKBR_GENERICERROR;
     }
 
     mappedJoy *joyBinded = (mappedJoy *)beh->GetLocalParameterWriteDataPtr(0);
     int joyBindedNumber = 0;
     beh->GetLocalParameterValue(1, &joyBindedNumber);
 
-    if (!input->IsJoystickAttached(joyBindedNumber))
+    int joy = 0;
+    beh->GetInputParameterValue(0, &joy);
+
+    if (!input->IsJoystickAttached(joy))
     {
         behcontext.Context->OutputToConsoleEx("Joystick not attached");
-        if (!beo) return CKBR_GENERICERROR;
+        return CKBR_GENERICERROR;
     }
 
     VxVector sensitivity(0.5f, 0.5f, 0.5f);
     beh->GetLocalParameterValue(2, &sensitivity);
-
-    int joy = 0;
-    beh->GetInputParameterValue(0, &joy);
 
     VxVector pos;
     input->GetJoystickPosition(joy, &pos);

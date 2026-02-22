@@ -263,11 +263,8 @@ int EditString(const CKBehaviorContext &behcontext)
     CKBehavior *beh = behcontext.Behavior;
 
     CKParameterLocal *local = beh->GetLocalParameter(LOCAL_STR);
-    static bool oldVersion = false;
     if (!local)
     {
-        oldVersion = true;
-
         behcontext.Context->OutputToConsoleEx("The behavior Input String is not compatible with the version 1.0");
 
         CKParameterLocal *loc = NULL;
@@ -389,7 +386,12 @@ int EditString(const CKBehaviorContext &behcontext)
         beh->GetLocalParameterValue(LOCAL_KEYBREP, &keybrep);
         input->EnableKeyboardRepetition(keybrep);
         beh->ActivateInput(IN_ON, FALSE);
-        char *resetstr = (char*)beh->GetInputParameterReadDataPtr(PIN_STRING);
+        const char *resetRead = (const char *)beh->GetInputParameterReadDataPtr(PIN_STRING);
+        if (!resetRead)
+            resetRead = "";
+        int resetReadLen = (int)strlen(resetRead);
+        char *resetstr = new char[resetReadLen + 1];
+        memcpy(resetstr, resetRead, resetReadLen + 1);
         RemoveAllCaret(resetstr);
         int len = (int)strlen(resetstr);
         if (len < size)
@@ -426,6 +428,8 @@ int EditString(const CKBehaviorContext &behcontext)
             pout->SetValue(tmp, (int)strlen(tmp) + 1);
             delete[] tmp;
         }
+
+        delete[] resetstr;
 
         beh->ActivateOutput(OUT_ON);
         return CKBR_ACTIVATENEXTFRAME;
@@ -732,10 +736,10 @@ int EditString(const CKBehaviorContext &behcontext)
             pout->SetValue(tmp, (int)strlen(tmp) + 1);
             delete[] tmp;
         }
-        if (oldVersion)
-            beh->ActivateOutput(OUT_OFF, TRUE);
-        else
+        if (beh->GetOutput(OUT_UPDATED))
             beh->ActivateOutput(OUT_UPDATED, TRUE);
+        else
+            beh->ActivateOutput(OUT_OFF, TRUE);
     }
 
     return CKBR_ACTIVATENEXTFRAME;
