@@ -33,7 +33,6 @@ CKObjectDeclaration *FillBehaviorFadeOutDecl()
     od->SetCreationFunction(CreateFadeOutBehaviorProto);
     od->SetCompatibleClassId(CKCID_BEOBJECT);
     od->NeedManager(SOUND_MANAGER_GUID);
-    od->NeedManager(SOUND_MANAGER_GUID);
 
     return od;
 }
@@ -73,6 +72,8 @@ int FadeOut(const CKBehaviorContext &behcontext)
     int ti = 1000;
     beh->GetInputParameterValue(0, &ti);
     float totaltime = (float)ti;
+    if (totaltime < 0.0f)
+        totaltime = 0.0f;
 
     if (beh->IsInputActive(0))
     { // we trigger the behavior for the first time
@@ -81,6 +82,14 @@ int FadeOut(const CKBehaviorContext &behcontext)
         beh->SetOutputParameterValue(0, &timeelapsed);
 
         CKListenerSettings set;
+        if (totaltime <= 0.0f)
+        {
+            set.m_GlobalGain = 0.0f;
+            sm->UpdateListenerSettings(CK_LISTENERSETTINGS_GAIN, set);
+            beh->ActivateOutput(0);
+            return CKBR_OK;
+        }
+
         set.m_GlobalGain = 1.0f;
         sm->UpdateListenerSettings(CK_LISTENERSETTINGS_GAIN, set);
     }
@@ -93,7 +102,7 @@ int FadeOut(const CKBehaviorContext &behcontext)
         beh->SetOutputParameterValue(0, &timeelapsed);
 
         CKListenerSettings set;
-        set.m_GlobalGain = 1.0f - timeelapsed / totaltime;
+        set.m_GlobalGain = (totaltime > 0.0f) ? (1.0f - timeelapsed / totaltime) : 0.0f;
         sm->UpdateListenerSettings(CK_LISTENERSETTINGS_GAIN, set);
 
         if (timeelapsed == totaltime)

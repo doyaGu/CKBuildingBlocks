@@ -30,7 +30,6 @@ CKObjectDeclaration *FillBehaviorSetListenerDecl()
     od->SetCreationFunction(CreateSetListenerBehaviorProto);
     od->SetCompatibleClassId(CKCID_BEOBJECT);
     od->NeedManager(SOUND_MANAGER_GUID);
-    od->NeedManager(SOUND_MANAGER_GUID);
 
     return od;
 }

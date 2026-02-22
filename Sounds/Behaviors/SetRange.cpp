@@ -74,10 +74,5 @@ int SetRange(const CKBehaviorContext &behcontext)
 
     wave->SetMinMaxDistance(mind, maxd);
 
-    float scale = 1.0f;
-    beh->GetInputParameterValue(2, &scale);
-
-    // wave->SetDistanceFactor(scale);
-
     return CKBR_OK;
 }
