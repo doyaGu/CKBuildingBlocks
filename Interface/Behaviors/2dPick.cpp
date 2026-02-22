@@ -66,7 +66,7 @@ CKERROR CreatePicking2dProto(CKBehaviorPrototype **pproto)
     proto->DeclareOutParameter("Intersection Point", CKPGUID_VECTOR);
     proto->DeclareOutParameter("Intersection Normal", CKPGUID_VECTOR);
     proto->DeclareOutParameter("UV Coordinates", CKPGUID_2DVECTOR);
-    proto->DeclareOutParameter("Distance from The Viewpoint", CKPGUID_VECTOR);
+    proto->DeclareOutParameter("Distance from The Viewpoint", CKPGUID_FLOAT);
     proto->DeclareOutParameter("Face Index", CKPGUID_INT);
     proto->DeclareOutParameter("Sprite", CKPGUID_SPRITE);
 

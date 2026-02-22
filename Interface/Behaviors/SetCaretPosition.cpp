@@ -127,6 +127,7 @@ int SetCaretPosition(const CKBehaviorContext &behcontext)
     }
 
     beh->SetOutputParameterValue(0, news, count + 1);
+    delete[] news;
 
     return (CKBR_OK);
 }

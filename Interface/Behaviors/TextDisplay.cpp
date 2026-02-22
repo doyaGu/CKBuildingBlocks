@@ -204,7 +204,10 @@ CKERROR TextDisplayCallBackObject(const CKBehaviorContext &behcontext)
             // font name
             CKSTRING font = (CKSTRING)beh->GetLocalParameterReadDataPtr(3);
             if (font)
-                strcpy(fi.m_FaceName, font);
+            {
+                strncpy(fi.m_FaceName, font, sizeof(fi.m_FaceName) - 1);
+                fi.m_FaceName[sizeof(fi.m_FaceName) - 1] = '\0';
+            }
             else
                 strcpy(fi.m_FaceName, "Arial");
             fi.m_Style = 0;

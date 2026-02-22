@@ -453,7 +453,8 @@ void BitmapTextRender(CKRenderContext *context, void *arg)
         beh->GetInputParameterValue(4, &vspacing);
     }
 
-    char *substring = CKStrdup(string);
+    char *textCopy = CKStrdup(string ? string : "");
+    char *substring = textCopy;
     char *newline = NULL;
 
     switch (align)
@@ -536,5 +537,5 @@ void BitmapTextRender(CKRenderContext *context, void *arg)
         break;
     }
 
-    CKDeletePointer(substring);
+    CKDeletePointer(textCopy);
 }
