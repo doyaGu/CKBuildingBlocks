@@ -116,7 +116,7 @@ CKERROR IdentityCallBack(const CKBehaviorContext &behcontext)
                 beh->CreateOutputParameter(str, pin->GetType());
             }
         }
-        for (; i < beh->GetOutputParameterCount(); i++)
+        while (i < beh->GetOutputParameterCount())
         {
             CKDestroyObject(beh->RemoveOutputParameter(i));
         }

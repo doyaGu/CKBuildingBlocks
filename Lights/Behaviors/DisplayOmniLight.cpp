@@ -80,7 +80,11 @@ int DisplayOmniLight(const CKBehaviorContext &behcontext)
 
     CKLight *ent = (CKLight *)beh->GetOwner();
     AML *aml = (AML *)beh->GetLocalParameterWriteDataPtr(0);
+    if (!ent || !aml)
+        return CKBR_PARAMETERERROR;
     CKSprite3D *cksprite3d = (CKSprite3D *)ctx->GetObject(aml->spr_id);
+    if (!cksprite3d)
+        return CKBR_PARAMETERERROR;
 
     if (!(aml->is_lighting))
     {
@@ -93,6 +97,8 @@ int DisplayOmniLight(const CKBehaviorContext &behcontext)
         beh->ActivateOutput(0, TRUE);
 
         CKMaterial *ckmat = (CKMaterial *)ctx->GetObject(aml->mat_id);
+        if (!ckmat)
+            return CKBR_PARAMETERERROR;
 
         CKTexture *tex = (CKTexture *)beh->GetInputParameterObject(0);
         ckmat->SetTexture0(tex);
@@ -193,8 +199,16 @@ CKERROR CallbackDisp(const CKBehaviorContext &behcontext)
     case CKM_BEHAVIORDELETE:
     {
         AML *aml = (AML *)beh->GetLocalParameterWriteDataPtr(0);
+        if (!aml)
+            break;
+
         CKSprite3D *cksprite3d = (CKSprite3D *)ctx->GetObject(aml->spr_id);
-        CKDestroyObject(cksprite3d);
+        CKMaterial *ckmat = (CKMaterial *)ctx->GetObject(aml->mat_id);
+
+        if (cksprite3d)
+            CKDestroyObject(cksprite3d);
+        if (ckmat)
+            CKDestroyObject(ckmat);
     }
     break;
 
@@ -203,9 +217,12 @@ CKERROR CallbackDisp(const CKBehaviorContext &behcontext)
     case CKM_BEHAVIORRESET:
     {
         AML *aml = (AML *)beh->GetLocalParameterWriteDataPtr(0);
-        CKSprite3D *cksprite3d = (CKSprite3D *)ctx->GetObject(aml->spr_id);
+        if (!aml)
+            break;
 
-        cksprite3d->Show(CKHIDE);
+        CKSprite3D *cksprite3d = (CKSprite3D *)ctx->GetObject(aml->spr_id);
+        if (cksprite3d)
+            cksprite3d->Show(CKHIDE);
     }
     break;
 
@@ -218,7 +235,12 @@ CKERROR CallbackDisp(const CKBehaviorContext &behcontext)
     case CKM_BEHAVIORNEWSCENE:
     {
         AML *aml = (AML *)beh->GetLocalParameterWriteDataPtr(0);
+        if (!aml)
+            break;
+
         CKSprite3D *cksprite3d = (CKSprite3D *)ctx->GetObject(aml->spr_id);
+        if (!cksprite3d)
+            break;
 
         // remove the object from all scene it was in
         for (int i = 0; i < cksprite3d->GetSceneInCount(); i++)
