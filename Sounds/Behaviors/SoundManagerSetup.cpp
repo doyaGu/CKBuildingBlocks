@@ -80,8 +80,9 @@ CKERROR CreateSoundManagerSetupBehaviorProto(CKBehaviorPrototype **pproto)
 int SoundManagerSetup(const CKBehaviorContext &behcontext)
 {
     CKBehavior *beh = behcontext.Behavior;
+    CKContext *context = behcontext.Context;
 
-    CKSoundManager *sm = (CKSoundManager *)behcontext.Context->GetManagerByGuid(SOUND_MANAGER_GUID);
+    CKSoundManager *sm = (CKSoundManager *)context->GetManagerByGuid(SOUND_MANAGER_GUID);
     if (!sm)
         return CKBR_OK;
 
@@ -89,8 +90,29 @@ int SoundManagerSetup(const CKBehaviorContext &behcontext)
     CKListenerSettings set;
     CKDWORD states = 0;
     if (!beh->GetInputParameterValue(0, &set.m_DistanceFactor)) states |= CK_LISTENERSETTINGS_DISTANCE;
-    //	if(!beh->GetInputParameterValue(1,&set.m_UnitsPerMeter))	states |= CK_LISTENERSETTINGS_UNITS;
-    //	if(!beh->GetInputParameterValue(2,&set.m_GlobalEq))			states |= CK_LISTENERSETTINGS_EQ;
+    if (!beh->GetInputParameterValue(1, &set.m_RollOff)) states |= CK_LISTENERSETTINGS_ROLLOFF;
+    float globalTone = 1.0f;
+    if (!beh->GetInputParameterValue(2, &globalTone))
+    {
+        CKWaveSoundSettings soundSetting;
+        soundSetting.m_Eq = globalTone;
+
+        const int waveCount = context->GetObjectsCountByClassID(CKCID_WAVESOUND);
+        CK_ID *waveIds = context->GetObjectsListByClassID(CKCID_WAVESOUND);
+        for (int i = 0; i < waveCount; ++i)
+        {
+            CKWaveSound *wave = CKWaveSound::Cast(context->GetObject(waveIds[i]));
+            if (!wave)
+                continue;
+
+            CKSOUNDHANDLE source = wave->GetSource();
+            if (!source)
+                continue;
+
+            sm->UpdateSettings(source, CK_WAVESOUND_SETTINGS_EQUALIZATION, soundSetting);
+        }
+    }
+
     if (!beh->GetInputParameterValue(3, &set.m_GlobalGain)) states |= CK_LISTENERSETTINGS_GAIN;
     if (!beh->GetInputParameterValue(4, &set.m_DopplerFactor)) states |= CK_LISTENERSETTINGS_DOPPLER;
     //	if(!beh->GetInputParameterValue(5,&set.m_PriorityBias))		states |= CK_LISTENERSETTINGS_PRIORITY;
