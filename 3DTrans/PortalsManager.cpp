@@ -3,33 +3,12 @@
 
 #include "CKAll.h"
 
-#if defined(macintosh)
-#include "qhull.h"
-using namespace QHULL;
-#endif
-
-#if !defined(macintosh) && defined(__cplusplus)
-extern "C"
-{
-#endif
-
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
-#include "qhull/qhull_a.h"
-
-#if defined(macintosh)
-    namespace QHULL
-    {
-#endif
-        char qh_version[] = "qad 2000/8/1"; /* used for error messages */
-#if defined(macintosh)
-    } // end namespace QHULL
-#endif
-
-#if !defined(macintosh) && defined(__cplusplus)
-}
-#endif
+/* Reentrant qhull */
+#include "libqhull_r/qhull_ra.h"
 
 #include "PortalsManager.h"
 
@@ -880,6 +859,11 @@ void FindCommonPoints(CKDWORD *iV1, int iCount1, CKDWORD *iV2, int iCount2, CKDW
 // Ctor : Compute the Convex Hull of the occluder
 PortalsManager::Occluder::Occluder(CKMesh *iMesh)
 {
+    /* Reentrant qhull context -- scoped to this constructor */
+    qhT qh_instance;
+    qhT *qh = &qh_instance;
+    memset(qh, 0, sizeof(qhT));
+
     // Get mesh topology
     CKDWORD vStride = 0;
     void *tmp = iMesh->GetPositionsPtr(&vStride);
@@ -923,13 +907,13 @@ PortalsManager::Occluder::Occluder(CKMesh *iMesh)
         {                                                                    // second time
             sprintf(flags, "qhull Qs QJ%G C-0 Pp W1e-6 E1.0e-8", randomEps); // "qhull QbB Pp"
 
-            qh_freeqhull(!qh_ALL); // free memory from precedent call
+            qh_freeqhull(qh, !qh_ALL); // free memory from precedent call
         }
         else
         { // first time
             sprintf(flags, "qhull Qs Pp C-0 W1e-6 E1.0e-8 Tv");
         }
-        exitcode = qh_new_qhull(3, numpoints, points, False, flags, NULL, stderr);
+        exitcode = qh_new_qhull(qh, 3, numpoints, points, False, flags, NULL, stderr);
         freeMem = true;
 
         if (!exitcode) // success
@@ -983,7 +967,7 @@ PortalsManager::Occluder::Occluder(CKMesh *iMesh)
         ///
         // Facets iteration
 
-        int facetCount = qh num_facets;
+        int facetCount = qh->num_facets;
         m_HullFaces.Reserve(facetCount + 2);
 
         FORALLfacets
@@ -996,7 +980,7 @@ PortalsManager::Occluder::Occluder(CKMesh *iMesh)
             Face &face = *(m_HullFaces.End() - 1);
 
             // store its normal
-            for (int k = 0; k < qh hull_dim; k++)
+            for (int k = 0; k < qh->hull_dim; k++)
             {
                 face.normal[k] = facet->normal[k];
             }
@@ -1005,7 +989,7 @@ PortalsManager::Occluder::Occluder(CKMesh *iMesh)
             setT *vertices;
 
             // retreive the number of vertices in the facet
-            int vcount = qh_setsize(facet->vertices);
+            int vcount = qh_setsize(qh, facet->vertices);
             face.PrepareVertices(vcount);
 
             // retreive the number of edges in the facet
@@ -1014,7 +998,7 @@ PortalsManager::Occluder::Occluder(CKMesh *iMesh)
             face.PrepareEdges(ecount);
 
             // Generate a temp set of vertices from a facet
-            vertices = qh_facet3vertex(facet);
+            vertices = qh_facet3vertex(qh, facet);
             int j = 0;
             FOREACHvertex_(vertices)
             {
@@ -1169,10 +1153,10 @@ PortalsManager::Occluder::Occluder(CKMesh *iMesh)
             }
         }
     }
-    qh_freeqhull(!qh_ALL);
+    qh_freeqhull(qh, !qh_ALL);
 
     int curlong, totlong;
-    qh_memfreeshort(&curlong, &totlong);
+    qh_memfreeshort(qh, &curlong, &totlong);
 
     delete[] points;
 }
