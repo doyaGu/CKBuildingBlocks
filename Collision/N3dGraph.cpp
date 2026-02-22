@@ -317,6 +317,8 @@ void N3DGraph::DeleteEdge(CK3dEntity *s, CK3dEntity *e)
 {
     int si = SeekPosition(CKOBJID(s));
     int ei = SeekPosition(CKOBJID(e));
+    if (si < 0 || ei < 0)
+        return;
 
     N3DEdge *edge;
     N3DEdge *backedge;
@@ -395,6 +397,7 @@ N3DGraph::CreateEdge(int e, float d, float dist)
     edge->m_Active = STATEBASICACTIVITY | STATEDYNAMICACTIVITY;
     edge->m_Next = NULL;
     edge->m_Successor = e;
+    edge->m_Distance = dist;
     edge->m_Difficulty = d;
     return edge;
 }
@@ -729,7 +732,7 @@ void N3DGraph::UpdateDistance()
     int i;
     for (i = 0; i < m_Size; i++)
     {
-        VxVector a;
+        VxVector a(0.0f);
         CK3dEntity *ent;
         ent = GetSafeEntity(m_States + i);
         if (ent)
@@ -791,6 +794,7 @@ void GraphRender(CKRenderContext *rc, void *arg)
     v1.y *= 0.5f / HeightOn2;
     v2.y *= 0.5f / HeightOn2;
 
+    VxMatrix World = rc->GetWorldTransformationMatrix();
     VxMatrix View = rc->GetViewTransformationMatrix();
     VxMatrix Projection = rc->GetProjectionTransformationMatrix();
     // A custom projection matrix to render homogenous coordinates
@@ -799,7 +803,11 @@ void GraphRender(CKRenderContext *rc, void *arg)
 
     N3DGraph *graph = (N3DGraph *)arg;
     if (!graph)
+    {
+        rc->SetWorldTransformationMatrix(World);
+        rc->SetViewTransformationMatrix(View);
         return;
+    }
     N3DDisplayStructure *display = graph->GetDisplay();
 
     XVoidArray *extents = graph->GetExtentsList();
@@ -945,7 +953,11 @@ void GraphRender(CKRenderContext *rc, void *arg)
             {
                 endent = graph->GetSafeEntity(end);
                 if (!endent)
+                {
+                    rc->SetWorldTransformationMatrix(World);
+                    rc->SetViewTransformationMatrix(View);
                     return;
+                }
                 endent->GetPosition(&pos);
                 Vx3DMultiplyMatrixVector(&nodepos2, View, &pos);
                 positions[0] = nodepos;
@@ -988,5 +1000,6 @@ void GraphRender(CKRenderContext *rc, void *arg)
         }
     }
 
+    rc->SetWorldTransformationMatrix(World);
     rc->SetViewTransformationMatrix(View);
 }

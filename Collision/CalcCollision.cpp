@@ -189,7 +189,7 @@ CKBOOL CollBallFace::DetectCollisionWithBallAndFace()
     }
 
     pos_posc = *ball_pos - posc;
-    if (sphere_flag & 0x010)
+    if (sphere_flag & 0x001)
     {
         if (Magnitude(pos_posc) < radius)
         {
