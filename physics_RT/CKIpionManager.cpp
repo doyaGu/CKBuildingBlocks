@@ -149,6 +149,7 @@ CKIpionManager::CKIpionManager(CKContext *context)
     m_CollisionFilterExclusivePair = NULL;
     m_PreSimulateCallbacks = NULL;
     m_PostSimulateCallbacks = NULL;
+    m_ContactManager = NULL;
     m_CollisionListener = NULL;
     m_ObjectListener = NULL;
     m_Environment = NULL;
@@ -171,6 +172,7 @@ CKERROR CKIpionManager::OnCKInit()
 
     m_TimeManager = m_Context->GetTimeManager();
     m_PhysicsTimeFactor = 0.001f;
+    ResetProfiler();
 
     return CK_OK;
 }
@@ -242,11 +244,13 @@ CKERROR CKIpionManager::SequenceToBeDeleted(CK_ID *objids, int count)
             PhysicsObject *po = GetPhysicsObject(ent);
             if (po)
             {
-                po->m_RealObject->delete_silently();
+                IVP_Real_Object *realObject = po->m_RealObject;
+                if (realObject)
+                    realObject->delete_silently();
                 RemovePhysicsObject(ent);
 
-                if (m_MovableObjects.index_of(po->m_RealObject) != -1)
-                    m_MovableObjects.remove(po->m_RealObject);
+                if (realObject && m_MovableObjects.index_of(realObject) != -1)
+                    m_MovableObjects.remove(realObject);
             }
         }
     }
@@ -373,6 +377,12 @@ int CKIpionManager::CreatePhysicsObjectOnParameters(CK3dEntity *target, int conv
 
         obj = CreatePhysicsPolygon(target->GetName(), mass, material, linearSpeedDampening, rotSpeedDampening, target,
                                    startFrozen, fixed, collisionGroup, enableCollision, surman, shiftMassCenter);
+    }
+
+    if (!obj)
+    {
+        m_Context->OutputToConsoleEx("Error: failed to create physics object for %s !\n", target->GetName());
+        return CKERR_INVALIDPARAMETER;
     }
 
     obj->client_data = target;
@@ -506,6 +516,15 @@ void CKIpionManager::DestroyEnvironment()
 
         delete m_CollisionListener;
         m_CollisionListener = NULL;
+    }
+
+    // Release per-object contact state while the contact manager is still valid.
+    m_PhysicsObjects.Clear();
+
+    if (m_ContactManager)
+    {
+        delete m_ContactManager;
+        m_ContactManager = NULL;
     }
 
     for (int i = m_Entities.len() - 1; i >= 0; --i)

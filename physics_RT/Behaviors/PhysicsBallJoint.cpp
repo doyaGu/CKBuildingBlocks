@@ -168,7 +168,7 @@ CKERROR PhysicsBallJointCallBack(const CKBehaviorContext &behcontext)
     case CKM_BEHAVIORRESET:
     {
         void *handle = NULL;
-        beh->SetLocalParameterValue(0, handle);
+        beh->SetLocalParameterValue(0, &handle);
         return CKBR_OK;
     }
     case CKM_BEHAVIORSETTINGSEDITED:
