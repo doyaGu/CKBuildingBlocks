@@ -104,12 +104,12 @@ public:
             obj = situation->objects[1];
 
         CK3dEntity *ent = (CK3dEntity *)obj->client_data;
-
-        int contactID = m_IpionManager->m_ContactManager->GetContactID(ent);
-        if (contactID == -1)
+        if (!ent)
             return;
 
-        int index = contactID - 1;
+        int contactID = m_IpionManager->m_ContactManager->GetContactID(ent);
+        if (contactID <= 0)
+            return;
 
         ent = (CK3dEntity *)m_RealObject->client_data;
         PhysicsObject *po = m_IpionManager->GetPhysicsObject(ent);
@@ -118,6 +118,10 @@ public:
 
         PhysicsContactData *data = po->m_ContactData;
         if (!data)
+            return;
+
+        int index = contactID - 1;
+        if (index < 0 || index >= data->m_GroupOutputCount)
             return;
 
         PhysicsContactData::GroupOutput &output = data->m_GroupOutputs[index];
@@ -138,7 +142,9 @@ public:
                 {
                     contactManager->RemoveRecord(i);
                     data->m_GroupOutputs[index].active = TRUE;
-                    data->m_Behavior->ActivateOutput(2 * index, TRUE);
+                    const int outputIndex = 2 * index;
+                    if (outputIndex < data->m_Behavior->GetOutputCount())
+                        data->m_Behavior->ActivateOutput(outputIndex, TRUE);
                     activated = true;
                 }
             }
@@ -163,12 +169,12 @@ public:
             obj = situation->objects[1];
 
         CK3dEntity *ent = (CK3dEntity *)obj->client_data;
-
-        int contactID = m_IpionManager->m_ContactManager->GetContactID(ent);
-        if (contactID == -1)
+        if (!ent)
             return;
 
-        int index = contactID - 1;
+        int contactID = m_IpionManager->m_ContactManager->GetContactID(ent);
+        if (contactID <= 0)
+            return;
 
         ent = (CK3dEntity *)m_RealObject->client_data;
         PhysicsObject *po = m_IpionManager->GetPhysicsObject(ent);
@@ -177,6 +183,10 @@ public:
 
         PhysicsContactData *data = po->m_ContactData;
         if (!data)
+            return;
+
+        int index = contactID - 1;
+        if (index < 0 || index >= data->m_GroupOutputCount)
             return;
 
         PhysicsContactData::GroupOutput &output = data->m_GroupOutputs[index];
@@ -212,8 +222,13 @@ public:
         float timeDelayEnd = 0.1f;
         beh->GetInputParameterValue(TIME_DELAY_END, &timeDelayEnd);
 
-        int numberGroupOutput;
+        int numberGroupOutput = 0;
         beh->GetLocalParameterValue(0, &numberGroupOutput);
+        if (numberGroupOutput < 0)
+            numberGroupOutput = 0;
+        const int maxGroupOutput = beh->GetOutputCount() / 2;
+        if (numberGroupOutput > maxGroupOutput)
+            numberGroupOutput = maxGroupOutput;
 
         PhysicsObject *po = m_IpionManager->GetPhysicsObject(ent);
         if (!po)
@@ -224,7 +239,7 @@ public:
         if (po->m_ContactData)
             return 1;
 
-        PhysicsContactData *data = new PhysicsContactData(timeDelayStart, timeDelayEnd,
+        PhysicsContactData *data = new PhysicsContactData(timeDelayStart, timeDelayEnd, numberGroupOutput,
                                                           m_IpionManager->GetContactManager(), beh);
         po->m_ContactData = data;
 
@@ -305,9 +320,9 @@ CKERROR PhysicsContinuousContactCallBack(const CKBehaviorContext &behcontext)
         char buf[256];
         for (int i = 0; i < numberGroupOutput; ++i)
         {
-            snprintf(buf, sizeof(buf), "contact on %d", i);
+            snprintf(buf, sizeof(buf), "contact on %d", i + 1);
             beh->AddOutput(buf);
-            snprintf(buf, sizeof(buf), "contact off %d", i);
+            snprintf(buf, sizeof(buf), "contact off %d", i + 1);
             beh->AddOutput(buf);
         }
     }

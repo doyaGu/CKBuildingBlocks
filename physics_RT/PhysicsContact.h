@@ -21,11 +21,13 @@ public:
         int number = 0;
     };
 
-    PhysicsContactData(float timeDelayStart, float timeDelayEnd, PhysicsContactManager *man, CKBehavior *beh);
+    PhysicsContactData(float timeDelayStart, float timeDelayEnd, int groupOutputCount,
+                       PhysicsContactManager *man, CKBehavior *beh);
     ~PhysicsContactData();
 
     float m_TimeDelayStart;
     float m_TimeDelayEnd;
+    int m_GroupOutputCount;
     PhysicsContactManager *m_Manager;
     CKBehavior *m_Behavior;
     GroupOutput *m_GroupOutputs;

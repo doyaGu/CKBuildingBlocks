@@ -142,21 +142,32 @@ int PhysicsContactManager::GetContactID(CK3dEntity *entity) const
     return contactID;
 }
 
-PhysicsContactData::PhysicsContactData(float timeDelayStart, float timeDelayEnd,
+PhysicsContactData::PhysicsContactData(float timeDelayStart, float timeDelayEnd, int groupOutputCount,
                                        PhysicsContactManager *man, CKBehavior *beh)
-    : m_TimeDelayStart(timeDelayStart), m_TimeDelayEnd(timeDelayEnd), m_Manager(man), m_Behavior(beh)
+    : m_TimeDelayStart(timeDelayStart), m_TimeDelayEnd(timeDelayEnd),
+      m_GroupOutputCount(groupOutputCount > 0 ? groupOutputCount : 0), m_Manager(man), m_Behavior(beh)
 {
-    m_GroupOutputs = new GroupOutput[m_Manager->m_NumberGroupOutput];
+    m_GroupOutputs = m_GroupOutputCount > 0 ? new GroupOutput[m_GroupOutputCount] : NULL;
     m_Listener = NULL;
 }
 
 PhysicsContactData::~PhysicsContactData()
 {
     CKBehavior *beh = m_Behavior;
+    if (!beh || !m_Manager || !m_Manager->m_IpionManager)
+    {
+        if (m_GroupOutputs)
+            delete[] m_GroupOutputs;
+        return;
+    }
 
     CK3dEntity *ent = (CK3dEntity *)beh->GetTarget();
     if (!ent)
+    {
+        if (m_GroupOutputs)
+            delete[] m_GroupOutputs;
         return;
+    }
 
     PhysicsObject *po = m_Manager->m_IpionManager->GetPhysicsObject(ent);
     m_Manager->RemoveRecord(po);
@@ -164,16 +175,19 @@ PhysicsContactData::~PhysicsContactData()
     PhysicsContactData *data = NULL;
     beh->SetLocalParameterValue(1, &data);
 
-    const int count = m_Manager->m_NumberGroupOutput;
+    const int count = m_GroupOutputCount;
     for (int i = 0; i < count; ++i)
     {
         GroupOutput *output = &m_GroupOutputs[i];
         if (output->active == TRUE)
         {
             output->active = FALSE;
-            beh->ActivateOutput(2 * i + 1, TRUE);
+            const int outputIndex = 2 * i + 1;
+            if (outputIndex < beh->GetOutputCount())
+                beh->ActivateOutput(outputIndex, TRUE);
         }
     }
 
-    delete[] m_GroupOutputs;
+    if (m_GroupOutputs)
+        delete[] m_GroupOutputs;
 }

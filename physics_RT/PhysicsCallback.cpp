@@ -2,6 +2,7 @@
 
 void PhysicsCallbackContainer::Process()
 {
+    m_HasCallbacks = FALSE;
     for (int i = 0; i < 3; ++i)
     {
         IVP_U_Vector<PhysicsCallback> &cbs = m_Callbacks[i];
@@ -14,11 +15,23 @@ void PhysicsCallbackContainer::Process()
                 cbs.remove_at(j);
             }
         }
+
+        if (cbs.len() != 0)
+            m_HasCallbacks = TRUE;
     }
 }
 
 void PhysicsCallbackContainer::Process(PhysicsCallback *pc)
 {
+    if (!pc)
+        return;
+
+    if (!pc->m_Behavior)
+    {
+        delete pc;
+        return;
+    }
+
     if (pc->m_Behavior)
     {
         if (pc->Execute() != 0)
@@ -29,6 +42,10 @@ void PhysicsCallbackContainer::Process(PhysicsCallback *pc)
         {
             m_Callbacks[pc->m_Type].add(pc);
             m_HasCallbacks = TRUE;
+        }
+        else
+        {
+            delete pc;
         }
     }
 }

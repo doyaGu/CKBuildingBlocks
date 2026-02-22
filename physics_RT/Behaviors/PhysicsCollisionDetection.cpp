@@ -152,20 +152,16 @@ public:
         m_Behavior->SetOutputParameterObject(ENTITY, ent);
         m_Behavior->SetOutputParameterValue(SPEED, &speed);
 
-        if (situation->objects[0] != m_RealObject)
-        {
-            situation->surf_normal.mult(-1.0f);
-        }
-
-        VxVector collisionNormalWorld(situation->surf_normal.k[0],
-                                      situation->surf_normal.k[1],
-                                      situation->surf_normal.k[2]);
+        const float normalSign = (situation->objects[0] != m_RealObject) ? -1.0f : 1.0f;
+        VxVector collisionNormalWorld((float)situation->surf_normal.k[0] * normalSign,
+                                      (float)situation->surf_normal.k[1] * normalSign,
+                                      (float)situation->surf_normal.k[2] * normalSign);
         m_Behavior->SetOutputParameterValue(COLLISION_NORMAL_WORLD, &collisionNormalWorld);
 
         VxVector positionWorld((float)situation->contact_point_ws.k[0],
                                (float)situation->contact_point_ws.k[1],
                                (float)situation->contact_point_ws.k[2]);
-        m_Behavior->SetOutputParameterValue(POSITION_WORLD, &collisionNormalWorld);
+        m_Behavior->SetOutputParameterValue(POSITION_WORLD, &positionWorld);
 
         m_Time = m_IpionManager->GetSimulationTime();
 
