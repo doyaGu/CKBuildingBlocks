@@ -60,7 +60,7 @@ CKERROR CreateSetFogProto(CKBehaviorPrototype **pproto)
     proto->DeclareLocalParameter("NewVersion", CKPGUID_INT, "0");
 
     proto->SetFlags(CK_BEHAVIORPROTOTYPE_NORMAL);
-    proto->SetFunction(SetFog);
+    proto->SetFunction(SetFogV2);
     proto->SetBehaviorCallbackFct(SetFogCB);
 
     *pproto = proto;
