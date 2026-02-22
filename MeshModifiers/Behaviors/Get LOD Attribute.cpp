@@ -100,7 +100,7 @@ int GetLODAttribute(const CKBehaviorContext &behcontext)
     beh->SetOutputParameterValue(6, &lo->facesMag);
     beh->SetOutputParameterValue(7, &lo->facesMin);
     beh->SetOutputParameterValue(8, &lo->alphaScreenMag);
-    beh->SetOutputParameterValue(8, &lo->alphaScreenMin);
+    beh->SetOutputParameterValue(9, &lo->alphaScreenMin);
 
     return CKBR_OK;
 }

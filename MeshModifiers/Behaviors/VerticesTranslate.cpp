@@ -97,8 +97,11 @@ int VerticesTranslate(const CKBehaviorContext &behcontext)
             CKStateChunk *chunk = scn->GetObjectInitialValue(mesh);
             if (chunk)
                 mesh->LoadVertices(chunk);
-            const VxBbox &bbox = mesh->GetLocalBox();
-            beh->SetLocalParameterValue(1, &bbox);
+            if (beh->GetLocalParameterCount() > 1)
+            {
+                const VxBbox &bbox = mesh->GetLocalBox();
+                beh->SetLocalParameterValue(1, &bbox);
+            }
         }
         beh->ActivateInput(1, FALSE);
     }
@@ -125,7 +128,7 @@ int VerticesTranslate(const CKBehaviorContext &behcontext)
         CKBYTE *vxv = (CKBYTE *)mesh->GetModifierVertices(&vStride);
         int vcount = mesh->GetModifierVertexCount();
 
-        if (index + count > vcount)
+        if ((index < 0) || (count < 0) || (index > vcount) || (index + count > vcount))
         {
             behcontext.Context->OutputToConsole("Bad vertices number...");
             return CKBR_PARAMETERERROR;

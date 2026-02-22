@@ -459,9 +459,12 @@ int prerenderjoin(CKRenderContext *dev, CKRenderObject *rent, void *arg)
     //------------- position join's vertice
     int count = mesh->GetVertexCount();
 
-    CKDWORD Stride;
-    VxVector *pos = (VxVector *)mesh->GetPositionsPtr(&Stride);
-    VxVector *normal = (VxVector *)mesh->GetNormalsPtr(&Stride);
+    CKDWORD posStride = 0;
+    VxVector *pos = (VxVector *)mesh->GetPositionsPtr(&posStride);
+    CKDWORD normalStride = 0;
+    VxVector *normal = (VxVector *)mesh->GetNormalsPtr(&normalStride);
+    if (!corresp || !pos || !normal)
+        return 0;
 
     CKMesh *obj_mesh;
     VxVector V, V_tmp;
@@ -489,8 +492,8 @@ int prerenderjoin(CKRenderContext *dev, CKRenderObject *rent, void *arg)
                 normal->Normalize();
             }
         }
-        pos = (VxVector *)((CKBYTE *)pos + Stride);
-        normal = (VxVector *)((CKBYTE *)normal + Stride);
+        pos = (VxVector *)((CKBYTE *)pos + posStride);
+        normal = (VxVector *)((CKBYTE *)normal + normalStride);
     }
 
     //------------- building normals

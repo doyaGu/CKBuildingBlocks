@@ -165,7 +165,7 @@ int MeshMorpher(const CKBehaviorContext &behcontext)
 
     VxVector ste;
     // we move all the points
-    for (int i = 0; i < pointsNumber; i++, ivarray += iStride, svarray += sStride, evarray += eStride, invarray += iStride, snvarray += sStride, envarray += eStride)
+    for (int i = 0; i < pointsNumber; i++, ivarray += iStride, svarray += sStride, evarray += eStride, invarray += inStride, snvarray += snStride, envarray += enStride)
     {
         ste = *(VxVector *)evarray - *(VxVector *)svarray;
         ste *= effect;
