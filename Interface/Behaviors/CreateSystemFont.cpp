@@ -177,10 +177,12 @@ CKERROR CreateSystemFontCallback(const CKBehaviorContext &behcontext)
         if (!pm)
             return CKBR_OK;
         CKEnumStruct *data = pm->GetEnumDescByType(pm->ParameterGuidToType(CKPGUID_FONTNAME));
+        if (!data || !data->Desc)
+            return CKBR_OK;
 
         int fontIndex = -1;
         beh->GetInputParameterValue(1, &fontIndex);
-        if ((fontIndex < 0) || (fontIndex > data->NbData))
+        if ((fontIndex < 0) || (fontIndex >= data->NbData))
             return CKBR_OK;
         beh->SetLocalParameterValue(4, data->Desc[fontIndex]);
     }
@@ -191,10 +193,12 @@ CKERROR CreateSystemFontCallback(const CKBehaviorContext &behcontext)
         if (!pm)
             return CKBR_OK;
         CKEnumStruct *data = pm->GetEnumDescByType(pm->ParameterGuidToType(CKPGUID_FONTNAME));
+        if (!data || !data->Desc)
+            return CKBR_OK;
 
         int fontIndex = -1;
         beh->GetInputParameterValue(1, &fontIndex);
-        if ((fontIndex < 0) || (fontIndex > data->NbData))
+        if ((fontIndex < 0) || (fontIndex >= data->NbData))
             return CKBR_OK;
         beh->SetLocalParameterValue(4, data->Desc[fontIndex]);
     }
