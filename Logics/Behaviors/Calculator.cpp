@@ -316,14 +316,18 @@ int CalcOp_Div( float *val, int *type ){
   } // if float.vector or vector.float
   *type = VECTOR_VALUE;
   if( type1==FLOAT_VALUE ){
+    if(0.0f == val1[0]) return RUNTIME_ERROR;
     val[0] = val2[0] / val1[0];
     val[1] = val2[1] / val1[0];
     val[2] = val2[2] / val1[0];
     return SUCCESS;
   }
-  val[0] = val2[0] / val1[1];
-  val[1] = val2[0] / val1[2];
-  val[2] = val2[0] / val1[3];
+  if(0.0f == val1[0]) return RUNTIME_ERROR;
+  if(0.0f == val1[1]) return RUNTIME_ERROR;
+  if(0.0f == val1[2]) return RUNTIME_ERROR;
+  val[0] = val2[0] / val1[0];
+  val[1] = val2[0] / val1[1];
+  val[2] = val2[0] / val1[2];
   return SUCCESS;
 }
 //___________________________________________

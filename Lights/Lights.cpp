@@ -32,6 +32,9 @@ PLUGIN_EXPORT int CKGetPluginInfoCount() { return 1; }
 
 PLUGIN_EXPORT CKPluginInfo *CKGetPluginInfo(int Index)
 {
+    if (Index != 0)
+        return NULL;
+
     g_PluginInfo.m_Author = "Virtools";
     g_PluginInfo.m_Description = "Light building blocks";
     g_PluginInfo.m_Extension = "";

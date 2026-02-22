@@ -56,9 +56,6 @@ int SetTypeLight(const CKBehaviorContext &behcontext)
 {
     CKBehavior *beh = behcontext.Behavior;
 
-    beh->ActivateInput(0, FALSE);
-    beh->ActivateOutput(0);
-
     CKLight *light = (CKLight *)beh->GetTarget();
     if (!light)
         return CKBR_OWNERERROR;
@@ -67,6 +64,9 @@ int SetTypeLight(const CKBehaviorContext &behcontext)
     beh->GetInputParameterValue(0, &type);
 
     light->SetType((VXLIGHT_TYPE)type);
+
+    beh->ActivateInput(0, FALSE);
+    beh->ActivateOutput(0);
 
     return CKBR_OK;
 }

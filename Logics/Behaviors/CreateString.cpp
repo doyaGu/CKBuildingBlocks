@@ -6,9 +6,6 @@
 /////////////////////////////////////////////////////
 /////////////////////////////////////////////////////
 #include "CKAll.h"
-#ifndef _WIN32
-#pragma cpp_extensions on
-#endif
 
 CKObjectDeclaration *FillBehaviorCreateStringDecl();
 CKERROR CreateCreateStringProto(CKBehaviorPrototype **);
@@ -123,8 +120,11 @@ int CreateString(const CKBehaviorContext &behcontext)
             {
                 int v = 0;
                 pout->GetValue(&v);
-                paramstring = new char[32];
-                sprintf(paramstring, format, v);
+                int paramsize = snprintf(NULL, 0, format, v);
+                if (paramsize < 0)
+                    paramsize = 0;
+                paramstring = new char[paramsize + 1];
+                snprintf(paramstring, paramsize + 1, format, v);
             }
             else
             {
@@ -132,8 +132,11 @@ int CreateString(const CKBehaviorContext &behcontext)
                 {
                     float v = 0;
                     pout->GetValue(&v);
-                    paramstring = new char[32];
-                    sprintf(paramstring, format, v);
+                    int paramsize = snprintf(NULL, 0, format, v);
+                    if (paramsize < 0)
+                        paramsize = 0;
+                    paramstring = new char[paramsize + 1];
+                    snprintf(paramstring, paramsize + 1, format, v);
                 }
                 else
                 {
@@ -142,11 +145,23 @@ int CreateString(const CKBehaviorContext &behcontext)
                     {
                         XAP<char> paramtemp(new char[paramsize]);
                         pout->GetStringValue(paramtemp, FALSE);
-                        paramstring = new char[paramsize];
+                        CKSTRING source = &(*paramtemp);
                         if (format[(int)strlen(format) - 1] != 's')
-                            sprintf(paramstring, "%s", &(*paramtemp));
+                        {
+                            int formattedsize = snprintf(NULL, 0, "%s", source);
+                            if (formattedsize < 0)
+                                formattedsize = 0;
+                            paramstring = new char[formattedsize + 1];
+                            snprintf(paramstring, formattedsize + 1, "%s", source);
+                        }
                         else
-                            sprintf(paramstring, format, &(*paramtemp));
+                        {
+                            int formattedsize = snprintf(NULL, 0, format, source);
+                            if (formattedsize < 0)
+                                formattedsize = 0;
+                            paramstring = new char[formattedsize + 1];
+                            snprintf(paramstring, formattedsize + 1, format, source);
+                        }
                     }
                     else
                         paramstring = NULL;
@@ -198,11 +213,11 @@ int CreateString(const CKBehaviorContext &behcontext)
             char *temp = new char[size];
             if (!beh->GetLocalParameter(0) || string[0] != '\0') // Old Version if no local param
             {
-                sprintf(temp, "%s\n%s", string, buffer.CStr());
+                snprintf(temp, size, "%s\n%s", string, buffer.CStr());
             }
             else
             {
-                sprintf(temp, "%s", buffer.CStr());
+                snprintf(temp, size, "%s", buffer.CStr());
                 size -= 1;
             }
             beh->SetOutputParameterValue(0, temp, size);

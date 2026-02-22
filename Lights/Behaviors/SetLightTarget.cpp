@@ -61,7 +61,7 @@ int SetLightTarget(const CKBehaviorContext &behcontext)
 {
     CKBehavior *beh = behcontext.Behavior;
 
-    CKTargetLight *light = (CKTargetLight *)beh->GetTarget();
+    CKLight *light = CKLight::Cast(beh->GetTarget());
     if (!light)
         return CKBR_OWNERERROR;
 
@@ -70,9 +70,8 @@ int SetLightTarget(const CKBehaviorContext &behcontext)
     beh->ActivateOutput(0);
 
     // Get target
-    CK3dEntity *ent = (CK3dEntity *)beh->GetInputParameterObject(0);
-
-    if (ent && (ent->GetClassID() == CKCID_3DENTITY))
+    CK3dEntity *ent = CK3dEntity::Cast((CKObject *)beh->GetInputParameterObject(0));
+    if (ent)
     {
         light->SetTarget(ent);
     }

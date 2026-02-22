@@ -94,9 +94,6 @@ int SplitString(const CKBehaviorContext &behcontext)
     CKSTRING str = string;
     CKSTRING del = NULL;
 
-    char buffer[256];
-    *buffer = '\0';
-
     while (del = strstr(str, delim))
     {
         if (del != str) // delimiter at the start of the string, we skip it
@@ -110,11 +107,12 @@ int SplitString(const CKBehaviorContext &behcontext)
             int size = (int)(del - str);
             if (size)
             {
-                // we copy the characters to the buffer
+                char *buffer = new char[size + 1];
                 memcpy(buffer, str, size);
                 *(buffer + size) = '\0';
                 // we fill the parameter out
                 pout->SetStringValue(buffer);
+                delete[] buffer;
             }
         }
 
@@ -129,13 +127,17 @@ int SplitString(const CKBehaviorContext &behcontext)
         ++elts;
         CKParameterOut *pout = beh->GetOutputParameter(elts);
         if (!pout)
+        {
+            CKDeletePointer(string);
             return CKBR_OK;
+        }
 
-        // we copy the characters to the buffer
+        char *buffer = new char[sizeleft + 1];
         memcpy(buffer, str, sizeleft);
         *(buffer + sizeleft) = '\0';
         // we fill the parameter out
         pout->SetStringValue(buffer);
+        delete[] buffer;
     }
 
     beh->SetOutputParameterValue(0, &elts);

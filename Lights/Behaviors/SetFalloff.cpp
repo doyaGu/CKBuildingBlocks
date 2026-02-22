@@ -59,9 +59,6 @@ int SetFalloff(const CKBehaviorContext &behcontext)
 {
     CKBehavior *beh = behcontext.Behavior;
 
-    beh->ActivateInput(0, FALSE);
-    beh->ActivateOutput(0);
-
     CKLight *light = (CKLight *)beh->GetTarget();
     if (!light)
         return CKBR_OWNERERROR;
@@ -80,6 +77,9 @@ int SetFalloff(const CKBehaviorContext &behcontext)
     float hotspot = 0.7f;
     beh->GetInputParameterValue(2, &hotspot);
     light->SetHotSpot(hotspot);
+
+    beh->ActivateInput(0, FALSE);
+    beh->ActivateOutput(0);
 
     return CKBR_OK;
 }

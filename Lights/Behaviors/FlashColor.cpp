@@ -14,6 +14,20 @@ int FlashColorTimeBased(const CKBehaviorContext &behcontext);
 int FlashColorTimeBasedOld(const CKBehaviorContext &behcontext);
 CKERROR FlashColorCallBack(const CKBehaviorContext &behcontext);
 
+static float GetFlashProgressValue(CK2dCurve *curve, float elapsed, float duration)
+{
+    if (duration <= 0.0f)
+        return 1.0f;
+
+    float t = elapsed / duration;
+    if (t < 0.0f)
+        t = 0.0f;
+    if (t > 1.0f)
+        t = 1.0f;
+
+    return curve ? curve->GetY(t) : t;
+}
+
 CKObjectDeclaration *FillBehaviorFlashColorDecl()
 {
     CKObjectDeclaration *od = CreateCKObjectDeclaration("Light Color Progression");
@@ -104,6 +118,14 @@ int FlashColor(const CKBehaviorContext &behcontext)
 
     int frames;
     beh->GetInputParameterValue(0, &frames);
+    if (frames <= 0)
+    {
+        VxColor color;
+        beh->GetInputParameterValue(2, &color);
+        light->SetColor(color);
+        beh->ActivateOutput(0);
+        return CKBR_OK;
+    }
 
     CK2dCurve *curve = NULL;
     beh->GetInputParameterValue(1, &curve);
@@ -111,7 +133,7 @@ int FlashColor(const CKBehaviorContext &behcontext)
     VxColor color;
     beh->GetInputParameterValue(2, &color);
 
-    float value = curve->GetY((float)elapsed / frames);
+    float value = GetFlashProgressValue(curve, (float)elapsed, (float)frames);
     color.r *= value;
     color.g *= value;
     color.b *= value;
@@ -158,6 +180,14 @@ int FlashColorTimeBased(const CKBehaviorContext &behcontext)
 
     float frames;
     beh->GetInputParameterValue(0, &frames);
+    if (frames <= 0.0f)
+    {
+        VxColor endColor;
+        beh->GetInputParameterValue(3, &endColor);
+        light->SetColor(endColor);
+        beh->ActivateOutput(0);
+        return CKBR_OK;
+    }
 
     CK2dCurve *curve = NULL;
     beh->GetInputParameterValue(1, &curve);
@@ -166,7 +196,7 @@ int FlashColorTimeBased(const CKBehaviorContext &behcontext)
     beh->GetInputParameterValue(2, &A);
     beh->GetInputParameterValue(3, &B);
 
-    float value = curve->GetY(elapsed / frames);
+    float value = GetFlashProgressValue(curve, elapsed, frames);
     A.r += (B.r - A.r) * value;
     A.g += (B.g - A.g) * value;
     A.b += (B.b - A.b) * value;
@@ -213,6 +243,14 @@ int FlashColorTimeBasedOld(const CKBehaviorContext &behcontext)
 
     int frames;
     beh->GetInputParameterValue(0, &frames);
+    if (frames <= 0)
+    {
+        VxColor endColor;
+        beh->GetInputParameterValue(3, &endColor);
+        light->SetColor(endColor);
+        beh->ActivateOutput(0);
+        return CKBR_OK;
+    }
 
     CK2dCurve *curve = NULL;
     beh->GetInputParameterValue(1, &curve);
@@ -221,7 +259,7 @@ int FlashColorTimeBasedOld(const CKBehaviorContext &behcontext)
     beh->GetInputParameterValue(2, &A);
     beh->GetInputParameterValue(3, &B);
 
-    float value = curve->GetY(elapsed / frames);
+    float value = GetFlashProgressValue(curve, elapsed, (float)frames);
     A.r += (B.r - A.r) * value;
     A.g += (B.g - A.g) * value;
     A.b += (B.b - A.b) * value;

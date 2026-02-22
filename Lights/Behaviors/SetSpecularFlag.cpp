@@ -57,9 +57,6 @@ int SetSpecularFlag(const CKBehaviorContext &behcontext)
 {
     CKBehavior *beh = behcontext.Behavior;
 
-    beh->ActivateInput(0, FALSE);
-    beh->ActivateOutput(0);
-
     CKLight *light = (CKLight *)beh->GetTarget();
     if (!light)
         return CKBR_OWNERERROR;
@@ -68,6 +65,9 @@ int SetSpecularFlag(const CKBehaviorContext &behcontext)
     beh->GetInputParameterValue(0, &k);
 
     light->SetSpecularFlag(k);
+
+    beh->ActivateInput(0, FALSE);
+    beh->ActivateOutput(0);
 
     return CKBR_OK;
 }
