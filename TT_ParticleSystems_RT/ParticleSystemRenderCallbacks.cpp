@@ -832,6 +832,11 @@ int RenderParticles_CS(CKRenderContext *dev, CKRenderObject *obj, void *arg)
         dir = p->dir;
         float halfsize = p->m_Size;
         float speed = Magnitude(dir);
+        if (speed <= 0.0f)
+        {
+            p = p->next;
+            continue;
+        }
         dir /= speed;
 
         // the old pos
@@ -987,6 +992,29 @@ int RenderParticles_RS(CKRenderContext *dev, CKRenderObject *obj, void *arg)
     CKDWORD *colors = (CKDWORD *)data->Colors.Ptr;
 #endif
 
+    // Indices
+    if (pc * 6 > ParticleEmitter::m_GlobalIndicesCount)
+    {
+        delete[] ParticleEmitter::m_GlobalIndices;
+
+        ParticleEmitter::m_GlobalIndicesCount = pc * 6;
+        ParticleEmitter::m_GlobalIndices = new CKWORD[ParticleEmitter::m_GlobalIndicesCount];
+
+        int ni = 0;
+        int fi = 0;
+        for (int i = 0; i < pc; ++i)
+        {
+            ParticleEmitter::m_GlobalIndices[fi] = ni;
+            ParticleEmitter::m_GlobalIndices[fi + 1] = ni + 1;
+            ParticleEmitter::m_GlobalIndices[fi + 2] = ni + 2;
+            ParticleEmitter::m_GlobalIndices[fi + 3] = ni;
+            ParticleEmitter::m_GlobalIndices[fi + 4] = ni + 2;
+            ParticleEmitter::m_GlobalIndices[fi + 5] = ni + 3;
+            fi += 6;
+            ni += 4;
+        }
+    }
+
     // Render States
     em->SetState(dev);
 
@@ -1017,8 +1045,6 @@ int RenderParticles_RS(CKRenderContext *dev, CKRenderObject *obj, void *arg)
 
     const VxMatrix &invCam = cam->GetInverseWorldMatrix();
 
-    int fi = 0;
-    int ni = 0;
     while (p)
     {
         Vx3DMultiplyMatrixVector(&pos, invCam, &p->pos);
@@ -1128,7 +1154,6 @@ int RenderParticles_RS(CKRenderContext *dev, CKRenderObject *obj, void *arg)
 #endif
 
         p = p->next;
-        ni += 4;
     }
 
     dev->DrawPrimitive(VX_TRIANGLELIST, ParticleEmitter::m_GlobalIndices, pc * 6, data);

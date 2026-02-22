@@ -5,9 +5,13 @@
 void ObjectEmitter::InitiateParticle(Particle *p)
 {
     CK3dEntity *entity = (CK3dEntity *)m_Context->GetObject(m_Entity);
+    if (!entity || !m_Shape)
+        return;
 
     // we get a random face
     int nbface = m_Shape->GetFaceCount();
+    if (nbface <= 0)
+        return;
     int face = rand() % nbface;
 
     VxVector av, bv, cv, fn;
