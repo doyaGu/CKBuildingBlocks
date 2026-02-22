@@ -63,7 +63,7 @@ int SplitString(const CKBehaviorContext &behcontext)
     if (!text)
         return CKBR_OK;
 
-    const char *str = CKStrdup(text);
+    const char *str = text;
     const char *delim = (const char *)beh->GetInputParameterReadDataPtr(1);
     if (!delim || *delim == '\0')
         delim = " ";
@@ -71,7 +71,6 @@ int SplitString(const CKBehaviorContext &behcontext)
     size_t delimLen = strlen(delim);
     int elements = 0;
 
-    char buf[512];
     for (const char *p = strstr(str, delim); p != NULL; p = strstr(&p[delimLen], delim))
     {
         if (p != str)
@@ -82,9 +81,13 @@ int SplitString(const CKBehaviorContext &behcontext)
             size_t sz = p - str;
             if (sz != 0)
             {
-                memcpy(buf, str, sz);
-                buf[sz] = '\0';
-                pout->SetStringValue(buf);
+                char *token = new char[sz + 1];
+                if (!token)
+                    break;
+                memcpy(token, str, sz);
+                token[sz] = '\0';
+                pout->SetStringValue(token);
+                delete[] token;
             }
         }
         str = &p[delimLen];
@@ -96,9 +99,14 @@ int SplitString(const CKBehaviorContext &behcontext)
         CKParameterOut *pout = beh->GetOutputParameter(++elements);
         if (pout)
         {
-            memcpy(buf, str, remains);
-            buf[remains] = '\0';
-            pout->SetStringValue(buf);
+            char *token = new char[remains + 1];
+            if (token)
+            {
+                memcpy(token, str, remains);
+                token[remains] = '\0';
+                pout->SetStringValue(token);
+                delete[] token;
+            }
         }
     }
 
