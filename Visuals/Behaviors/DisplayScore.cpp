@@ -7,6 +7,9 @@
 /////////////////////////////////////////////////////
 #include "CKAll.h"
 
+#include <stdio.h>
+#include <string.h>
+
 CKObjectDeclaration *FillBehaviorDisplayScoreDecl();
 CKERROR CreateDisplayScoreProto(CKBehaviorPrototype **pproto);
 int DisplayScore(const CKBehaviorContext &behcontext);
@@ -126,7 +129,10 @@ CKERROR DisplayScoreCallBack(const CKBehaviorContext &behcontext)
 
         char name[256] = "";
         if (sprite->GetName())
-            strcpy(name, sprite->GetName());
+        {
+            strncpy(name, sprite->GetName(), sizeof(name) - 1);
+            name[sizeof(name) - 1] = '\0';
+        }
         //---------------------------------------------
         char *number = strchr(name, '0');
         if (!number)
@@ -137,7 +143,8 @@ CKERROR DisplayScoreCallBack(const CKBehaviorContext &behcontext)
         int i;
         for (i = 1; i < 10; i++)
         {
-            sprintf(number, "%d", i);
+            *number = '0' + i;
+            number[1] = '\0';
             sprite = (CKSprite *)ctx->GetObjectByNameAndClass(name, CKCID_SPRITE);
             if (!sprite)
             {
@@ -193,8 +200,8 @@ void ScorePostRender(CKRenderContext *rc, void *arg)
     beh->GetInputParameterValue(0, &x);
     int y;
     beh->GetInputParameterValue(1, &y);
-    static char buffer[64];
-    sprintf(buffer, "%d", score);
+    char buffer[64];
+    snprintf(buffer, sizeof(buffer), "%d", score);
     int s;
     Vx2DVector size;
     CKSprite *sprite;
