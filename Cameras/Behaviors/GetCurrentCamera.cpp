@@ -60,7 +60,9 @@ int GetCurrentCamera(const CKBehaviorContext &behcontext)
     beh->ActivateInput(0, FALSE);
     beh->ActivateOutput(0);
 
-    CKCamera *cam = behcontext.CurrentRenderContext->GetAttachedCamera();
+    CKCamera *cam = NULL;
+    if (behcontext.CurrentRenderContext)
+        cam = behcontext.CurrentRenderContext->GetAttachedCamera();
 
     beh->SetOutputParameterObject(0, cam);
 

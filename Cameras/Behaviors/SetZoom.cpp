@@ -63,6 +63,8 @@ int SetZoom(const CKBehaviorContext &behcontext)
 
     float zoom = 50; // Zoom in mm
     beh->GetInputParameterValue(0, &zoom);
+    if (zoom <= 0.0f)
+        return CKBR_PARAMETERERROR;
 
     float fov = 2.0f * atanf(18.0f / zoom);
     cam->SetFov(fov);

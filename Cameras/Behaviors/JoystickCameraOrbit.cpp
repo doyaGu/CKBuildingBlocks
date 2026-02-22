@@ -198,7 +198,7 @@ void ProcessJoystickInputs(VxVector *RotationAngles, CKBehavior *beh, CKInputMan
     int ZoutButton;
     beh->GetLocalParameterValue(LOCAL_JOY_ZOUT, &ZoutButton);
 
-    if ((input->IsJoystickButtonDown(JoystickNumber, ZinButton)) || (input->IsJoystickButtonDown(JoystickNumber, ZoutButton)) && !stopping)
+    if ((input->IsJoystickButtonDown(JoystickNumber, ZinButton) || input->IsJoystickButtonDown(JoystickNumber, ZoutButton)) && !stopping)
     {
         float ZoomSpeed = 40.0f;
         beh->GetInputParameterValue(IN_SPEED_ZOOM, &ZoomSpeed);

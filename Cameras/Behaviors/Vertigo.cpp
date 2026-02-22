@@ -98,6 +98,8 @@ int Vertigo(const CKBehaviorContext &behcontext)
         // we get the velocity (input parameter)
         int nb_frame = 100;
         beh->GetInputParameterValue(1, &nb_frame);
+        if (nb_frame <= 0)
+            return CKBR_PARAMETERERROR;
 
         // we calculate the steps remaining
         stepsRemaining = nb_frame;
@@ -113,6 +115,8 @@ int Vertigo(const CKBehaviorContext &behcontext)
         // we get the effect value
         float effectValue = 0.5f;
         beh->GetInputParameterValue(3, &effectValue);
+        effectValue = XMax(0.0f, effectValue);
+        effectValue = XMin(1.0f, effectValue);
 
         // we get the direction
         CKBOOL direction = TRUE;
@@ -130,6 +134,8 @@ int Vertigo(const CKBehaviorContext &behcontext)
             goingVector.x = 0;
             goingVector.y = 0;
             goingVector.z = -objectPosition.z;
+            if (effectValue >= 1.0f)
+                return CKBR_PARAMETERERROR;
             effectValue = effectValue / (1.0f - effectValue);
         }
         float D = Magnitude(goingVector);
@@ -176,6 +182,8 @@ int Vertigo(const CKBehaviorContext &behcontext)
         // getting the 2d curve
         CK2dCurve *accelerationCurve = NULL;
         beh->GetInputParameterValue(4, &accelerationCurve);
+        if (!accelerationCurve)
+            return CKBR_PARAMETERERROR;
 
         ///////////////////////////////
         // getting the local parameters
@@ -207,9 +215,13 @@ int Vertigo(const CKBehaviorContext &behcontext)
         // calculating the new D
         // we get the object position
         CK3dEntity *e = (CK3dEntity *)beh->GetInputParameterObject(0);
+        if (!e)
+            return CKBR_PARAMETERERROR;
         VxVector objectPosition;
         e->GetPosition(&objectPosition, ent);
         float D = (float)fabs(objectPosition.z);
+        if (D < 0.0001f)
+            D = 0.0001f;
 
         // calculating the fov
         float fov = 2.0f * atanf(planeProjectionSize / D);
