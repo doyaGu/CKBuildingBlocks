@@ -9,6 +9,7 @@
 #include "InterfaceManager.h"
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 
 #ifndef WIN32_LEAN_AND_MEAN
@@ -105,22 +106,26 @@ int ReadRegistry(const CKBehaviorContext &behcontext)
             beh->ActivateOutput(1);
             return CKBR_OK;
         }
-        strcat(regSection, "\\");
-        strcat(regSection, arrayName);
-        strcat(regSection, "\\");
-
-        char buffer[200];
-        strcpy(buffer, regSection);
+        char baseSection[200] = {0};
+        const int baseLen = _snprintf(baseSection, sizeof(baseSection), "%s\\%s\\", regSection, arrayName);
+        if (baseLen < 0 || baseLen >= (int)sizeof(baseSection))
+        {
+            context->OutputToConsoleExBeep("TT_ReadRegistry: Registry path is too long");
+            beh->ActivateOutput(1);
+            return CKBR_OK;
+        }
 
         if (cols > 0)
         {
             for (int c = 0; c < cols; ++c)
             {
-                strcpy(regSection, buffer);
-                char num[32];
-                _itoa(c, num, 10);
-                strcat(regSection, num);
-                strcat(regSection, "\\");
+                const int sectionLen = _snprintf(regSection, sizeof(regSection), "%s%d\\", baseSection, c);
+                if (sectionLen < 0 || sectionLen >= (int)sizeof(regSection))
+                {
+                    context->OutputToConsoleExBeep("TT_ReadRegistry: Registry path is too long");
+                    beh->ActivateOutput(1);
+                    return CKBR_OK;
+                }
 
                 CK_ARRAYTYPE type = array->GetColumnType(c);
                 for (int i = 0; i < rows; ++i)
@@ -129,8 +134,13 @@ int ReadRegistry(const CKBehaviorContext &behcontext)
                     {
                     case CKARRAYTYPE_INT:
                     {
-                        _itoa(i, num, 10);
-                        strcpy(regEntry, num);
+                        const int entryLen = _snprintf(regEntry, sizeof(regEntry), "%d", i);
+                        if (entryLen < 0 || entryLen >= (int)sizeof(regEntry))
+                        {
+                            context->OutputToConsoleExBeep("TT_ReadRegistry: Registry entry is too long");
+                            beh->ActivateOutput(1);
+                            return CKBR_OK;
+                        }
                         int val = 0;
                         if (!ReadIntegerFromRegistry(regSection, context, regEntry, &val))
                         {
@@ -143,8 +153,13 @@ int ReadRegistry(const CKBehaviorContext &behcontext)
 
                     case CKARRAYTYPE_FLOAT:
                     {
-                        _itoa(i, num, 10);
-                        strcpy(regEntry, num);
+                        const int entryLen = _snprintf(regEntry, sizeof(regEntry), "%d", i);
+                        if (entryLen < 0 || entryLen >= (int)sizeof(regEntry))
+                        {
+                            context->OutputToConsoleExBeep("TT_ReadRegistry: Registry entry is too long");
+                            beh->ActivateOutput(1);
+                            return CKBR_OK;
+                        }
                         float val = 0.0f;
                         if (!ReadFloatFromRegistry(regSection, context, regEntry, &val))
                         {
@@ -164,8 +179,13 @@ int ReadRegistry(const CKBehaviorContext &behcontext)
                             beh->ActivateOutput(1);
                             return CKBR_OK;
                         }
-                        _itoa(i, num, 10);
-                        strcpy(regEntry, num);
+                        const int entryLen = _snprintf(regEntry, sizeof(regEntry), "%d", i);
+                        if (entryLen < 0 || entryLen >= (int)sizeof(regEntry))
+                        {
+                            context->OutputToConsoleExBeep("TT_ReadRegistry: Registry entry is too long");
+                            beh->ActivateOutput(1);
+                            return CKBR_OK;
+                        }
                         int val = 0;
                         if (!ReadIntegerFromRegistry(regSection, context, regEntry, &val))
                         {
@@ -177,8 +197,13 @@ int ReadRegistry(const CKBehaviorContext &behcontext)
                     break;
                     case CKARRAYTYPE_STRING:
                     {
-                        _itoa(i, num, 10);
-                        strcpy(regEntry, num);
+                        const int entryLen = _snprintf(regEntry, sizeof(regEntry), "%d", i);
+                        if (entryLen < 0 || entryLen >= (int)sizeof(regEntry))
+                        {
+                            context->OutputToConsoleExBeep("TT_ReadRegistry: Registry entry is too long");
+                            beh->ActivateOutput(1);
+                            return CKBR_OK;
+                        }
                         char str[256] = {0};
                         if (!ReadStringFromRegistry(regSection, context, regEntry, str, sizeof(str)))
                         {
@@ -187,6 +212,7 @@ int ReadRegistry(const CKBehaviorContext &behcontext)
                         }
                         array->SetElementStringValue(i, c, str);
                     }
+                    break;
                     default:
                         break;
                     }

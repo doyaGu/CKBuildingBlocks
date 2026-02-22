@@ -55,6 +55,12 @@ int DeleteGameInfo(const CKBehaviorContext &behcontext)
     beh->GetInputParameterValue(0, &gameInfo);
 
     InterfaceManager *man = InterfaceManager::GetManager(context);
+    if (!man)
+    {
+        beh->ActivateOutput(1);
+        return CKBR_OK;
+    }
+
     if (gameInfo == man->GetGameInfo())
     {
         if (gameInfo)

@@ -67,6 +67,7 @@ int SetGameScore(const CKBehaviorContext &behcontext)
     {
         ::PostMessageA((HWND)context->GetMainWindow(), TT_MSG_NO_GAMEINFO, 0x09, 0);
         context->OutputToConsoleExBeep("SetGameScore: gameInfo not exists");
+        return CKBR_OK;
     }
 
     beh->GetInputParameterValue(0, &gameInfo->gameScore);

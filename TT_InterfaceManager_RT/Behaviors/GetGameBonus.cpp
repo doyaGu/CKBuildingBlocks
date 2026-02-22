@@ -67,9 +67,10 @@ int GetGameBonus(const CKBehaviorContext &behcontext)
     {
         ::PostMessageA((HWND)context->GetMainWindow(), TT_MSG_NO_GAMEINFO, 0x00, 0);
         context->OutputToConsoleExBeep("GetGameBonus: gameInfo not exists");
+        return CKBR_OK;
     }
 
-    beh->GetInputParameterValue(0, &gameInfo->gameBonus);
+    beh->SetOutputParameterValue(0, &gameInfo->gameBonus);
 
     beh->ActivateOutput(0);
     return CKBR_OK;

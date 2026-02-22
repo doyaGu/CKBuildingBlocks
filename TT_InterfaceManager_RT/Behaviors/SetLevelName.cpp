@@ -67,6 +67,7 @@ int SetLevelName(const CKBehaviorContext &behcontext)
     {
         ::PostMessageA((HWND)context->GetMainWindow(), TT_MSG_NO_GAMEINFO, 0x13, 0);
         context->OutputToConsoleExBeep("SetLevelName: gameInfo not exists");
+        return CKBR_OK;
     }
 
     beh->GetInputParameterValue(0, gameInfo->levelName);

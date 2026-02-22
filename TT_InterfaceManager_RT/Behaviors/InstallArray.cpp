@@ -66,10 +66,18 @@ int InstallArray(const CKBehaviorContext &behcontext)
     {
         ::PostMessageA((HWND)context->GetRenderManager()->GetRenderContext(0)->GetWindowHandle(), TT_MSG_NO_GAMEINFO, 0x1A, 1);
         context->OutputToConsoleExBeep("InstallArray: gameInfo not exists");
+        beh->ActivateOutput(0);
+        return CKBR_OK;
     }
 
     CKDataArray *array = (CKDataArray *)beh->GetInputParameterObject(0);
     CKSTRING cmo = (CKSTRING)beh->GetInputParameterReadDataPtr(1);
+    if (!array || !cmo)
+    {
+        context->OutputToConsoleExBeep("InstallArray: invalid array or cmo");
+        beh->ActivateOutput(0);
+        return CKBR_OK;
+    }
 
     CNemoArrayList *nemoArrayList = man->GetNemoArrayList();
     if (!nemoArrayList->Search(cmo, array))

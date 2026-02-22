@@ -80,14 +80,20 @@ int SetIntegerValueToRegistry(const CKBehaviorContext &behcontext)
     }
 
     char buffer[512];
-    sprintf(buffer, "%s%s", gameInfo->regSubkey, regKey);
+    if (strlen(gameInfo->regSubkey) + strlen(regKey) >= sizeof(buffer))
+    {
+        context->OutputToConsoleExBeep("TT_SetIntegerValueToRegistry: registry path too long");
+        beh->ActivateOutput(1);
+        return CKBR_OK;
+    }
+    strcpy(buffer, gameInfo->regSubkey);
+    strcat(buffer, regKey);
 
-    HKEY hkResult;
+    HKEY hkResult = NULL;
     DWORD dwDisposition;
     if (::RegCreateKeyExA(gameInfo->hkRoot, buffer, 0, 0, 0, KEY_ALL_ACCESS, 0, &hkResult, &dwDisposition) != ERROR_SUCCESS)
     {
-        ::RegCloseKey(hkResult);
-        context->OutputToConsoleExBeep("TT_SetIntegerValueToRegistry: Failed to create %s %s", gameInfo->hkRoot, buffer);
+        context->OutputToConsoleExBeep("TT_SetIntegerValueToRegistry: Failed to create %s", buffer);
         beh->ActivateOutput(1);
         return CKBR_OK;
     }

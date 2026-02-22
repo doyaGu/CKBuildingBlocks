@@ -77,14 +77,20 @@ int SetBooleanValueToRegistry(const CKBehaviorContext &behcontext)
     }
 
     char buffer[512];
-    sprintf(buffer, "%s%s", gameInfo->regSubkey, regKey);
+    if (strlen(gameInfo->regSubkey) + strlen(regKey) >= sizeof(buffer))
+    {
+        context->OutputToConsoleExBeep("TT_SetBooleanValueToRegistry: registry path too long");
+        beh->ActivateOutput(1);
+        return CKBR_OK;
+    }
+    strcpy(buffer, gameInfo->regSubkey);
+    strcat(buffer, regKey);
 
-    HKEY hkResult;
+    HKEY hkResult = NULL;
     DWORD dwDisposition;
     if (::RegCreateKeyExA(gameInfo->hkRoot, buffer, 0, 0, 0, KEY_ALL_ACCESS, 0, &hkResult, &dwDisposition) != ERROR_SUCCESS)
     {
-        ::RegCloseKey(hkResult);
-        context->OutputToConsoleExBeep("TT_SetBooleanValueToRegistry: Failed to create %s %s", gameInfo->hkRoot, buffer);
+        context->OutputToConsoleExBeep("TT_SetBooleanValueToRegistry: Failed to create %s", buffer);
         beh->ActivateOutput(1);
         return CKBR_OK;
     }
@@ -92,7 +98,7 @@ int SetBooleanValueToRegistry(const CKBehaviorContext &behcontext)
     if (::RegSetValueExA(hkResult, valueName, 0, REG_DWORD, (LPBYTE)&value, sizeof(value)) != ERROR_SUCCESS)
     {
         ::RegCloseKey(hkResult);
-        context->OutputToConsoleExBeep("TT_SetBooleanValueToRegistry: Failed to set %s %d", valueName, (value) ? "TRUE" : "FALSE");
+        context->OutputToConsoleExBeep("TT_SetBooleanValueToRegistry: Failed to set %s %s", valueName, value ? "TRUE" : "FALSE");
         beh->ActivateOutput(1);
         return CKBR_OK;
     }

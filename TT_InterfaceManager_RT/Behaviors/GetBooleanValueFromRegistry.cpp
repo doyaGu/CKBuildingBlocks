@@ -60,8 +60,8 @@ int GetBooleanValueFromRegistry(const CKBehaviorContext &behcontext)
     CKContext *context = behcontext.Context;
 
     CKBOOL value = FALSE;
-    char regKey[512];
-    char valueName[128];
+    char regKey[512] = {0};
+    char valueName[128] = {0};
     beh->GetInputParameterValue(0, regKey);
     beh->GetInputParameterValue(1, valueName);
 
@@ -84,13 +84,19 @@ int GetBooleanValueFromRegistry(const CKBehaviorContext &behcontext)
     }
 
     char buffer[512];
-    sprintf(buffer, "%s%s", gameInfo->regSubkey, regKey);
+    if (strlen(gameInfo->regSubkey) + strlen(regKey) >= sizeof(buffer))
+    {
+        beh->SetOutputParameterValue(0, &value);
+        beh->ActivateOutput(1);
+        return CKBR_OK;
+    }
+    strcpy(buffer, gameInfo->regSubkey);
+    strcat(buffer, regKey);
 
-    HKEY hkResult;
+    HKEY hkResult = NULL;
     DWORD dwDisposition;
     if (::RegCreateKeyExA(gameInfo->hkRoot, buffer, 0, 0, 0, KEY_ALL_ACCESS, 0, &hkResult, &dwDisposition) != ERROR_SUCCESS)
     {
-        ::RegCloseKey(hkResult);
         beh->SetOutputParameterValue(0, &value);
         beh->ActivateOutput(1);
         return CKBR_OK;

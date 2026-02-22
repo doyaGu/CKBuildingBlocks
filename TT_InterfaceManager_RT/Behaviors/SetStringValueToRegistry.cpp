@@ -82,18 +82,24 @@ int SetStringValueToRegistry(const CKBehaviorContext &behcontext)
     }
 
     char buffer[512];
-    sprintf(buffer, "%s%s", gameInfo->regSubkey, regKey);
+    if (strlen(gameInfo->regSubkey) + strlen(regKey) >= sizeof(buffer))
+    {
+        context->OutputToConsoleExBeep("TT_SetStringValueToRegistry: registry path too long");
+        beh->ActivateOutput(1);
+        return CKBR_OK;
+    }
+    strcpy(buffer, gameInfo->regSubkey);
+    strcat(buffer, regKey);
 
-    HKEY hkResult;
+    HKEY hkResult = NULL;
     DWORD dwDisposition;
     if (::RegCreateKeyExA(gameInfo->hkRoot, buffer, 0, 0, 0, KEY_ALL_ACCESS, 0, &hkResult, &dwDisposition) != ERROR_SUCCESS)
     {
-        ::RegCloseKey(hkResult);
         beh->ActivateOutput(1);
         return CKBR_OK;
     }
 
-    if (::RegSetValueExA(hkResult, valueName, 0, REG_SZ, (LPBYTE)str, sizeof(str)) != ERROR_SUCCESS)
+    if (::RegSetValueExA(hkResult, valueName, 0, REG_SZ, (LPBYTE)str, (DWORD)strlen(str) + 1) != ERROR_SUCCESS)
     {
         ::RegCloseKey(hkResult);
         beh->ActivateOutput(1);

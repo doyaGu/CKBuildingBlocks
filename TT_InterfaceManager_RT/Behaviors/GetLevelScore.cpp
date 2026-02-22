@@ -67,6 +67,7 @@ int GetLevelScore(const CKBehaviorContext &behcontext)
     {
         ::PostMessageA((HWND)context->GetMainWindow(), TT_MSG_NO_GAMEINFO, 0x0E, 0);
         context->OutputToConsoleExBeep("GetLevelScore: gameInfo not exists");
+        return CKBR_OK;
     }
 
     beh->SetOutputParameterValue(0, &gameInfo->levelScore);

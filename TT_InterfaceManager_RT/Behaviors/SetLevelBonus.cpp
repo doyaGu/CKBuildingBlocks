@@ -66,6 +66,7 @@ int SetLevelBonus(const CKBehaviorContext &behcontext)
     {
         ::PostMessageA((HWND)context->GetMainWindow(), TT_MSG_NO_GAMEINFO, 0x10, 0);
         context->OutputToConsoleExBeep("SetLevelBonus: gameInfo not exists");
+        return CKBR_OK;
     }
 
     beh->GetInputParameterValue(0, &gameInfo->levelBonus);
