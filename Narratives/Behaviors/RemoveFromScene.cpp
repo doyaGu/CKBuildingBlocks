@@ -60,7 +60,9 @@ int RemoveFromScene(const CKBehaviorContext &behcontext)
     beh->ActivateOutput(0);
 
     // We get the target object
-    CKSceneObject *sceneobject = (CKSceneObject *)beh->GetTarget();
+    CKSceneObject *sceneobject = CKSceneObject::Cast(beh->GetTarget());
+    if (!sceneobject)
+        return CKBR_OWNERERROR;
 
     // we get the scene
     CKScene *scene = (CKScene *)beh->GetInputParameterObject(0);
@@ -68,8 +70,10 @@ int RemoveFromScene(const CKBehaviorContext &behcontext)
     // we add the object to the scene
     if (scene)
         scene->RemoveObjectFromScene(sceneobject);
-    else
+    else if (behcontext.CurrentScene)
         behcontext.CurrentScene->RemoveObjectFromScene(sceneobject);
+    else
+        return CKBR_PARAMETERERROR;
 
     return CKBR_OK;
 }

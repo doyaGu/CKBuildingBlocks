@@ -63,11 +63,15 @@ int AddToScene(const CKBehaviorContext &behcontext)
 
     // We get the target object
     CKSceneObject *sceneobject = (CKSceneObject *)beh->GetTarget();
+    if (!sceneobject)
+        return CKBR_OWNERERROR;
 
     // we get the scene
     CKScene *scene = (CKScene *)beh->GetInputParameterObject(0);
     if (!scene)
         scene = behcontext.CurrentScene;
+    if (!scene)
+        return CKBR_PARAMETERERROR;
 
     // we add the object to the scene
     scene->AddObjectToScene(sceneobject);

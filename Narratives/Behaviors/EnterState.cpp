@@ -60,12 +60,12 @@ int EnterState(const CKBehaviorContext &behcontext)
     CKBehavior *beh = behcontext.Behavior;
 
     beh->ActivateInput(0, FALSE);
-    beh->ActivateOutput(0);
 
     CKStateObject *rdv = (CKStateObject *)beh->GetInputParameterObject(0);
     if (!rdv)
-        throw "You didn't provide a State...";
+        return CKBR_PARAMETERERROR;
     rdv->EnterState();
+    beh->ActivateOutput(0);
 
     return CKBR_OK;
 }
