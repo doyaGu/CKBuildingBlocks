@@ -113,7 +113,7 @@ int PlanarShadow(const CKBehaviorContext &behcontext)
         }
 
         // We add the post rendercallback
-        ent->AddPostRenderCallBack(PlanarShadowPostRenderCallBack, (void *)beh->GetID(), TRUE);
+        ent->AddPostRenderCallBack(PlanarShadowPostRenderCallBack, (void *)(uintptr_t)beh->GetID(), TRUE);
     }
 
     return CKBR_ACTIVATENEXTFRAME;
@@ -355,7 +355,7 @@ int PlanarShadowPostRenderCallBack(CKRenderContext *rc, CKRenderObject *obj, voi
         CKDWORD m_ClipPlanesWasEnabled;
     };
 
-    CKBehavior *beh = (CKBehavior *)CKGetObject(rc->GetCKContext(), (CK_ID)arg);
+    CKBehavior *beh = (CKBehavior *)CKGetObject(rc->GetCKContext(), (CK_ID)(uintptr_t)arg);
     if (!beh)
         return 0;
 

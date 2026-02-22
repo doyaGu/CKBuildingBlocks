@@ -216,7 +216,7 @@ CKERROR CreateSystemFontCallback(const CKBehaviorContext &behcontext)
             pin->SetGUID(CKPGUID_FONTNAME, TRUE);
 
             CKEnumStruct *data = pm->GetEnumDescByType(pm->ParameterGuidToType(CKPGUID_FONTNAME));
-            if (pout && FontName && strlen(FontName))
+            if (pout && FontName && (int)strlen(FontName))
             {
                 for (i = 0; i < data->NbData; i++)
                 {
@@ -224,7 +224,7 @@ CKERROR CreateSystemFontCallback(const CKBehaviorContext &behcontext)
                         if (!strcmp(FontName, data->Desc[i]))
                         {
                             pout->SetValue(&i);
-                            beh->SetLocalParameterValue(4, data->Desc[i], strlen(data->Desc[i]) + 1);
+                            beh->SetLocalParameterValue(4, data->Desc[i], (int)strlen(data->Desc[i]) + 1);
                             return CKBR_OK;
                         }
                 }
@@ -254,7 +254,7 @@ CKERROR CreateSystemFontCallback(const CKBehaviorContext &behcontext)
             CKSTRING currentFont = (CKSTRING)beh->GetLocalParameterReadDataPtr(4);
 
             CKEnumStruct *data = pm->GetEnumDescByType(pm->ParameterGuidToType(CKPGUID_FONTNAME));
-            if (!currentFont || (strlen(currentFont) == 0))
+            if (!currentFont || ((int)strlen(currentFont) == 0))
             {
                 // we try to use Arial instead
                 for (i = 0; i < data->NbData; i++)

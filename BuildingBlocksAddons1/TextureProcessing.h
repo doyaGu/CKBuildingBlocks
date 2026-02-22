@@ -33,18 +33,21 @@ extern int CMDecalTR[3][3];
 
 void ApplyMatrixToTexture(CKTexture *tex, int matrix[3][3], int sum);
 
+#if defined(_M_IX86) || defined(_M_X64) || (defined(macintosh) && defined(__i386__))
 void ProcessPixelsTemporalMMX(void *SrcData, void *DstData, int width, int height, void *MatrixData, int Damping);
 void ExchangeMemoryMMX(void *Data1, void *Data2, CKDWORD sizet);
 void ProcessPixelsMMX(void *SrcData, void *DstData, int width, int height, void *MatrixData);
 void WaterEffectMMX(void *CurrentData, void *PreviousData, int width, int height, CKDWORD BorderColor, int Damping);
 void WaterEffectWillamette(void *CurrentData, void *PreviousData, int width, int height, CKDWORD BorderColor, int Damping);
 void BlendDataMMX(void *ResData, void *Data1, void *Data2, int NbDword, float Factor);
+void BlendDataC(CKDWORD *ResData, CKDWORD *Data1, CKDWORD *Data2, int NbDword, float Factor);
+#endif
 
 #if defined(macintosh)
 #if G4
-void BlendDataAltivec(unsigned long *ResData, unsigned long *Data1, unsigned long *Data2, int NbDword, float Factor);
+void BlendDataAltivec(CKDWORD *ResData, CKDWORD *Data1, CKDWORD *Data2, int NbDword, float Factor);
 #else
-void BlendDataC(unsigned long *ResData, unsigned long *Data1, unsigned long *Data2, int NbDword, float Factor);
+void BlendDataC(CKDWORD *ResData, CKDWORD *Data1, CKDWORD *Data2, int NbDword, float Factor);
 #endif
 #endif
 #endif

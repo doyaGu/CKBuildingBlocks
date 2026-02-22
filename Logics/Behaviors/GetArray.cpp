@@ -73,7 +73,7 @@ int GetArray(const CKBehaviorContext &behcontext)
     if (!array)
         return CKBR_OWNERERROR;
 
-    CKDWORD key = NULL;
+    CKUINTPTR key = NULL;
     int column = array->GetKeyColumn();
     if (column < 0)
     {

@@ -84,11 +84,11 @@ int RemoveArray(const CKBehaviorContext &behcontext)
     }
 
     // we find the key
-    CKDWORD key = 0;
+    CKUINTPTR key = 0;
     int size = GetInputValue(array, beh, column, 0, key);
 
     // the insertion itself
-    int index = array->FindRowIndex(column, CKEQUAL, key, size);
+    int index = (int)array->FindRowIndex(column, CKEQUAL, key, size);
     if (index < 0)
     {
         // Set IO states

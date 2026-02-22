@@ -135,21 +135,21 @@ int Text2D(const CKBehaviorContext &behcontext)
         {
             // Only when activated, we set the callback
             if (ent)
-                Text2DRenderCallback(behcontext.CurrentRenderContext, ent, (void *)beh->GetID());
+                Text2DRenderCallback(behcontext.CurrentRenderContext, ent, (void *)(uintptr_t)beh->GetID());
             return CKBR_OK;
         }
     }
 
     // we add the render callback (temporarily)
     if (ent)
-        ent->AddPostRenderCallBack(Text2DRenderCallback, (void *)beh->GetID(), TRUE);
+        ent->AddPostRenderCallBack(Text2DRenderCallback, (void *)(uintptr_t)beh->GetID(), TRUE);
 
     return CKBR_ACTIVATENEXTFRAME;
 }
 
 CKBOOL Text2DRenderCallback(CKRenderContext *dev, CKRenderObject *obj, void *Argument)
 {
-    CKBehavior *beh = (CKBehavior *)CKGetObject(dev->GetCKContext(), (CK_ID)Argument);
+    CKBehavior *beh = (CKBehavior *)CKGetObject(dev->GetCKContext(), (CK_ID)(uintptr_t)Argument);
     if (!beh)
         return TRUE;
 

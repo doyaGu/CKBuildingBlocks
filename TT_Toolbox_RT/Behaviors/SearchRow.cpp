@@ -93,7 +93,7 @@ int SearchRow(const CKBehaviorContext &behcontext)
     case CKARRAYTYPE_STRING:
         searchData = param->GetReadDataPtr(TRUE);
         if (searchData)
-            dataSize = strlen((char *)searchData) + 1;
+            dataSize = (int)(strlen((char *)searchData) + 1);
         break;
 
     case CKARRAYTYPE_OBJECT:
@@ -119,7 +119,7 @@ int SearchRow(const CKBehaviorContext &behcontext)
         return CKBR_OK;
     }
 
-    int rowIndex = array->FindRowIndex(column, CKEQUAL, (CKDWORD)searchData, dataSize, 0);
+    int rowIndex = (int)array->FindRowIndex(column, CKEQUAL, (CKUINTPTR)searchData, dataSize, 0);
     beh->SetOutputParameterValue(0, &rowIndex);
 
     return CKBR_OK;

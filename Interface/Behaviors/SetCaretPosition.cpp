@@ -72,7 +72,7 @@ int SetCaretPosition(const CKBehaviorContext &behcontext)
     int pos = -1;
     beh->GetInputParameterValue(1, &pos);
 
-    int count = strlen(string);
+    int count = (int)strlen(string);
 
     char *news = new char[2 + count];
     char *newp = news;

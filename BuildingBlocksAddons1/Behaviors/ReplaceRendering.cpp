@@ -62,7 +62,7 @@ CKERROR CreateReplaceRenderingProto(CKBehaviorPrototype **pproto)
 /**********************************************/
 void ReplaceMaterialPreRender(CKRenderContext *rc, CK3dEntity *Mov, CKMesh *Object, CKMaterial *mat, void *arg)
 {
-    CKBehavior *beh = (CKBehavior *)CKGetObject(rc->GetCKContext(), (CK_ID)arg);
+    CKBehavior *beh = (CKBehavior *)CKGetObject(rc->GetCKContext(), (CK_ID)(uintptr_t)arg);
     if (!beh)
         return;
 
@@ -80,7 +80,7 @@ void ReplaceMaterialPreRender(CKRenderContext *rc, CK3dEntity *Mov, CKMesh *Obje
 
 int PreReplaceMaterialRC(CKRenderContext *rc, CKRenderObject *iEnt, void *arg)
 {
-    CKBehavior *beh = (CKBehavior *)CKGetObject(rc->GetCKContext(), (CK_ID)arg);
+    CKBehavior *beh = (CKBehavior *)CKGetObject(rc->GetCKContext(), (CK_ID)(uintptr_t)arg);
     if (!beh)
         return 0;
 
@@ -100,7 +100,7 @@ int PreReplaceMaterialRC(CKRenderContext *rc, CKRenderObject *iEnt, void *arg)
 int PostReplaceMaterialRC(CKRenderContext *rc, CKRenderObject *iEnt, void *arg)
 {
 
-    CKBehavior *beh = (CKBehavior *)CKGetObject(rc->GetCKContext(), (CK_ID)arg);
+    CKBehavior *beh = (CKBehavior *)CKGetObject(rc->GetCKContext(), (CK_ID)(uintptr_t)arg);
     if (!beh)
         return 0;
 
@@ -119,7 +119,7 @@ int PostReplaceMaterialRC(CKRenderContext *rc, CKRenderObject *iEnt, void *arg)
 
 void PreReplaceMaterialRCMesh(CKRenderContext *Dev, CK3dEntity *Mov, CKMesh *Object, void *Argument)
 {
-    CKBehavior *beh = (CKBehavior *)CKGetObject(Dev->GetCKContext(), (CK_ID)Argument);
+    CKBehavior *beh = (CKBehavior *)CKGetObject(Dev->GetCKContext(), (CK_ID)(uintptr_t)Argument);
     if (!beh)
         return;
 
@@ -131,7 +131,7 @@ void PreReplaceMaterialRCMesh(CKRenderContext *Dev, CK3dEntity *Mov, CKMesh *Obj
 
 void PostReplaceMaterialRCMesh(CKRenderContext *Dev, CK3dEntity *Mov, CKMesh *Object, void *Argument)
 {
-    CKBehavior *beh = (CKBehavior *)CKGetObject(Dev->GetCKContext(), (CK_ID)Argument);
+    CKBehavior *beh = (CKBehavior *)CKGetObject(Dev->GetCKContext(), (CK_ID)(uintptr_t)Argument);
     if (!beh)
         return;
 
@@ -177,14 +177,14 @@ int ReplaceRendering(const CKBehaviorContext &behcontext)
 
     if (perObject)
     {
-        ent->AddPreRenderCallBack(PreReplaceMaterialRC, (void *)beh->GetID(), TRUE);
-        ent->AddPostRenderCallBack(PostReplaceMaterialRC, (void *)beh->GetID(), TRUE);
+        ent->AddPreRenderCallBack(PreReplaceMaterialRC, (void *)(uintptr_t)beh->GetID(), TRUE);
+        ent->AddPostRenderCallBack(PostReplaceMaterialRC, (void *)(uintptr_t)beh->GetID(), TRUE);
     }
     else
     {
         // every object using this mesh sould have there material replaced
-        mesh->AddPreRenderCallBack(PreReplaceMaterialRCMesh, (void *)beh->GetID(), TRUE);
-        mesh->AddPostRenderCallBack(PostReplaceMaterialRCMesh, (void *)beh->GetID(), TRUE);
+        mesh->AddPreRenderCallBack(PreReplaceMaterialRCMesh, (void *)(uintptr_t)beh->GetID(), TRUE);
+        mesh->AddPostRenderCallBack(PostReplaceMaterialRCMesh, (void *)(uintptr_t)beh->GetID(), TRUE);
     }
 
     return CKBR_ACTIVATENEXTFRAME;

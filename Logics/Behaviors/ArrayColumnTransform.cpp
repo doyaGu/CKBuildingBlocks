@@ -78,11 +78,11 @@ int ArrayColumnTransform(const CKBehaviorContext &behcontext)
     beh->GetInputParameterValue(1, &op);
 
     // we find the key
-    CKDWORD key = NULL;
+    CKUINTPTR key = NULL;
     int size = GetInputValue(array, beh, column, 2, key);
 
     // the transformation itself
-    array->ColumnTransform(column, op, key);
+    array->ColumnTransform(column, op, (CKDWORD)key);
 
     // Set IO states
     beh->ActivateInput(0, FALSE);

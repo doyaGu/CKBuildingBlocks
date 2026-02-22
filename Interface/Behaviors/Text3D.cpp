@@ -129,7 +129,7 @@ int Text3D(const CKBehaviorContext &behcontext)
         {
             // Only when activated, we set the callback
             if (ent && ent->IsVisible() && !ent->IsHiddenByParent())
-                Text3DRenderCallback(behcontext.CurrentRenderContext, ent, (void *)beh->GetID());
+                Text3DRenderCallback(behcontext.CurrentRenderContext, ent, (void *)(uintptr_t)beh->GetID());
             return CKBR_OK;
         }
         else
@@ -155,7 +155,7 @@ int Text3D(const CKBehaviorContext &behcontext)
 
     // we add the render callback (temporarily)
     if (ent)
-        ent->AddPostRenderCallBack(Text3DRenderCallback, (void *)beh->GetID(), TRUE);
+        ent->AddPostRenderCallBack(Text3DRenderCallback, (void *)(uintptr_t)beh->GetID(), TRUE);
 
     return CKBR_ACTIVATENEXTFRAME;
 }
@@ -225,7 +225,7 @@ int Text3DRenderCallback(CKRenderContext *dev, CKRenderObject *obj, void *arg)
     static const float inv32f = 1.0f / 32.0f;
     static const float inv16f = 1.0f / 16.0f;
 
-    CKBehavior *beh = (CKBehavior *)CKGetObject(dev->GetCKContext(), (CK_ID)arg);
+    CKBehavior *beh = (CKBehavior *)CKGetObject(dev->GetCKContext(), (CK_ID)(uintptr_t)arg);
     if (!beh)
         return TRUE;
 

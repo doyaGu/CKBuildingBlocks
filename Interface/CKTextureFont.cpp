@@ -1689,5 +1689,5 @@ void CKTextureFont::DrawStringEx(CKRenderContext *iRC, const char *iString, cons
     // We update the line width
     pos.x = textzone.left + m_Offset.x;
 
-    DrawString(iRC, iString, strlen(iString), pos, textzone, iOptions);
+    DrawString(iRC, iString, (int)strlen(iString), pos, textzone, iOptions);
 }

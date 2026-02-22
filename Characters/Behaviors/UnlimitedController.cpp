@@ -705,7 +705,7 @@ void ReconstructIndexes(CKContext *ctx, int count, UnlimitedParam *Params, const
                 if (anim == Params[i].AnimationPtr)
                 {
                     Found = anim;
-                    Pos = ids - array.Begin();
+                    Pos = (int)(ids - array.Begin());
                     break;
                 }
             }

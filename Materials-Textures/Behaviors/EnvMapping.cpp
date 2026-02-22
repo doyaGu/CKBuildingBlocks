@@ -91,7 +91,7 @@ int EnvMapping(const CKBehaviorContext &behcontext)
     if (!ent)
         return CKBR_OWNERERROR;
 
-    ent->AddPreRenderCallBack(EnvMapPreRender, (void *)beh->GetID(), TRUE);
+    ent->AddPreRenderCallBack(EnvMapPreRender, (void *)(uintptr_t)beh->GetID(), TRUE);
 
     return CKBR_OK;
 }
@@ -101,7 +101,7 @@ int EnvMapping(const CKBehaviorContext &behcontext)
 /***********************************************/
 int EnvMapPreRender(CKRenderContext *rc, CKRenderObject *rent, void *arg)
 {
-    CKBehavior *beh = (CKBehavior *)CKGetObject(rc->GetCKContext(), (CK_ID)arg);
+    CKBehavior *beh = (CKBehavior *)CKGetObject(rc->GetCKContext(), (CK_ID)(uintptr_t)arg);
     if (!beh)
         return 0;
 

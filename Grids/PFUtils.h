@@ -38,7 +38,7 @@ typedef XListIt<GridInfo *> GridInfoIt;
 typedef XListIt<int> IntIt;
 typedef XListIt<float> FloatIt;
 typedef XListIt<IndoorLink *> IndoorLinkIt;
-typedef XSHashTableIt<GridInfo *, int> Grid2GridInfoIt;
+typedef XSHashTableIt<GridInfo *, uintptr_t> Grid2GridInfoIt;
 typedef XSHashTableIt<Path *, int> PathID2PathIt;
 //----------------------------------------------------------------------------------------------------------
 #ifdef WIN32

@@ -91,9 +91,9 @@ int CameraView(const CKBehaviorContext &behcontext)
         CKBOOL o2D = TRUE;
         beh->GetInputParameterValue(2, &o2D);
         if (o2D)
-            rcontext->AddPostSpriteRenderCallBack(CameraViewRender, (void *)beh->GetID(), TRUE);
+            rcontext->AddPostSpriteRenderCallBack(CameraViewRender, (void *)(uintptr_t)beh->GetID(), TRUE);
         else
-            rcontext->AddPostRenderCallBack(CameraViewRender, (void *)beh->GetID(), TRUE);
+            rcontext->AddPostRenderCallBack(CameraViewRender, (void *)(uintptr_t)beh->GetID(), TRUE);
     }
 
     return CKBR_ACTIVATENEXTFRAME;
@@ -103,13 +103,13 @@ void CameraViewRender(CKRenderContext *dev, void *arg)
 {
     CKContext *ctx = dev->GetCKContext();
 
-    CKBehavior *beh = (CKBehavior *)CKGetObject(dev->GetCKContext(), (CK_ID)arg);
+    CKBehavior *beh = (CKBehavior *)CKGetObject(dev->GetCKContext(), (CK_ID)(uintptr_t)arg);
     if (!beh)
         return;
     // CKBehavior* beh = (CKBehavior*)arg;
 
     // Prevent Infinite loop
-    CKBOOL infunction = (CKBOOL)beh->GetAppData();
+    CKBOOL infunction = (beh->GetAppData() != nullptr);
     if (infunction)
         return;
     beh->SetAppData((void *)TRUE);

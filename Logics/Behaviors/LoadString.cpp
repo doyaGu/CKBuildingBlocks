@@ -80,7 +80,7 @@ int LoadString(const CKBehaviorContext &behcontext)
         // we read from the file
         int realcount = 0;
         if (size)
-            realcount = fread(text, 1, size, file);
+            realcount = (int)fread(text, 1, size, file);
 
         // eof
         text[realcount] = '\0';

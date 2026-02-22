@@ -96,7 +96,7 @@ int MouseCursor(const CKBehaviorContext &behcontext)
         CKInputManager *im = (CKInputManager *)behcontext.Context->GetManagerByGuid(INPUT_MANAGER_GUID);
         if (im) im->ShowCursor(FALSE);
     }
-    behcontext.CurrentRenderContext->AddPostSpriteRenderCallBack(MouseCursorRender, (void *)behcontext.Behavior->GetID(), TRUE);
+    behcontext.CurrentRenderContext->AddPostSpriteRenderCallBack(MouseCursorRender, (void *)(uintptr_t)behcontext.Behavior->GetID(), TRUE);
     return CKBR_ACTIVATENEXTFRAME;
 }
 
@@ -137,7 +137,7 @@ CKERROR MouseCursorCallbackDisp(const CKBehaviorContext &behcontext)
 
 void MouseCursorRender(CKRenderContext *dev, void *arg)
 {
-    CKBehavior *beh = (CKBehavior *)CKGetObject(dev->GetCKContext(), (CK_ID)arg);
+    CKBehavior *beh = (CKBehavior *)CKGetObject(dev->GetCKContext(), (CK_ID)(uintptr_t)arg);
     if (!beh)
         return;
     CKContext *ctx = beh->GetCKContext();

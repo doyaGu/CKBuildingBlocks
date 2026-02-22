@@ -118,7 +118,7 @@ void ApplyMatrixToTexture(CKTexture *tex, int matrix[3][3], int sum)
     int height = tex->GetHeight();
     CKDWORD *image = (CKDWORD *)tex->LockSurfacePtr();
 
-#if !defined(macintosh) // || defined (__i386__)
+#if !defined(macintosh) && defined(_M_IX86) // x86 MMX path only
 
     if (GetProcessorFeatures() & PROC_MMX)
     {
@@ -131,7 +131,7 @@ void ApplyMatrixToTexture(CKTexture *tex, int matrix[3][3], int sum)
                 short int val = (int)(matrix[a][b] * 256) / (int)sum;
                 SMat[a][b] = val;
             }
-        // Tableau de short int prepar�s dans l'ordre utilis� par la routine MMX
+        // Table of short ints prepared in the order used by the MMX routine
         short int MatrixVals[24] = {
             SMat[0][1], SMat[0][0], SMat[0][1], SMat[0][0], SMat[0][2], SMat[0][2], SMat[0][2], SMat[0][2],
             SMat[1][1], SMat[1][0], SMat[1][1], SMat[1][0], SMat[1][2], SMat[1][2], SMat[1][2], SMat[1][2],
@@ -188,11 +188,11 @@ void ApplyMatrixToTexture(CKTexture *tex, int matrix[3][3], int sum)
                     ip1 = height - 1;
 
                 int jm1 = j - 1;
-                if (i == 0)
-                    im1 = 0;
+                if (j == 0)
+                    jm1 = 0;
 
                 int jp1 = j + 1;
-                if (i == width - 1)
+                if (j == width - 1)
                     jp1 = width - 1;
 
                 intcolor sumcol(0);
@@ -249,7 +249,7 @@ void ApplyMatrixToTexture(CKTexture *tex, int matrix[3][3], int sum)
     tex->ReleaseSurfacePtr();
 }
 
-#if defined(WIN32) //  || (defined(macintosh) && defined(__i386__))
+#if defined(WIN32) && !defined(_M_X64) //  || (defined(macintosh) && defined(__i386__))
 
 //*************************************************************************
 //  SrcData doit etre de taille (Width+2)*(Height+2)
@@ -434,7 +434,7 @@ LoopExchange:
 //  SrcData doit etre de taille (Width)*(Height)
 //	DstData doit etre de taille (Width*Height)
 //
-//	SrcData represente les donn�es de la frame pr�c�dente
+//	SrcData represents the data from the previous frame
 //*************************************************************************
 
 void ProcessPixelsTemporalMMX(void *CurrentData, void *PreviousData, int width, int height, void *MatrixData, int Damping)
@@ -603,7 +603,7 @@ finTot:
 //	DstData doit etre de taille (Width*Height)
 //
 //  Applique un filtre sur CurrentData  NewP(x,y)= 2*Voisinage(CurrentP(x,y)) -  PreviousP(x,y);
-//  Le resultat est �crit dans Previous Data
+//  The result is written into Previous Data
 //*************************************************************************
 void WaterEffectMMX(void *CurrentData, void *PreviousData, int width, int height, CKDWORD BorderColor, int Damping)
 {
@@ -881,7 +881,7 @@ LastLine:
 //  Both must be aligned on 16 bytes booundary
 //
 //  Applique un filtre sur CurrentData  NewP(x,y)= 2*Voisinage(CurrentP(x,y)) - PreviousP(x,y);
-//  Le resultat est �crit dans Previous Data
+//  The result is written into Previous Data
 //*************************************************************************
 void WaterEffectWillamette(void *CurrentData, void *PreviousData, int width, int height, CKDWORD BorderColor, int Damping)
 {
@@ -1249,7 +1249,7 @@ LastLine:
 }
 #endif
 
-#if defined(WIN32) || (defined(macintosh) && defined(__i386__))
+#if (defined(WIN32) && !defined(_M_X64)) || (defined(macintosh) && defined(__i386__))
 
 /*****************************************************************************************************************
 /*																												 */
@@ -1420,16 +1420,58 @@ BlendLoop:
         jmp BoucleW
 
 */
+#elif defined(_M_X64)
+void BlendDataMMX(void *ResData, void *Data1, void *Data2, int NbDword, float Factor)
+{
+    if (!ResData || !Data1 || !Data2 || NbDword <= 0)
+        return;
+
+    CKDWORD *dst = static_cast<CKDWORD *>(ResData);
+    const CKDWORD *src1 = static_cast<const CKDWORD *>(Data1);
+    const CKDWORD *src2 = static_cast<const CKDWORD *>(Data2);
+
+    const float f1 = (1.0f - Factor);
+    const float f2 = Factor;
+    for (int i = 0; i < NbDword; ++i) {
+        const CKDWORD c1 = src1[i];
+        const CKDWORD c2 = src2[i];
+
+        const int r = static_cast<int>(ColorGetRed(c1) * f1 + ColorGetRed(c2) * f2);
+        const int g = static_cast<int>(ColorGetGreen(c1) * f1 + ColorGetGreen(c2) * f2);
+        const int b = static_cast<int>(ColorGetBlue(c1) * f1 + ColorGetBlue(c2) * f2);
+        const int a = static_cast<int>(ColorGetAlpha(c1) * f1 + ColorGetAlpha(c2) * f2);
+        dst[i] = RGBAITOCOLOR(r, g, b, a);
+    }
+}
+
+void BlendDataC(CKDWORD *ResData, CKDWORD *Data1, CKDWORD *Data2, int NbDword, float Factor)
+{
+    CKDWORD *pResData = ResData;
+    const CKDWORD *pData1 = Data1;
+    const CKDWORD *pData2 = Data2;
+    const float f1 = 1.0f - Factor;
+    const float f2 = Factor;
+    while (NbDword-- > 0)
+    {
+        CKDWORD c1 = *pData1++;
+        CKDWORD c2 = *pData2++;
+        CKDWORD ColAG = (CKDWORD)(((c1 & 0xFF00FF00) >> 2) * f1 + ((c2 & 0xFF00FF00) >> 2) * f2);
+        CKDWORD ColRB = (CKDWORD)(((c1 & 0x00FF00FF)) * f1 + ((c2 & 0x00FF00FF)) * f2);
+        ColAG = (ColAG << 2) & 0xFF00FF00;
+        ColRB = ColRB & 0x00FF00FF;
+        *pResData++ = ColAG | ColRB;
+    }
+}
 #endif
 
 #if (defined(macintosh) && defined(__ppc__))
 
 #if G4
 #include <altivec.h>
-void BlendDataAltivecAligned(unsigned long *ResData, unsigned long *Data0, unsigned long *Data1, int NbDword, float Factor);
-void BlendDataAltivecUnAligned(unsigned long *ResData, unsigned long *Data0, unsigned long *Data1, int NbDword, float Factor);
+void BlendDataAltivecAligned(CKDWORD *ResData, CKDWORD *Data0, CKDWORD *Data1, int NbDword, float Factor);
+void BlendDataAltivecUnAligned(CKDWORD *ResData, CKDWORD *Data0, CKDWORD *Data1, int NbDword, float Factor);
 
-void BlendDataAltivec(unsigned long *ResData, unsigned long *Data0, unsigned long *Data1, int NbDword, float Factor)
+void BlendDataAltivec(CKDWORD *ResData, CKDWORD *Data0, CKDWORD *Data1, int NbDword, float Factor)
 {
     if ((((long)ResData) & 0x0f != 0) ||
         (((long)ResData) & 0x0f != 0) ||
@@ -1441,14 +1483,14 @@ void BlendDataAltivec(unsigned long *ResData, unsigned long *Data0, unsigned lon
     BlendDataAltivecAligned(ResData, Data0, Data1, NbDword, Factor);
 }
 
-void BlendDataAltivecAligned(unsigned long *ResData, unsigned long *Data0, unsigned long *Data1, int NbDword, float Factor)
+void BlendDataAltivecAligned(CKDWORD *ResData, CKDWORD *Data0, CKDWORD *Data1, int NbDword, float Factor)
 {
 #ifdef __GNUC__
 #undef long
 #define long int
 #endif
-    unsigned long mul0 = (unsigned long)(Factor * 256.0f);
-    unsigned long mul1 = (unsigned long)((1.0f - Factor) * 256.0f);
+    CKDWORD mul0 = (CKDWORD)(Factor * 256.0f);
+    CKDWORD mul1 = (CKDWORD)((1.0f - Factor) * 256.0f);
 
     vector unsigned long c0;
     vector unsigned long c1;
@@ -1545,14 +1587,14 @@ void BlendDataAltivecAligned(unsigned long *ResData, unsigned long *Data0, unsig
 #endif
 }
 
-void BlendDataAltivecUnAligned(unsigned long *ResData, unsigned long *Data0, unsigned long *Data1, int NbDword, float Factor)
+void BlendDataAltivecUnAligned(CKDWORD *ResData, CKDWORD *Data0, CKDWORD *Data1, int NbDword, float Factor)
 {
 #ifdef __GNUC__
 #undef long
 #define long int
 #endif
-    unsigned long mul0 = (unsigned long)(Factor * 256.0f);
-    unsigned long mul1 = (unsigned long)((1.0f - Factor) * 256.0f);
+    CKDWORD mul0 = (CKDWORD)(Factor * 256.0f);
+    CKDWORD mul1 = (CKDWORD)((1.0f - Factor) * 256.0f);
 
     vector unsigned long c0;
     vector unsigned long c1;
@@ -1617,21 +1659,225 @@ void BlendDataAltivecUnAligned(unsigned long *ResData, unsigned long *Data0, uns
 }
 #else
 
-void BlendDataC(DWORD *ResData, DWORD *Data1, DWORD *Data2, int NbDword, float Factor)
+void BlendDataC(CKDWORD *ResData, CKDWORD *Data1, CKDWORD *Data2, int NbDword, float Factor)
 {
-    float BFactor1 = (Factor);			//*256.0f);
-    float BFactor2 = ((1.0f - Factor)); //*256.0f);
+    CKDWORD *pResData = ResData;
+    CKDWORD *pData1 = Data1;
+    CKDWORD *pData2 = Data2;
+    float BFactor1 = (Factor);
+    float BFactor2 = ((1.0f - Factor));
     while (NbDword-- > 0)
     {
-        DWORD f1 = *Data1++;
-        DWORD f2 = *Data2++;
-        DWORD ColAG = ((f1 & 0xFF00FF00) >> 2) * BFactor2 + ((f2 & 0xFF00FF00) >> 2) * BFactor1;
-        DWORD ColRB = ((f1 & 0x00FF00FF)) * BFactor2 + ((f2 & 0x00FF00FF)) * BFactor1;
+        CKDWORD f1 = *pData1++;
+        CKDWORD f2 = *pData2++;
+        CKDWORD ColAG = ((f1 & 0xFF00FF00) >> 2) * BFactor2 + ((f2 & 0xFF00FF00) >> 2) * BFactor1;
+        CKDWORD ColRB = ((f1 & 0x00FF00FF)) * BFactor2 + ((f2 & 0x00FF00FF)) * BFactor1;
         ColAG = (ColAG << 2) & 0xFF00FF00;
         ColRB = (ColRB)&0x00FF00FF;
-        *ResData++ = ColAG | ColRB;
+        *pResData++ = ColAG | ColRB;
     }
 }
 #endif
 
+#elif !defined(WIN32) || defined(_M_X64)
+
+namespace {
+inline int ClampToByte(int value) {
+    if (value < 0)
+        return 0;
+    if (value > 255)
+        return 255;
+    return value;
+}
+
+inline void DecodeColor(CKDWORD color, int &r, int &g, int &b, int &a) {
+    r = ColorGetRed(color);
+    g = ColorGetGreen(color);
+    b = ColorGetBlue(color);
+    a = ColorGetAlpha(color);
+}
+
+inline CKDWORD EncodeColor(int r, int g, int b, int a) {
+    return RGBAITOCOLOR(ClampToByte(r), ClampToByte(g), ClampToByte(b), ClampToByte(a));
+}
+
+inline CKDWORD SampleWithBorder(const CKDWORD *data, int width, int height, int x, int y, CKDWORD borderColor) {
+    if (x < 0 || y < 0 || x >= width || y >= height)
+        return borderColor;
+    return data[y * width + x];
+}
+
+inline void DecodeKernel(const short *matrixData, int kernel[3][3]) {
+    if (!matrixData) {
+        kernel[0][0] = 0;
+        kernel[0][1] = 0;
+        kernel[0][2] = 0;
+        kernel[1][0] = 0;
+        kernel[1][1] = 256;
+        kernel[1][2] = 0;
+        kernel[2][0] = 0;
+        kernel[2][1] = 0;
+        kernel[2][2] = 0;
+        return;
+    }
+
+    // Matrix layout matches the old MMX-prepared table in ApplyMatrixToTexture().
+    kernel[0][0] = matrixData[1];
+    kernel[0][1] = matrixData[0];
+    kernel[0][2] = matrixData[4];
+    kernel[1][0] = matrixData[9];
+    kernel[1][1] = matrixData[8];
+    kernel[1][2] = matrixData[12];
+    kernel[2][0] = matrixData[17];
+    kernel[2][1] = matrixData[16];
+    kernel[2][2] = matrixData[20];
+}
+} // namespace
+
+void ProcessPixelsMMX(void *SrcData, void *DstData, int width, int height, void *MatrixData)
+{
+    if (!SrcData || !DstData || width <= 0 || height <= 0)
+        return;
+
+    const CKDWORD *src = static_cast<const CKDWORD *>(SrcData);
+    CKDWORD *dst = static_cast<CKDWORD *>(DstData);
+    const short *matrixData = static_cast<const short *>(MatrixData);
+
+    int kernel[3][3];
+    DecodeKernel(matrixData, kernel);
+
+    const int srcStride = width + 2;
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            int sumR = 0, sumG = 0, sumB = 0, sumA = 0;
+
+            for (int ky = 0; ky < 3; ++ky) {
+                for (int kx = 0; kx < 3; ++kx) {
+                    const CKDWORD color = src[(y + ky) * srcStride + (x + kx)];
+                    int r, g, b, a;
+                    DecodeColor(color, r, g, b, a);
+                    const int w = kernel[ky][kx];
+                    sumR += r * w;
+                    sumG += g * w;
+                    sumB += b * w;
+                    sumA += a * w;
+                }
+            }
+
+            dst[y * width + x] = EncodeColor(sumR >> 8, sumG >> 8, sumB >> 8, sumA >> 8);
+        }
+    }
+}
+
+void ExchangeMemoryMMX(void *Data1, void *Data2, CKDWORD sizet)
+{
+    if (!Data1 || !Data2 || sizet == 0)
+        return;
+
+    CKDWORD *lhs = static_cast<CKDWORD *>(Data1);
+    CKDWORD *rhs = static_cast<CKDWORD *>(Data2);
+    for (CKDWORD i = 0; i < sizet; ++i) {
+        CKDWORD tmp = lhs[i];
+        lhs[i] = rhs[i];
+        rhs[i] = tmp;
+    }
+}
+
+void ProcessPixelsTemporalMMX(void *CurrentData, void *PreviousData, int width, int height, void *MatrixData, int Damping)
+{
+    if (!CurrentData || !PreviousData || width <= 0 || height <= 0)
+        return;
+
+    const CKDWORD *current = static_cast<const CKDWORD *>(CurrentData);
+    CKDWORD *previous = static_cast<CKDWORD *>(PreviousData);
+    const short *matrixData = static_cast<const short *>(MatrixData);
+
+    int kernel[3][3];
+    DecodeKernel(matrixData, kernel);
+
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            int convR = 0, convG = 0, convB = 0, convA = 0;
+
+            for (int ky = -1; ky <= 1; ++ky) {
+                const int sy = (y + ky < 0) ? 0 : ((y + ky >= height) ? (height - 1) : (y + ky));
+                for (int kx = -1; kx <= 1; ++kx) {
+                    const int sx = (x + kx < 0) ? 0 : ((x + kx >= width) ? (width - 1) : (x + kx));
+                    int r, g, b, a;
+                    DecodeColor(current[sy * width + sx], r, g, b, a);
+                    const int w = kernel[ky + 1][kx + 1];
+                    convR += r * w;
+                    convG += g * w;
+                    convB += b * w;
+                    convA += a * w;
+                }
+            }
+
+            int prevR, prevG, prevB, prevA;
+            DecodeColor(previous[y * width + x], prevR, prevG, prevB, prevA);
+
+            int outR = ClampToByte((convR >> 8) - prevR);
+            int outG = ClampToByte((convG >> 8) - prevG);
+            int outB = ClampToByte((convB >> 8) - prevB);
+            int outA = ClampToByte((convA >> 8) - prevA);
+
+            if (Damping > 0 && Damping < 31) {
+                outR -= (outR >> Damping);
+                outG -= (outG >> Damping);
+                outB -= (outB >> Damping);
+                outA -= (outA >> Damping);
+            }
+
+            previous[y * width + x] = EncodeColor(outR, outG, outB, outA);
+        }
+    }
+}
+
+void WaterEffectMMX(void *CurrentData, void *PreviousData, int width, int height, CKDWORD BorderColor, int Damping)
+{
+    if (!CurrentData || !PreviousData || width <= 0 || height <= 0)
+        return;
+
+    const CKDWORD *current = static_cast<const CKDWORD *>(CurrentData);
+    CKDWORD *previous = static_cast<CKDWORD *>(PreviousData);
+
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            int lR, lG, lB, lA;
+            int rR, rG, rB, rA;
+            int uR, uG, uB, uA;
+            int dR, dG, dB, dA;
+            int pR, pG, pB, pA;
+
+            DecodeColor(SampleWithBorder(current, width, height, x - 1, y, BorderColor), lR, lG, lB, lA);
+            DecodeColor(SampleWithBorder(current, width, height, x + 1, y, BorderColor), rR, rG, rB, rA);
+            DecodeColor(SampleWithBorder(current, width, height, x, y - 1, BorderColor), uR, uG, uB, uA);
+            DecodeColor(SampleWithBorder(current, width, height, x, y + 1, BorderColor), dR, dG, dB, dA);
+            DecodeColor(previous[y * width + x], pR, pG, pB, pA);
+
+            int outR = ClampToByte((((lR + rR + uR + dR) >> 2) << 1) - pR);
+            int outG = ClampToByte((((lG + rG + uG + dG) >> 2) << 1) - pG);
+            int outB = ClampToByte((((lB + rB + uB + dB) >> 2) << 1) - pB);
+            int outA = ClampToByte((((lA + rA + uA + dA) >> 2) << 1) - pA);
+
+            if (Damping > 0 && Damping < 31) {
+                outR -= (outR >> Damping);
+                outG -= (outG >> Damping);
+                outB -= (outB >> Damping);
+                outA -= (outA >> Damping);
+            }
+
+            previous[y * width + x] = EncodeColor(outR, outG, outB, outA);
+        }
+    }
+}
+
+void WaterEffectWillamette(void *CurrentData, void *PreviousData, int width, int height, CKDWORD BorderColor, int Damping)
+{
+    // x64 fallback: same scalar implementation as WaterEffectMMX.
+    WaterEffectMMX(CurrentData, PreviousData, width, height, BorderColor, Damping);
+}
+
 #endif
+
+

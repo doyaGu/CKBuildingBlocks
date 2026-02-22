@@ -69,7 +69,7 @@ int ReverseString(const CKBehaviorContext &behcontext)
         return (CKBR_OK);
     }
 
-    len = strlen(string);
+    len = (int)strlen(string);
 
     lim = len / 2;
     len--;

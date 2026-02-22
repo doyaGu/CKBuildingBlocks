@@ -126,7 +126,7 @@ int BlendTextures(const CKBehaviorContext &behcontext)
     CKDWORD *TexData1 = (CKDWORD *)tex1->LockSurfacePtr();
     CKDWORD *TexData2 = (CKDWORD *)tex2->LockSurfacePtr();
 
-#if defined(WIN32) || (defined(macintosh) && defined(__i386__))
+#if defined(_M_IX86) || (defined(macintosh) && defined(__i386__))
     // MMX asm code
     BlendDataMMX(TexData, TexData1, TexData2, Size, BlendFactor);
 #elif (defined(macintosh) && defined(__ppc__))
@@ -136,6 +136,9 @@ int BlendTextures(const CKBehaviorContext &behcontext)
 #else
     BlendDataC(TexData, TexData1, TexData2, Size, BlendFactor);
 #endif
+#else
+    // C++ fallback for x64 and other non-MMX/non-PPC platforms
+    BlendDataC(TexData, TexData1, TexData2, Size, BlendFactor);
 #endif
 
     // Force texture reload

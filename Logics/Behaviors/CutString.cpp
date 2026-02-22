@@ -72,7 +72,7 @@ int CutString(const CKBehaviorContext &behcontext)
     if (!string)
         return CKBR_OK;
 
-    int len = strlen(string);
+    int len = (int)strlen(string);
 
     // We get the string
     CKParameterOut *pout = beh->GetOutputParameter(0);

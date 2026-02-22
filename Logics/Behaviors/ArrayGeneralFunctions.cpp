@@ -34,7 +34,7 @@ void WriteOutputParameters(CKDataArray *array, CKDataRow *dr, CKBehavior *beh, i
 {
     if (!dr)
         return;
-    CKDWORD *it = dr->Begin();
+    CKUINTPTR *it = dr->Begin();
     if (!it)
         return;
 
@@ -70,7 +70,7 @@ void WriteOutputParameters(CKDataArray *array, CKDataRow *dr, CKBehavior *beh, i
             {
                 char *ns = (char *)(*it);
                 if (ns)
-                    pout->SetValue(ns, strlen(ns) + 1);
+                    pout->SetValue(ns, (int)strlen(ns) + 1);
                 else
                 {
                     char *s = "";
@@ -85,7 +85,7 @@ void WriteOutputParameters(CKDataArray *array, CKDataRow *dr, CKBehavior *beh, i
             CK_CLASSID cid;
             if (cid = pout->GetParameterClassID())
             {
-                CKObject *obj = beh->GetCKObject(*it);
+                CKObject *obj = beh->GetCKObject((CK_ID)*it);
                 if (CKIsChildClassOf(obj, cid))
                     pout->SetValue((CKDWORD *)it);
                 else
@@ -110,7 +110,7 @@ void ReadInputParameters(CKDataArray *array, CKDataRow *dr, CKBehavior *beh, int
 {
     if (!dr)
         return;
-    CKDWORD *it = dr->Begin();
+    CKUINTPTR *it = dr->Begin();
     if (!it)
         return;
     int i;
@@ -155,7 +155,7 @@ void ReadInputParameters(CKDataArray *array, CKDataRow *dr, CKBehavior *beh, int
                 if (s)
                 {
                     char *ns = CKStrdup(s);
-                    (*it) = (CKDWORD)ns;
+                    (*it) = (CKUINTPTR)ns;
                 }
                 else
                     *it = 0;
@@ -647,7 +647,7 @@ void CreateOutputParameters(CKDataArray *array, CKBehavior *beh, int firstoutput
     }
 }
 
-int GetInputValue(CKDataArray *array, CKBehavior *beh, int column, int pindex, CKDWORD &key)
+int GetInputValue(CKDataArray *array, CKBehavior *beh, int column, int pindex, CKUINTPTR &key)
 {
     CKParameterIn *pin = beh->GetInputParameter(pindex);
     if (!pin)
@@ -680,8 +680,8 @@ int GetInputValue(CKDataArray *array, CKBehavior *beh, int column, int pindex, C
             char *s = (char *)pin->GetReadDataPtr();
             if (s)
             {
-                key = (CKDWORD)s;
-                return strlen(s) + 1;
+                key = (CKUINTPTR)s;
+                return (int)strlen(s) + 1;
             }
         }
     }
@@ -698,7 +698,7 @@ int GetInputValue(CKDataArray *array, CKBehavior *beh, int column, int pindex, C
     {
         if (pin->GetGUID() == array->GetColumnParameterGuid(column))
         {
-            key = (CKDWORD)pin->GetReadDataPtr();
+            key = (CKUINTPTR)pin->GetReadDataPtr();
             return (pin->GetRealSource())->GetDataSize();
         }
     }

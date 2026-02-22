@@ -151,7 +151,7 @@ CK3dEntity *GetChildOfTarget(int prefixLength, const char *name, CK3dEntity *tar
 
     CK3dEntity *result = NULL;
 
-    const CKDWORD length = strlen(name);
+    const CKDWORD length = (int)strlen(name);
     const int count = target->GetChildrenCount();
     for (int i = 0; i < count; ++i)
     {

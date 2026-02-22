@@ -87,7 +87,7 @@ int SetBodypartAnimationFrame(const CKBehaviorContext &behcontext)
     {
         CKObjectAnimation *oanim = ((CKKeyedAnimation *)anim)->GetAnimation(body);
         if (oanim)
-            oanim->SetFrame(frame, (CKKeyedAnimation *)CKANIMATION_FORCESETSTEP);
+            oanim->SetFrame(frame, (CKKeyedAnimation *)(uintptr_t)CKANIMATION_FORCESETSTEP);
     }
     else
         return CKBR_PARAMETERERROR;

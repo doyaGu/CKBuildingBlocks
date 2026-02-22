@@ -202,7 +202,7 @@ CKBOOL GridPathManager::ConstructListNodeLinker(XList<int> *listLayer)
             // Create the grid's grid info
             gridInfo = new GridInfo(grid);
             gridInfo->m_Num = numGrid++;
-            m_ListGridInfo.Insert((int)grid, gridInfo, FALSE);
+            m_ListGridInfo.Insert((uintptr_t)grid, gridInfo, FALSE);
 
             w = grid->GetWidth();
             l = grid->GetLength();
@@ -419,7 +419,7 @@ int GridPathManager::GetTargetStatus(CK3dEntity *target)
 {
     int *contextPtr;
 
-    if (!(contextPtr = m_Target2PathContext.FindPtr((int)target)))
+    if (!(contextPtr = m_Target2PathContext.FindPtr((uintptr_t)target)))
         return 0;
     return m_ArrayPathProblem[*contextPtr]->m_State;
 }
@@ -451,7 +451,7 @@ CKBOOL GridPathManager::RegisterPathProblem(CK3dEntity *target, VxVector *target
 
     ++m_NumPathProblem;
     m_ArrayPathProblem[pathID]->Set(target, targetPos, goalRef, goalPos, obstacleLayer, obstacleThreshold, slowingFactor, linker, linkerObs, heuristicCoef, timeFrame, heuristic, diagonal, optimize, STATE_GETSTARTENDGRIDSID);
-    m_Target2PathContext.Insert((int)target, pathID, FALSE);
+    m_Target2PathContext.Insert((uintptr_t)target, pathID, FALSE);
     return TRUE;
 }
 
@@ -501,10 +501,10 @@ CKBOOL GridPathManager::UnregisterPathProblem(CK3dEntity *target, CKBOOL giveToF
     int *pathContextPtr;
     int pathContext;
 
-    if (!(pathContextPtr = m_Target2PathContext.FindPtr((int)target)))
+    if (!(pathContextPtr = m_Target2PathContext.FindPtr((uintptr_t)target)))
         return FALSE;
     pathContext = *pathContextPtr;
-    m_Target2PathContext.Remove((int)target);
+    m_Target2PathContext.Remove((uintptr_t)target);
 
     pathProblem = m_ArrayPathProblem[pathContext];
     if (giveToFollower)
@@ -549,14 +549,14 @@ int GetStartEndGridID(PathProblem &pathProblem, int context)
         pathProblem.m_StateFunction = STATE_PATHNOTFOUND;
         return 0;
     }
-    if (gridManager->m_ListGridInfo.FindPtr((int)gridStart))
+    if (gridManager->m_ListGridInfo.FindPtr((uintptr_t)gridStart))
     {
         if (!(gridEnd = gridManager->m_GridManager->GetPreferredGrid(&pathProblem.m_GoalPos)))
         {
             pathProblem.m_StateFunction = STATE_PATHNOTFOUND;
             return 0;
         }
-        if (gridManager->m_ListGridInfo.FindPtr((int)gridEnd))
+        if (gridManager->m_ListGridInfo.FindPtr((uintptr_t)gridEnd))
         {
             NodeLinker *nodeStart = pathProblem.m_NodeLinkerDynStart;
             NodeLinker *nodeEnd = pathProblem.m_NodeLinkerDynEnd;
@@ -724,7 +724,7 @@ int GetLinkerFromStart(PathProblem &pathProblem, int context)
         // First time we enter in GetLinkerFromStart function.
         if (!pathProblem.m_StartPartSearch)
         {
-            GridInfo *gridInfo = *gridManager->m_ListGridInfo.FindPtr((int)pathProblem.m_GridStart);
+            GridInfo *gridInfo = *gridManager->m_ListGridInfo.FindPtr((uintptr_t)pathProblem.m_GridStart);
             pathProblem.m_ItLinkerStart = gridInfo->m_ListNodeLinker.Begin();
             pathProblem.m_ItLinkerEnd = gridInfo->m_ListNodeLinker.End();
 
@@ -843,7 +843,7 @@ int GetLinkerFromEnd(PathProblem &pathProblem, int context)
         // First time we enter in GetLinkerFromEnd function.
         if (!pathProblem.m_StartPartSearch)
         {
-            GridInfo *gridInfo = *gridManager->m_ListGridInfo.FindPtr((int)pathProblem.m_GridEnd);
+            GridInfo *gridInfo = *gridManager->m_ListGridInfo.FindPtr((uintptr_t)pathProblem.m_GridEnd);
             pathProblem.m_ItLinkerStart = gridInfo->m_ListNodeLinker.Begin();
             pathProblem.m_ItLinkerEnd = gridInfo->m_ListNodeLinker.End();
 
@@ -1553,7 +1553,7 @@ void GridPathManager::GetPath(CK3dEntity *target, float &coast, int &pathID)
     PathProblem *pathProblem;
 
     // Get the pathProblem attached to the target.
-    if (!(pathContextPtr = m_Target2PathContext.FindPtr((int)target)))
+    if (!(pathContextPtr = m_Target2PathContext.FindPtr((uintptr_t)target)))
         return;
     pathProblem = m_ArrayPathProblem[*pathContextPtr];
     pathProblem->m_FollowPathID = m_FollowPathID;
@@ -1577,7 +1577,7 @@ void GridPathManager::GetPath(CK3dEntity *target, float &coast, CKCurve *curve)
     int size;
 
     // Get the pathProblem attached to the target.
-    if (!(contextPtr = m_Target2PathContext.FindPtr((int)target)))
+    if (!(contextPtr = m_Target2PathContext.FindPtr((uintptr_t)target)))
         return;
     pathProblem = m_ArrayPathProblem[*contextPtr];
 
@@ -1627,7 +1627,7 @@ void GridPathManager::GetPath(CK3dEntity *target, float &coast, CKDataArray *dat
     int indexPoint = 0;
 
     // Get the pathProblem attached to the target.
-    if (!(contextPtr = m_Target2PathContext.FindPtr((int)target)))
+    if (!(contextPtr = m_Target2PathContext.FindPtr((uintptr_t)target)))
         return;
     pathProblem = m_ArrayPathProblem[*contextPtr];
 
@@ -1958,7 +1958,7 @@ void GridPathManager::FillSuccessor(PathProblem &pathProblem, int index)
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 CKBOOL GridPathManager::CaseIsLinker(PathProblem &pathProblem, CKGrid *grid, int index)
 {
-    NodeLinker *nodeLinker = m_ArrayNodeGrid[index].m_LinkerObs[(*m_ListGridInfo.FindPtr((int)grid))->m_Num];
+    NodeLinker *nodeLinker = m_ArrayNodeGrid[index].m_LinkerObs[(*m_ListGridInfo.FindPtr((uintptr_t)grid))->m_Num];
 
     if (nodeLinker)
     {
@@ -2128,7 +2128,7 @@ void GridPathManager::ResetArrayLinkerContextInfo(int context) const
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 int GridPathManager::GetGridNum(CKGrid *grid)
 {
-    return (*m_ListGridInfo.FindPtr((int)grid))->m_Num;
+    return (*m_ListGridInfo.FindPtr((uintptr_t)grid))->m_Num;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////

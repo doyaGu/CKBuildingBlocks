@@ -90,7 +90,7 @@ int LODOptionsStringFunc(CKParameter *p, char *value, CKBOOL ReadFrom)
                 lo.alphaScreenMag * 100.0f, lo.alphaScreenMin * 100.0f);
         if (value)
             strcpy(value, temp);
-        return strlen(temp) + 1;
+        return (int)strlen(temp) + 1;
     }
     return 0;
 }

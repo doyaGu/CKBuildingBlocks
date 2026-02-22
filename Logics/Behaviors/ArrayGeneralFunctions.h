@@ -11,7 +11,7 @@ CKERROR ArrayLineOutputCallBack(const CKBehaviorContext &behcontext);
 
 void ReadInputParameters(CKDataArray *array, CKDataRow *it, CKBehavior *beh, int firstinputindex);
 
-int GetInputValue(CKDataArray *array, CKBehavior *beh, int column, int pindex, CKDWORD &key);
+int GetInputValue(CKDataArray *array, CKBehavior *beh, int column, int pindex, CKUINTPTR &key);
 
 void WriteOutputParameters(CKDataArray *array, CKDataRow *it, CKBehavior *beh, int firstoutputindex);
 
