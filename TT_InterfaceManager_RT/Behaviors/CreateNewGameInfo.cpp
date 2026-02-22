@@ -56,14 +56,28 @@ int CreateNewGameInfo(const CKBehaviorContext &behcontext)
     CKSTRING path = (CKSTRING)beh->GetInputParameterReadDataPtr(0);
 
     InterfaceManager *man = InterfaceManager::GetManager(context);
-    if (!man || !man->GetGameInfo())
+    if (!man)
     {
-        CGameInfo *gameInfo = new CGameInfo;
-        strcpy(gameInfo->regSubkey, path);
-        man->SetGameInfo(gameInfo);
+        context->OutputToConsoleExBeep("CreateNewGameInfo: im == NULL");
+        CGameInfo *gameInfo = NULL;
         beh->SetOutputParameterValue(0, &gameInfo, sizeof(CGameInfo *));
+        beh->ActivateOutput(0);
+        return CKBR_OK;
     }
 
+    CGameInfo *gameInfo = man->GetGameInfo();
+    if (!gameInfo)
+    {
+        gameInfo = new CGameInfo;
+        if (path)
+        {
+            strncpy(gameInfo->regSubkey, path, sizeof(gameInfo->regSubkey) - 1);
+            gameInfo->regSubkey[sizeof(gameInfo->regSubkey) - 1] = '\0';
+        }
+        man->SetGameInfo(gameInfo);
+    }
+
+    beh->SetOutputParameterValue(0, &gameInfo, sizeof(CGameInfo *));
     beh->ActivateOutput(0);
     return CKBR_OK;
 }

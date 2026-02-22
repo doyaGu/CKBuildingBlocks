@@ -58,8 +58,19 @@ int LoadCMO(const CKBehaviorContext &behcontext)
     CKSTRING name = (CKSTRING)beh->GetInputParameterReadDataPtr(0);
 
     InterfaceManager *man = InterfaceManager::GetManager(context);
-    if (!man || !man->GetGameInfo())
+    if (!man)
+    {
+        context->OutputToConsoleExBeep("LoadCMO: im == NULL");
+        beh->ActivateOutput(0);
+        return CKBR_OK;
+    }
+
+    if (!man->GetGameInfo())
+    {
         context->OutputToConsoleExBeep("LoadCMO: gameInfo == NULL, exit CMO");
+        beh->ActivateOutput(0);
+        return CKBR_OK;
+    }
 
     man->SetCmoName(name);
     ::PostMessageA((HWND)context->GetMainWindow(), TT_MSG_CMO_LOAD, (WPARAM)man->GetCmoName(), 0);

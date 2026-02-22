@@ -104,7 +104,14 @@ public:
 
     void SetCmoName(const char *name)
     {
-        strncpy(m_CmoName, name, sizeof(m_CmoName));
+        if (!name)
+        {
+            m_CmoName[0] = '\0';
+            return;
+        }
+
+        strncpy(m_CmoName, name, sizeof(m_CmoName) - 1);
+        m_CmoName[sizeof(m_CmoName) - 1] = '\0';
     }
 
     bool IsWindowActivated() const

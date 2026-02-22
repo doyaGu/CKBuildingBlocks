@@ -67,6 +67,7 @@ int GetGameName(const CKBehaviorContext &behcontext)
     {
         ::PostMessageA((HWND)context->GetMainWindow(), TT_MSG_NO_GAMEINFO, 0x03, 0);
         context->OutputToConsoleExBeep("GetGameName: gameInfo not exists");
+        return CKBR_OK;
     }
 
     beh->SetOutputParameterValue(0, gameInfo->gameName);

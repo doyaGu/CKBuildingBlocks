@@ -66,10 +66,18 @@ int WriteArray(const CKBehaviorContext &behcontext)
     {
         ::PostMessageA((HWND)context->GetRenderManager()->GetRenderContext(0)->GetWindowHandle(), TT_MSG_NO_GAMEINFO, 0x1E, 1);
         context->OutputToConsoleExBeep("WriteArray: gameInfo not exists");
+        beh->ActivateOutput(0);
+        return CKBR_OK;
     }
 
     CKDataArray *array = (CKDataArray *)beh->GetInputParameterObject(0);
     CKSTRING cmo = (CKSTRING)beh->GetInputParameterReadDataPtr(1);
+    if (!array || !cmo)
+    {
+        context->OutputToConsoleExBeep("WriteArray: invalid array or cmo");
+        beh->ActivateOutput(0);
+        return CKBR_OK;
+    }
 
     CNemoArrayList *nemoArraylist = man->GetNemoArrayList();
     CNemoArray *nemoArray = nemoArraylist->Search(cmo, array);

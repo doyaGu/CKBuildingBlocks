@@ -5,6 +5,21 @@
 
 #include "CKAll.h"
 
+static void CopyStringToBuffer(char *dst, size_t dstSize, const char *src)
+{
+    if (!dst || dstSize == 0)
+        return;
+
+    if (!src)
+    {
+        dst[0] = '\0';
+        return;
+    }
+
+    strncpy(dst, src, dstSize - 1);
+    dst[dstSize - 1] = '\0';
+}
+
 CNemoElement::CNemoElement()
 {
     m_Value.ival = 0;
@@ -71,10 +86,7 @@ CNemoElement::CNemoElement(const CNemoElement &rhs)
         }
         else
         {
-            if (!m_Value.str)
-                m_Value.str = NULL;
-            else
-                m_Value.str[0] = '\0';
+            m_Value.str = NULL;
         }
         break;
 
@@ -98,6 +110,9 @@ CNemoElement &CNemoElement::operator=(const CNemoElement &rhs)
     {
         return *this;
     }
+
+    if (m_Type == CKARRAYTYPE_STRING && rhs.m_Type != CKARRAYTYPE_STRING)
+        Free();
 
     switch (rhs.m_Type)
     {
@@ -180,7 +195,10 @@ bool CNemoElement::operator==(const CNemoElement &rhs)
 void CNemoElement::Free()
 {
     if (m_Type == CKARRAYTYPE_STRING && m_Value.str)
+    {
         delete[] m_Value.str;
+        m_Value.str = NULL;
+    }
 }
 
 bool CNemoElement::GetValue(void *value, CK_ARRAYTYPE *type) const
@@ -212,12 +230,12 @@ bool CNemoElement::GetValue(void *value, CK_ARRAYTYPE *type) const
         return false;
     }
 
-    return false;
+    return true;
 }
 
 char *CNemoElement::GetString() const
 {
-    if (m_Type != CKARRAYTYPE_STRING || m_Value.str[0] == '\0')
+    if (m_Type != CKARRAYTYPE_STRING || !m_Value.str || m_Value.str[0] == '\0')
         return NULL;
     return m_Value.str;
 }
@@ -232,13 +250,20 @@ bool CNemoElement::SetValue(void *value, CK_ARRAYTYPE type, bool force)
     if (!force && type != m_Type)
         return false;
 
+    if (m_Type == CKARRAYTYPE_STRING && type != CKARRAYTYPE_STRING)
+        Free();
+
     switch (type)
     {
     case CKARRAYTYPE_INT:
+        if (!value)
+            return false;
         m_Value.ival = *(int *)value;
         break;
 
     case CKARRAYTYPE_FLOAT:
+        if (!value)
+            return false;
         m_Value.fval = *(float *)value;
         break;
 
@@ -260,6 +285,8 @@ bool CNemoElement::SetValue(void *value, CK_ARRAYTYPE type, bool force)
 
     case CKARRAYTYPE_OBJECT:
     case CKARRAYTYPE_PARAMETER:
+        if (!value)
+            return false;
         m_Value.id = *(CK_ID *)value;
         break;
 
@@ -300,18 +327,20 @@ CNemoArray::CNemoArray() : m_Flag(false), m_Elements()
 
 CNemoArray::CNemoArray(const char *cmoName, CKDataArray *array) : m_Flag(true), m_Elements()
 {
-    char str[512];
-    void *value;
+    CopyStringToBuffer(m_CmoName, sizeof(m_CmoName), cmoName);
+    CopyStringToBuffer(m_ArrayName, sizeof(m_ArrayName), array ? array->GetName() : "");
 
-    strcpy(m_CmoName, cmoName);
-    strcpy(m_ArrayName, array->GetName());
+    if (!array || array->GetRowCount() <= 0)
+        return;
 
     const int columns = array->GetColumnCount();
     if (columns > 0)
     {
+        char str[512];
         for (int c = 0; c < columns; ++c)
         {
             CK_ARRAYTYPE type = array->GetColumnType(c);
+            void *value = NULL;
             if (type == CKARRAYTYPE_STRING)
             {
                 array->GetElementStringValue(0, c, str);
@@ -328,8 +357,8 @@ CNemoArray::CNemoArray(const char *cmoName, CKDataArray *array) : m_Flag(true), 
 
 CNemoArray::CNemoArray(const CNemoArray &rhs)
 {
-    strcpy(m_CmoName, rhs.m_CmoName);
-    strcpy(m_ArrayName, rhs.m_ArrayName);
+    CopyStringToBuffer(m_CmoName, sizeof(m_CmoName), rhs.m_CmoName);
+    CopyStringToBuffer(m_ArrayName, sizeof(m_ArrayName), rhs.m_ArrayName);
     m_Flag = rhs.m_Flag;
     m_Elements = rhs.m_Elements;
 }
@@ -341,8 +370,8 @@ CNemoArray &CNemoArray::operator=(const CNemoArray &rhs)
         return *this;
     }
 
-    strcpy(m_CmoName, rhs.m_CmoName);
-    strcpy(m_ArrayName, rhs.m_ArrayName);
+    CopyStringToBuffer(m_CmoName, sizeof(m_CmoName), rhs.m_CmoName);
+    CopyStringToBuffer(m_ArrayName, sizeof(m_ArrayName), rhs.m_ArrayName);
     m_Flag = rhs.m_Flag;
     m_Elements = rhs.m_Elements;
 
@@ -427,7 +456,9 @@ void CNemoArrayList::Add(const char *cmoName, CKDataArray *array)
 
 void CNemoArrayList::Remove(const char *cmoName, CKDataArray *array)
 {
-    m_Arrays.Remove(Find(cmoName, array));
+    CNemoArray *target = Find(cmoName, array);
+    if (target)
+        m_Arrays.Remove(target);
 }
 
 CNemoArray *CNemoArrayList::Search(const char *cmoName, CKDataArray *array)
@@ -439,5 +470,8 @@ CNemoArray *CNemoArrayList::Search(const char *cmoName, CKDataArray *array)
 
 CNemoArray *CNemoArrayList::Find(const char *cmoName, CKDataArray *array)
 {
+    if (!array)
+        return NULL;
+
     return m_Arrays.Find(CNemoArray(cmoName, array));
 }
