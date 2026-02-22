@@ -16,7 +16,10 @@ CKBOOL GridPathManager::RegisterFollowProblem(FollowStruct *followStruct)
     m_PathID2Path.Remove(followStruct->followPathID);
 
     if (!(*path)->NbSubPath())
+    {
+        delete *path;
         return FALSE;
+    }
 
     // Get a free index.
     if (m_StackFreeFollowIndex.Size())

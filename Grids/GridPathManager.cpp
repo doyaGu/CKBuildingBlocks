@@ -160,12 +160,23 @@ void GridPathManager::Reset()
     {
         delete *itPath;
     }
+    m_PathID2Path.Clear();
 
     // Delete follow problem.
     for (i = 0; i < m_ArrayFollowProblem.Size(); ++i)
     {
         delete m_ArrayFollowProblem[i];
     }
+    m_ArrayPathProblem.Clear();
+    m_ArrayFollowProblem.Clear();
+    m_Target2PathContext.Clear();
+    m_PathID2FollowContext.Clear();
+    m_StackFreeFollowIndex.Clear();
+    m_NumPathProblem = 0;
+    m_NumFollowProblem = 0;
+    m_MaxPathProblem = DEFAUL_MAX_PATH_CONTEXT;
+    m_MaxFollowProblem = DEFAUL_MAX_FOLLOW_CONTEXT;
+    m_GraphDone = FALSE;
 
     m_Reseted = TRUE;
 }
@@ -1707,13 +1718,13 @@ CKERROR GridPathManager::SequenceToBeDeleted(CK_ID *objids, int count)
         for (i = 0; i < m_ArrayPathProblem.Size(); ++i)
         {
             PathProblem *problem = m_ArrayPathProblem[i];
-            if (problem->m_StateFunction == STATE_FINISH)
+            if (!problem || !problem->m_Target || problem->m_StateFunction == STATE_FINISH)
                 continue;
 
             if (problem->m_Target->IsToBeDeleted() ||
-                problem->m_GridStart->IsToBeDeleted() ||
-                problem->m_GridEnd->IsToBeDeleted() ||
-                problem->m_GridSearch->IsToBeDeleted())
+                (problem->m_GridStart && problem->m_GridStart->IsToBeDeleted()) ||
+                (problem->m_GridEnd && problem->m_GridEnd->IsToBeDeleted()) ||
+                (problem->m_GridSearch && problem->m_GridSearch->IsToBeDeleted()))
             {
                 UnregisterPathProblem(problem->m_Target, FALSE);
                 problem->m_StateFunction = STATE_FINISH;
@@ -2196,7 +2207,7 @@ CKBOOL GridPathManager::ObsBetweenPoint(PathProblem &pp, int start, int end, int
     int i, j, tmp;
     int Y1, Y2;
     int index;
-    unsigned int obs = pp.m_ObstacleLayer;
+    unsigned int obs = pp.m_ObstacleThreshold;
     int numGrid = pp.m_NumGrid;
     CKSquare *square = pp.m_Square;
     float error = 0.0f;

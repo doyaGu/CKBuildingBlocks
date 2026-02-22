@@ -78,7 +78,7 @@ void PathProblem::Set(CK3dEntity *target, VxVector *targetPos, CK3dEntity *goalR
     m_ObstacleLayer = obstacleLayer;
     if (obstacleThreshold > 255)
         m_ObstacleThreshold = 255;
-    else if (m_ObstacleThreshold < 0)
+    else if (obstacleThreshold < 0)
         m_ObstacleThreshold = 0;
     else
         m_ObstacleThreshold = obstacleThreshold;
@@ -189,9 +189,9 @@ void PathProblem::BuildSubPath(int context, SubPath *subPath, CKBOOL back) const
     NodeGrid *prevNode;
     int width = subPath->m_Grid->GetWidth();
     int oldCaseIndex;
-    int lastCase;
+    int lastCase = m_NodeGrideEnd->m_CaseIndex;
     int oldDir;
-    int dir;
+    int dir = 0;
     int diffCase;
 
     subPath->SetLinker(m_Linker1, m_Linker2);
