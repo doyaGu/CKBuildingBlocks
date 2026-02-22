@@ -66,10 +66,7 @@ int IsInState(const CKBehaviorContext &behcontext)
     CKStateObject *rdv = (CKStateObject *)beh->GetInputParameterObject(0);
 
     if (!rdv)
-    {
-        throw "You didn't provide a valid State...";
-        return CKBR_OK;
-    }
+        return CKBR_PARAMETERERROR;
 
     if (rdv->IsStateActive())
     {

@@ -30,6 +30,9 @@ typedef struct LoadSoundThreadInfo
     CKBOOL SoundStreamed;
     XArray<CKBYTE> SoundBuffer;
     int BufferSize;
+    CKWaveSoundSettings Sound2DSettings;
+    CKWaveSound3DSettings Sound3DSettings;
+    CKBOOL HasSavedSettings;
 
     LoadSoundThreadInfo()
     {
@@ -41,6 +44,7 @@ typedef struct LoadSoundThreadInfo
         Error = 0;
         SoundStreamed = 0;
         BufferSize = 0;
+        HasSavedSettings = FALSE;
     };
 
 } LoadSoundThreadInfo;
@@ -211,16 +215,21 @@ int SoundLoader(const CKBehaviorContext &behcontext)
             beh->GetInputParameterValue(1, &EnableStream);
             if (EnableStream)
                 wave->m_State |= CK_WAVESOUND_FILESTREAMED;
+            else
+                wave->m_State &= ~CK_WAVESOUND_FILESTREAMED;
 
             LoadInfo->SoundStreamed = EnableStream;
 
             // dans le recreate
-            CKWaveSoundSettings setting;
-            CKWaveSound3DSettings setting3D;
             if (wave->m_Source)
             {
-                wave->m_SoundManager->UpdateSettings(wave->m_Source, CK_WAVESOUND_SETTINGS_ALL, setting, FALSE);
-                wave->m_SoundManager->Update3DSettings(wave->m_Source, CK_WAVESOUND_3DSETTINGS_ALL, setting3D, FALSE);
+                wave->m_SoundManager->UpdateSettings(wave->m_Source, CK_WAVESOUND_SETTINGS_ALL, LoadInfo->Sound2DSettings, FALSE);
+                wave->m_SoundManager->Update3DSettings(wave->m_Source, CK_WAVESOUND_3DSETTINGS_ALL, LoadInfo->Sound3DSettings, FALSE);
+                LoadInfo->HasSavedSettings = TRUE;
+            }
+            else
+            {
+                LoadInfo->HasSavedSettings = FALSE;
             }
 
             // We release the current source
@@ -251,7 +260,10 @@ int SoundLoader(const CKBehaviorContext &behcontext)
         beh->GetLocalParameterValue(1, &LoadInfo);
         if (VXT)
         {
-            LoadInfo->Stop = TRUE;
+            if (LoadInfo)
+            {
+                LoadInfo->Stop = TRUE;
+            }
             VXT->Wait();
             delete VXT;
             VXT = NULL;
@@ -276,7 +288,7 @@ int SoundLoader(const CKBehaviorContext &behcontext)
         {
             beh->GetLocalParameterValue(0, &VXT);
             beh->GetLocalParameterValue(1, &LoadInfo);
-            if (LoadInfo->Loaded) // the sound is loaded
+            if (LoadInfo && LoadInfo->Loaded) // the sound is loaded
             {
                 if (!LoadInfo->Error)
                 {
@@ -472,15 +484,11 @@ CKERROR SoundLoaderCallback(const CKBehaviorContext &behcontext)
 CKBOOL LoadBufferToCKSound(LoadSoundThreadInfo *LoadInfo, CKSound *sound)
 {
     // open file
-    CKWaveSoundSettings setting;
-
     CKSoundReader *SoundReader = LoadInfo->sreader;
 
     CKWaveSound *wave = (CKWaveSound *)sound;
 
     wave->m_SoundReader = SoundReader;
-
-    CKWaveSound3DSettings setting3D;
 
     SoundReader->GetWaveFormat(&wave->m_WaveFormat);
 
@@ -521,10 +529,13 @@ CKBOOL LoadBufferToCKSound(LoadSoundThreadInfo *LoadInfo, CKSound *sound)
     if (!wave->m_Source)
         return CKERR_INVALIDPARAMETER;
 
-    // Restore values of the source
-    wave->m_SoundManager->UpdateSettings(wave->m_Source, CK_WAVESOUND_SETTINGS_ALL, setting);
-    // Restore values of the source
-    wave->m_SoundManager->Update3DSettings(wave->m_Source, CK_WAVESOUND_3DSETTINGS_ALL, setting3D);
+    if (LoadInfo->HasSavedSettings)
+    {
+        // Restore values of the source
+        wave->m_SoundManager->UpdateSettings(wave->m_Source, CK_WAVESOUND_SETTINGS_ALL, LoadInfo->Sound2DSettings, TRUE);
+        // Restore values of the source
+        wave->m_SoundManager->Update3DSettings(wave->m_Source, CK_WAVESOUND_3DSETTINGS_ALL, LoadInfo->Sound3DSettings, TRUE);
+    }
 
     if (wave->GetFileStreaming() && (wave->m_BufferSize < wave->m_DataToRead)) // only a part of the sound can be in the buffer
     {

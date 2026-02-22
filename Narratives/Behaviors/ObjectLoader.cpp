@@ -136,6 +136,7 @@ int ObjectLoader(const CKBehaviorContext &behcontext)
         behcontext.Context->GetPathManager()->ResolveFileName(filename, DATA_PATH_IDX, -1);
         if (ctx->Load(filename.Str(), array, loadoptions) != CK_OK)
         {
+            DeleteCKObjectArray(array);
             beh->ActivateOutput(2);
             return CKBR_OK;
         }

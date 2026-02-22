@@ -220,14 +220,23 @@ int TextureLoader(const CKBehaviorContext &behcontext)
         beh->GetLocalParameterValue(0, &VXT);
         beh->GetLocalParameterValue(1, &LoadInfo);
 
-        LoadInfo->Stop = TRUE;
-        VXT->Wait();
-        delete VXT;
-        VXT = NULL;
-        beh->SetLocalParameterValue(0, &VXT);
-        delete LoadInfo;
-        LoadInfo = NULL;
-        beh->SetLocalParameterValue(1, &LoadInfo);
+        if (LoadInfo)
+        {
+            LoadInfo->Stop = TRUE;
+        }
+        if (VXT)
+        {
+            VXT->Wait();
+            delete VXT;
+            VXT = NULL;
+            beh->SetLocalParameterValue(0, &VXT);
+        }
+        if (LoadInfo)
+        {
+            delete LoadInfo;
+            LoadInfo = NULL;
+            beh->SetLocalParameterValue(1, &LoadInfo);
+        }
 #endif
         return CKBR_OK;
     }
@@ -240,7 +249,7 @@ int TextureLoader(const CKBehaviorContext &behcontext)
 
             beh->GetLocalParameterValue(0, &VXT);
             beh->GetLocalParameterValue(1, &LoadInfo);
-            if (LoadInfo->Loaded) // the texture is loaded
+            if (LoadInfo && LoadInfo->Loaded) // the texture is loaded
             {
                 if (!LoadInfo->Error)
                 {
@@ -337,7 +346,7 @@ CKBOOL LoadBufferToCKTexture(LoadTextureThreadInfo *LoadInfo, CKTexture *tex)
     {
         LoadInfo->breader->ReleaseMemory(LoadInfo->bp->m_Data);
         LoadInfo->bp->m_Data = NULL;
-        delete LoadInfo->bp->m_Format.ColorMap;
+        delete[] LoadInfo->bp->m_Format.ColorMap;
         LoadInfo->bp->m_Format.ColorMap = NULL;
         ExitLoad(FALSE);
     }
@@ -362,7 +371,7 @@ CKBOOL LoadBufferToCKTexture(LoadTextureThreadInfo *LoadInfo, CKTexture *tex)
 
     LoadInfo->breader->ReleaseMemory(LoadInfo->bp->m_Data);
     LoadInfo->bp->m_Data = NULL;
-    delete LoadInfo->bp->m_Format.ColorMap;
+    delete[] LoadInfo->bp->m_Format.ColorMap;
     LoadInfo->bp->m_Format.ColorMap = NULL;
     return TRUE;
 }
