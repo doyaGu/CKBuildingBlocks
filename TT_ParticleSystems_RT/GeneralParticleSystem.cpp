@@ -247,7 +247,7 @@ int GeneralParticleSystem(const CKBehaviorContext &behcontext)
 
                 if (emissiondelay > 0) // linked with time
                 {
-                    while (emissiontime > emissiondelay)
+                    while (emissiontime >= emissiondelay)
                     {
                         emissiontime -= emissiondelay;
                         pe->AddParticles();
