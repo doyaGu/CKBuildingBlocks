@@ -415,6 +415,8 @@ int MoveTo(const CKBehaviorContext &behcontext)
     // getting the 2d curve
     CK2dCurve *accelerationCurve = NULL;
     beh->GetInputParameterValue(2 + pindec, &accelerationCurve);
+    if (!accelerationCurve)
+        return CKBR_PARAMETERERROR;
 
     if (beh->IsInputActive(0))
     { // first time in a loop MoveTo is launched
@@ -430,6 +432,27 @@ int MoveTo(const CKBehaviorContext &behcontext)
         VxVector destPosition;
         ent->GetPosition(&destPosition, destref);
 
+        // no loop step requested: move once and finish
+        if (stepsRemaining <= 0)
+        {
+            // hierarchy
+            CKBOOL k = TRUE;
+            beh->GetInputParameterValue(3 + pindec, &k);
+            k = !k;
+
+            VxVector trans = position - destPosition;
+            ent->Translate(&trans, destref, k);
+
+            float progression = 1.0f;
+            float value = accelerationCurve->GetY(progression);
+            beh->SetOutputParameterValue(0, &progression);
+            beh->SetOutputParameterValue(1, &value);
+
+            beh->ActivateInput(0, FALSE);
+            beh->ActivateOutput(0);
+            return CKBR_OK;
+        }
+
         // we calculate the goingVector
         goingVector = position - destPosition;
 
@@ -443,7 +466,7 @@ int MoveTo(const CKBehaviorContext &behcontext)
         // output Value
         beh->SetOutputParameterValue(1, &value);
 
-        curveDeltaX = 1.0f / (stepsRemaining);
+        curveDeltaX = 1.0f / stepsRemaining;
 
         ///////////////////////////////
         // writing the local parameters
