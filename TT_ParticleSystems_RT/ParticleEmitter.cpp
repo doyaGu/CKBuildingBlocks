@@ -933,12 +933,19 @@ void ParticleEmitter::AddParticles2()
         }
         else
         {
-            emits *= time;
+            int emitCount = (int)(emits * time);
 
             self->m_Time = 0.0f;
 
             VxVector pos;
             ent->GetPosition(&pos);
+
+            VxVector currentPos = pos;
+            VxVector stepPos(0.0f, 0.0f, 0.0f);
+            if (emitCount > 0)
+            {
+                stepPos = (self->m_Position - pos) * (1.0f / emitCount);
+            }
 
             do
             {
@@ -954,7 +961,8 @@ void ParticleEmitter::AddParticles2()
                     particleCount++;
                     particles = p;
 
-                    p->pos = pos;
+                    p->pos = currentPos;
+                    currentPos += stepPos;
 
                     // CALCULATE THE STARTING DIRECTION VECTOR
                     InitiateDirection(p);
@@ -1206,7 +1214,7 @@ void ParticleEmitter::AddParticles2()
                 }
                 else
                     break;
-            } while (--emits > 0);
+            } while (--emitCount > 0);
 
             self->m_Position = pos;
         }

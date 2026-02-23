@@ -119,6 +119,7 @@ void ShowParticles(CKBehavior *beh, CKBOOL show)
     entity->RemovePostRenderCallBack(RenderParticles_OS, pe);
     entity->RemovePostRenderCallBack(RenderParticles_CS, pe);
     entity->RemovePostRenderCallBack(RenderParticles_RS, pe);
+    entity->RemovePostRenderCallBack(RenderParticles_PS, pe);
     if (show)
     {
         entity->AddPostRenderCallBack(pe->m_RenderParticlesCallback, pe);
@@ -143,10 +144,10 @@ int GeneralParticleSystem(const CKBehaviorContext &behcontext)
     int activity = 0;
     beh->GetLocalParameterValue(1, &activity);
 
-    CKBOOL realTimeMode = 0;
+    CKBOOL realTimeMode = TRUE;
     beh->GetInputParameterValue(REALTIMEMODE, &realTimeMode);
 
-    float deltaTime = 0.0f;
+    float deltaTime = 20.0f;
     beh->GetInputParameterValue(DELTATIME, &deltaTime);
     if (realTimeMode)
         deltaTime = behcontext.DeltaTime;
@@ -166,12 +167,12 @@ int GeneralParticleSystem(const CKBehaviorContext &behcontext)
             if (activity & FREEZED)
             {
                 activity &= ~FREEZED;
-                pe->m_Active = FALSE;
+                pe->m_Active = TRUE;
             }
             else
             {
                 activity |= FREEZED;
-                pe->m_Active = TRUE;
+                pe->m_Active = FALSE;
             }
         }
         else
@@ -263,11 +264,11 @@ int GeneralParticleSystem(const CKBehaviorContext &behcontext)
         // We update the particles (position, color, size...)
         if (pe->m_IsWaveEmitter)
         {
-            pe->UpdateParticles2(behcontext.DeltaTime);
+            pe->UpdateParticles2(deltaTime);
         }
         else
         {
-            pe->UpdateParticles(behcontext.DeltaTime);
+            pe->UpdateParticles(deltaTime);
         }
 
         // Saving Locals
