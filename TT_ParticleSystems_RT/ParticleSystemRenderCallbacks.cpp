@@ -1224,97 +1224,176 @@ int RenderParticles_O(CKRenderContext *dev, CKRenderObject *obj, void *arg)
 
 int RenderParticles_PS(CKRenderContext *dev, CKRenderObject *obj, void *arg)
 {
-        CK3dEntity *mov = (CK3dEntity *)obj;
-        ParticleEmitter *em = (ParticleEmitter *)arg;
+    CK3dEntity *mov = (CK3dEntity *)obj;
+    ParticleEmitter *em = (ParticleEmitter *)arg;
 
-        if (em->m_IsTimePointEmitter)
-                em->AddParticles2();
+    if (em->m_IsTimePointEmitter)
+        em->AddParticles2();
 
-        const int VBUFFERSIZE = 4000;
-        int pc = em->particleCount;
-        if (!pc)
-                return 0;
+    int pc = em->particleCount;
+    if (!pc)
+        return 0;
 
-        VxDrawPrimitiveData *data = dev->GetDrawPrimitiveStructure((CKRST_DPFLAGS)(CKRST_DP_TR_CL_VC | CKRST_DP_VBUFFER), (pc > VBUFFERSIZE) ? VBUFFERSIZE : pc);
+    VxMatrix oldmatrix = dev->GetWorldTransformationMatrix();
+    dev->SetWorldTransformationMatrix(oldmatrix * mov->GetInverseWorldMatrix());
 
-        VxMatrix oldmatrix = dev->GetWorldTransformationMatrix();
-        dev->SetWorldTransformationMatrix(oldmatrix * mov->GetInverseWorldMatrix());
+    VxDrawPrimitiveData *data = dev->GetDrawPrimitiveStructure((CKRST_DPFLAGS)(CKRST_DP_TR_CL_VCT | CKRST_DP_VBUFFER), 4 * pc);
+    CKWORD *indices = dev->GetDrawPrimitiveIndices(6 * pc);
 
-        em->SetState(dev);
+    em->SetState(dev, FALSE);
 
-        float averageSize = em->m_StartSize * 2.0f;
-        float minSize = 0.0f;
-        float maxSize = 4096.0f;
-        float pointScaleA = 1.0f;
-        float pointScaleB = 0.0f;
-        float pointScaleC = 1.0f;
+    CKBOOL changeuv = FALSE;
+    float step = 1.0f;
+    int framehc = 0;
+    if (em->m_TextureFrameCount > 1)
+    {
+        changeuv = TRUE;
+        framehc = 1 + (int)sqrtf((float)(em->m_TextureFrameCount - 1));
+        step = 1.0f / framehc;
+    }
 
-        dev->SetState(VXRENDERSTATE_POINTSPRITEENABLE, TRUE);
-        dev->SetState(VXRENDERSTATE_POINTSIZE, *(CKDWORD *)&averageSize);
-        dev->SetState(VXRENDERSTATE_POINTSIZE_MIN, *(CKDWORD *)&minSize);
-        dev->SetState(VXRENDERSTATE_POINTSIZE_MAX, *(CKDWORD *)&maxSize);
-        dev->SetState(VXRENDERSTATE_POINTSCALEENABLE, TRUE);
-        dev->SetState(VXRENDERSTATE_POINTSCALE_A, *(CKDWORD *)&pointScaleA);
-        dev->SetState(VXRENDERSTATE_POINTSCALE_B, *(CKDWORD *)&pointScaleB);
-        dev->SetState(VXRENDERSTATE_POINTSCALE_C, *(CKDWORD *)&pointScaleC);
-
-        Particle *p = em->GetParticles();
+    Particle *p = em->GetParticles();
 
 #if CKVERSION == 0x13022002 || CKVERSION == 0x05082002
-        VxVector *positions = (VxVector *)data->PositionPtr;
-        CKDWORD *colors = (CKDWORD *)data->ColorPtr;
+    VxUV *uvs = (VxUV *)data->TexCoordPtr;
+    VxVector *positions = (VxVector *)data->PositionPtr;
+    CKDWORD *colors = (CKDWORD *)data->ColorPtr;
 #else
-        VxVector *positions = (VxVector *)data->Positions.Ptr;
-        CKDWORD *colors = (CKDWORD *)data->Colors.Ptr;
+    VxUV *uvs = (VxUV *)data->TexCoord.Ptr;
+    VxVector *positions = (VxVector *)data->Positions.Ptr;
+    CKDWORD *colors = (CKDWORD *)data->Colors.Ptr;
 #endif
 
-        int np = 0;
-        int remaining = pc;
+    int vertexBase = 0;
+    int indexBase = 0;
+    while (p)
+    {
+        indices[indexBase + 0] = (CKWORD)(vertexBase + 0);
+        indices[indexBase + 1] = (CKWORD)(vertexBase + 1);
+        indices[indexBase + 2] = (CKWORD)(vertexBase + 2);
+        indices[indexBase + 3] = (CKWORD)(vertexBase + 0);
+        indices[indexBase + 4] = (CKWORD)(vertexBase + 2);
+        indices[indexBase + 5] = (CKWORD)(vertexBase + 3);
 
-        while (p)
+        const VxVector pos = p->pos;
+        const float size = p->m_Size;
+
+        VxVector right(size, 0.0f, 0.0f);
+        VxVector forward(0.0f, 0.0f, size);
+        if (p->m_Angle != 0.0f)
         {
-                *positions = p->pos;
-                *colors = RGBAFTOCOLOR(&(p->m_Color));
-
-                p = p->next;
-
-#if CKVERSION == 0x13022002 || CKVERSION == 0x05082002
-                colors = (CKDWORD *)((CKBYTE *)colors + data->ColorStride);
-                positions = (VxVector *)((CKBYTE *)positions + data->PositionStride);
-#else
-                colors = (CKDWORD *)((CKBYTE *)colors + data->Colors.Stride);
-                positions = (VxVector *)((CKBYTE *)positions + data->Positions.Stride);
-#endif
-
-                ++np;
-
-                if (np == VBUFFERSIZE)
-                {
-                        dev->DrawPrimitive(VX_POINTLIST, NULL, np, data);
-
-                        remaining -= VBUFFERSIZE;
-                        np = 0;
-
-                        if (remaining > 0)
-                        {
-                                data = dev->GetDrawPrimitiveStructure((CKRST_DPFLAGS)(CKRST_DP_TR_CL_VC | CKRST_DP_VBUFFER), (remaining > VBUFFERSIZE) ? VBUFFERSIZE : remaining);
-#if CKVERSION == 0x13022002 || CKVERSION == 0x05082002
-                                positions = (VxVector *)data->PositionPtr;
-                                colors = (CKDWORD *)data->ColorPtr;
-#else
-                                positions = (VxVector *)data->Positions.Ptr;
-                                colors = (CKDWORD *)data->Colors.Ptr;
-#endif
-                        }
-                }
+            const float ca = cosf(p->m_Angle);
+            const float sa = sinf(p->m_Angle);
+            right.Set(ca * size, 0.0f, -sa * size);
+            forward.Set(sa * size, 0.0f, ca * size);
         }
 
-        if (np)
-                dev->DrawPrimitive(VX_POINTLIST, NULL, np, data);
+        const VxVector v0 = pos - right + forward;
+        const VxVector v1 = pos + right + forward;
+        const VxVector v2 = pos + right - forward;
+        const VxVector v3 = pos - right - forward;
 
-        dev->SetState(VXRENDERSTATE_ZWRITEENABLE, TRUE);
-        dev->SetState(VXRENDERSTATE_POINTSPRITEENABLE, FALSE);
+        *positions = v0;
+#if CKVERSION == 0x13022002 || CKVERSION == 0x05082002
+        positions = (VxVector *)((CKBYTE *)positions + data->PositionStride);
+#else
+        positions = (VxVector *)((CKBYTE *)positions + data->Positions.Stride);
+#endif
+        *positions = v1;
+#if CKVERSION == 0x13022002 || CKVERSION == 0x05082002
+        positions = (VxVector *)((CKBYTE *)positions + data->PositionStride);
+#else
+        positions = (VxVector *)((CKBYTE *)positions + data->Positions.Stride);
+#endif
+        *positions = v2;
+#if CKVERSION == 0x13022002 || CKVERSION == 0x05082002
+        positions = (VxVector *)((CKBYTE *)positions + data->PositionStride);
+#else
+        positions = (VxVector *)((CKBYTE *)positions + data->Positions.Stride);
+#endif
+        *positions = v3;
+#if CKVERSION == 0x13022002 || CKVERSION == 0x05082002
+        positions = (VxVector *)((CKBYTE *)positions + data->PositionStride);
+#else
+        positions = (VxVector *)((CKBYTE *)positions + data->Positions.Stride);
+#endif
 
-        dev->SetWorldTransformationMatrix(oldmatrix);
-        return 0;
+        CKDWORD col = RGBAFTOCOLOR(&(p->m_Color));
+        *colors = col;
+#if CKVERSION == 0x13022002 || CKVERSION == 0x05082002
+        colors = (CKDWORD *)((CKBYTE *)colors + data->ColorStride);
+#else
+        colors = (CKDWORD *)((CKBYTE *)colors + data->Colors.Stride);
+#endif
+        *colors = col;
+#if CKVERSION == 0x13022002 || CKVERSION == 0x05082002
+        colors = (CKDWORD *)((CKBYTE *)colors + data->ColorStride);
+#else
+        colors = (CKDWORD *)((CKBYTE *)colors + data->Colors.Stride);
+#endif
+        *colors = col;
+#if CKVERSION == 0x13022002 || CKVERSION == 0x05082002
+        colors = (CKDWORD *)((CKBYTE *)colors + data->ColorStride);
+#else
+        colors = (CKDWORD *)((CKBYTE *)colors + data->Colors.Stride);
+#endif
+        *colors = col;
+#if CKVERSION == 0x13022002 || CKVERSION == 0x05082002
+        colors = (CKDWORD *)((CKBYTE *)colors + data->ColorStride);
+#else
+        colors = (CKDWORD *)((CKBYTE *)colors + data->Colors.Stride);
+#endif
+
+        float u = 0.0f;
+        float v = 0.0f;
+        if (changeuv)
+        {
+            int c = p->m_CurrentFrame;
+            while (c >= framehc)
+            {
+                v += step;
+                c -= framehc;
+            }
+            u = c * step;
+        }
+
+        uvs->u = u;
+        uvs->v = v;
+#if CKVERSION == 0x13022002 || CKVERSION == 0x05082002
+        uvs = (VxUV *)((CKBYTE *)uvs + data->TexCoordStride);
+#else
+        uvs = (VxUV *)((CKBYTE *)uvs + data->TexCoord.Stride);
+#endif
+        uvs->u = u + step;
+        uvs->v = v;
+#if CKVERSION == 0x13022002 || CKVERSION == 0x05082002
+        uvs = (VxUV *)((CKBYTE *)uvs + data->TexCoordStride);
+#else
+        uvs = (VxUV *)((CKBYTE *)uvs + data->TexCoord.Stride);
+#endif
+        uvs->u = u + step;
+        uvs->v = v + step;
+#if CKVERSION == 0x13022002 || CKVERSION == 0x05082002
+        uvs = (VxUV *)((CKBYTE *)uvs + data->TexCoordStride);
+#else
+        uvs = (VxUV *)((CKBYTE *)uvs + data->TexCoord.Stride);
+#endif
+        uvs->u = u;
+        uvs->v = v + step;
+#if CKVERSION == 0x13022002 || CKVERSION == 0x05082002
+        uvs = (VxUV *)((CKBYTE *)uvs + data->TexCoordStride);
+#else
+        uvs = (VxUV *)((CKBYTE *)uvs + data->TexCoord.Stride);
+#endif
+
+        p = p->next;
+        vertexBase += 4;
+        indexBase += 6;
+    }
+
+    dev->DrawPrimitive(VX_TRIANGLELIST, indices, 6 * pc, data);
+
+    dev->SetState(VXRENDERSTATE_ZWRITEENABLE, TRUE);
+    dev->SetWorldTransformationMatrix(oldmatrix);
+    return 1;
 }
