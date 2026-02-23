@@ -1662,6 +1662,10 @@ void ParticleEmitter::ReadSettings(CKBehavior *beh)
     {
         m_RenderParticlesCallback = RenderParticles_RS;
     }
+    else if (m_RenderMode == PR_PSPRITE)
+    {
+        m_RenderParticlesCallback = RenderParticles_PS;
+    }
     else
     {
         m_RenderParticlesCallback = NULL;

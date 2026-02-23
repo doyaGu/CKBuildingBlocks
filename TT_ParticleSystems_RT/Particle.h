@@ -156,6 +156,7 @@ extern char *ParticleDObjectName;
 #define PR_RSPRITE          0x00000006
 #define PR_FSPRITE          0x00000007
 #define PR_CSPRITE          0x00000008
+#define PR_PSPRITE          0x00000009
 
 // Loop mode
 #define PL_NOLOOP           0x00000000

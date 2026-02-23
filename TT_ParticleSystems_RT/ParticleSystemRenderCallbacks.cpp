@@ -1221,3 +1221,100 @@ int RenderParticles_O(CKRenderContext *dev, CKRenderObject *obj, void *arg)
 
     return 1;
 }
+
+int RenderParticles_PS(CKRenderContext *dev, CKRenderObject *obj, void *arg)
+{
+        CK3dEntity *mov = (CK3dEntity *)obj;
+        ParticleEmitter *em = (ParticleEmitter *)arg;
+
+        if (em->m_IsTimePointEmitter)
+                em->AddParticles2();
+
+        const int VBUFFERSIZE = 4000;
+        int pc = em->particleCount;
+        if (!pc)
+                return 0;
+
+        VxDrawPrimitiveData *data = dev->GetDrawPrimitiveStructure((CKRST_DPFLAGS)(CKRST_DP_TR_CL_VC | CKRST_DP_VBUFFER), (pc > VBUFFERSIZE) ? VBUFFERSIZE : pc);
+
+        VxMatrix oldmatrix = dev->GetWorldTransformationMatrix();
+        dev->SetWorldTransformationMatrix(oldmatrix * mov->GetInverseWorldMatrix());
+
+        em->SetState(dev);
+
+        float averageSize = em->m_StartSize * 2.0f;
+        float minSize = 0.0f;
+        float maxSize = 4096.0f;
+        float pointScaleA = 1.0f;
+        float pointScaleB = 0.0f;
+        float pointScaleC = 1.0f;
+
+        dev->SetState(VXRENDERSTATE_POINTSPRITEENABLE, TRUE);
+        dev->SetState(VXRENDERSTATE_POINTSIZE, *(CKDWORD *)&averageSize);
+        dev->SetState(VXRENDERSTATE_POINTSIZE_MIN, *(CKDWORD *)&minSize);
+        dev->SetState(VXRENDERSTATE_POINTSIZE_MAX, *(CKDWORD *)&maxSize);
+        dev->SetState(VXRENDERSTATE_POINTSCALEENABLE, TRUE);
+        dev->SetState(VXRENDERSTATE_POINTSCALE_A, *(CKDWORD *)&pointScaleA);
+        dev->SetState(VXRENDERSTATE_POINTSCALE_B, *(CKDWORD *)&pointScaleB);
+        dev->SetState(VXRENDERSTATE_POINTSCALE_C, *(CKDWORD *)&pointScaleC);
+
+        Particle *p = em->GetParticles();
+
+#if CKVERSION == 0x13022002 || CKVERSION == 0x05082002
+        VxVector *positions = (VxVector *)data->PositionPtr;
+        CKDWORD *colors = (CKDWORD *)data->ColorPtr;
+#else
+        VxVector *positions = (VxVector *)data->Positions.Ptr;
+        CKDWORD *colors = (CKDWORD *)data->Colors.Ptr;
+#endif
+
+        int np = 0;
+        int remaining = pc;
+
+        while (p)
+        {
+                *positions = p->pos;
+                *colors = RGBAFTOCOLOR(&(p->m_Color));
+
+                p = p->next;
+
+#if CKVERSION == 0x13022002 || CKVERSION == 0x05082002
+                colors = (CKDWORD *)((CKBYTE *)colors + data->ColorStride);
+                positions = (VxVector *)((CKBYTE *)positions + data->PositionStride);
+#else
+                colors = (CKDWORD *)((CKBYTE *)colors + data->Colors.Stride);
+                positions = (VxVector *)((CKBYTE *)positions + data->Positions.Stride);
+#endif
+
+                ++np;
+
+                if (np == VBUFFERSIZE)
+                {
+                        dev->DrawPrimitive(VX_POINTLIST, NULL, np, data);
+
+                        remaining -= VBUFFERSIZE;
+                        np = 0;
+
+                        if (remaining > 0)
+                        {
+                                data = dev->GetDrawPrimitiveStructure((CKRST_DPFLAGS)(CKRST_DP_TR_CL_VC | CKRST_DP_VBUFFER), (remaining > VBUFFERSIZE) ? VBUFFERSIZE : remaining);
+#if CKVERSION == 0x13022002 || CKVERSION == 0x05082002
+                                positions = (VxVector *)data->PositionPtr;
+                                colors = (CKDWORD *)data->ColorPtr;
+#else
+                                positions = (VxVector *)data->Positions.Ptr;
+                                colors = (CKDWORD *)data->Colors.Ptr;
+#endif
+                        }
+                }
+        }
+
+        if (np)
+                dev->DrawPrimitive(VX_POINTLIST, NULL, np, data);
+
+        dev->SetState(VXRENDERSTATE_ZWRITEENABLE, TRUE);
+        dev->SetState(VXRENDERSTATE_POINTSPRITEENABLE, FALSE);
+
+        dev->SetWorldTransformationMatrix(oldmatrix);
+        return 0;
+}
