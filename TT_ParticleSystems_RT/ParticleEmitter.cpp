@@ -145,28 +145,8 @@ void ParticleEmitter::UpdateParticles(float rdeltat)
     ///
     // Interactors management
 
-    // Gravity
-    float gravityForce = 0.0f;
     if (m_InteractorsFlags & PI_GRAVITY)
-    {
-        const XObjectPointerArray &Array = m_Context->GetAttributeManager()->GetAttributeListPtr(pm->m_GravityAttribute);
-
-        for (CKObject **it = Array.Begin(); it != Array.End(); ++it)
-        {
-            // we get attribute owner
-            CKBeObject *ent = (CKBeObject *)*it;
-
-            // we get the attribute value
-            CKParameterOut *pout = ent->GetAttributeParameter(pm->m_GravityAttribute);
-
-            float f = 0.0f;
-            pout->GetValue(&f);
-
-            gravityForce += f;
-        }
-
-        gravityForce *= rdeltat;
-    }
+        pm->ManageGravity(this, rdeltat);
 
     if (m_InteractorsFlags & PI_ATMOSPHERE)
         pm->ManageAtmosphere(this, rdeltat);
@@ -203,9 +183,6 @@ void ParticleEmitter::UpdateParticles(float rdeltat)
             }
 
             particle->prevpos = particle->pos;
-
-            // Gravity management
-            particle->dir.y += gravityForce * particle->m_Weight;
 
             // Calculating new angle
             particle->m_Angle += particle->m_DeltaAngle * deltat;
