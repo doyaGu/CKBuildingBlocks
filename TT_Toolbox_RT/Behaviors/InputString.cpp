@@ -345,15 +345,11 @@ int InputString(const CKBehaviorContext &behcontext)
         {
             beh->SetOutputParameterValue(POUT_KEY, &key);
 
-            if ((multi && endkey && endkey == key) || (!multi && (key == CKKEY_RETURN || key == CKKEY_NUMPADENTER)))
+            if (multi && endkey && endkey == key)
             {
-                char *tmp = new char[(int)strlen(str) + 1];
-                memcpy(tmp, str, (int)strlen(str) + 1);
-                int tcaret = caret;
-                RemoveCaret(tmp, tcaret, (int)strlen(tmp));
                 CKParameterOut *pout = beh->GetOutputParameter(POUT_STRING);
-                pout->SetValue(tmp, (int)strlen(tmp) + 1);
-                delete[] tmp;
+                RemoveCaret(str, caret, currentlength);
+                pout->SetValue(str, (int)strlen(str) + 1);
                 beh->SetLocalParameterValue(LOCAL_POS, &caret);
                 beh->ActivateOutput(OUT_OFF, TRUE);
                 return CKBR_OK;
@@ -467,8 +463,11 @@ int InputString(const CKBehaviorContext &behcontext)
                     break;
 
                 case CKKEY_RETURN:
-                    AddCharacter('\n', str, caret, currentlength, size);
-                    changed = TRUE;
+                    if (multi)
+                    {
+                        AddCharacter('\n', str, caret, currentlength, size);
+                        changed = TRUE;
+                    }
                     break;
                 case CKKEY_NUMPADENTER:
                     if (dkey & DISABLE_NUMPAD)
@@ -612,21 +611,25 @@ int InputString(const CKBehaviorContext &behcontext)
         beh->SetLocalParameterValue(LOCAL_POS, &caret);
         CKBOOL showcaret = FALSE;
         beh->GetLocalParameterValue(LOCAL_SHOWCARET, &showcaret);
+        char *tmp = new char[(int)strlen(str) + 1];
+        memcpy(tmp, str, (int)strlen(str) + 1);
         if (showcaret)
         {
             CKParameterOut *pout = beh->GetOutputParameter(POUT_STRING);
             pout->SetValue(str, (int)strlen(str) + 1);
+            int tcaret = showcaret;
+            RemoveCaret(tmp, tcaret, (int)strlen(tmp));
         }
         else
         {
-            char *tmp = new char[(int)strlen(str) + 1];
-            memcpy(tmp, str, (int)strlen(str) + 1);
             int tcaret = caret;
             RemoveCaret(tmp, tcaret, (int)strlen(tmp));
-            CKParameterOut *pout = beh->GetOutputParameter(POUT_STRING);
-            pout->SetValue(tmp, (int)strlen(tmp) + 1);
-            delete[] tmp;
+            CKParameterOut *pout0 = beh->GetOutputParameter(POUT_STRING);
+            pout0->SetValue(tmp, (int)strlen(tmp) + 1);
         }
+        CKParameterOut *pout1 = beh->GetOutputParameter(POUT_STRINGWITHOUTCARET);
+        pout1->SetValue(tmp, (int)strlen(tmp) + 1);
+        delete[] tmp;
         beh->ActivateOutput(OUT_UPDATED, TRUE);
     }
 
