@@ -118,7 +118,7 @@ CKERROR Set2DSpriteCallBack(const CKBehaviorContext &behcontext)
     {
         int input = 0;
         beh->GetLocalParameterValue(0, &input);
-        for (int i = beh->GetInputCount() - 1; i >= 0; --i)
+        for (int i = beh->GetInputParameterCount() - 1; i >= 0; --i)
         {
             CKParameterIn *pin = beh->RemoveInputParameter(i);
             CKDestroyObject(pin);
