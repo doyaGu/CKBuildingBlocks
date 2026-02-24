@@ -4,11 +4,6 @@
 #include "CKAll.h"
 #include "MidiManager.h"
 
-#ifdef macintosh
-#include "BehaviorExport.h"
-#endif
-
-
 #ifdef CK_LIB
 	#define RegisterBehaviorDeclarations	Register_MidiBehaviors_BehaviorDeclarations
 	#define InitInstance					_MidiBehaviors_InitInstance

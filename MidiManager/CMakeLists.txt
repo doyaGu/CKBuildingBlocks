@@ -5,8 +5,8 @@ ckbb_add_module(MidiManager
         MidiBehaviors.cpp
         MidiManager.cpp
         MidiManager.h
-        MidiSound/midisound.cpp
-        MidiSound/midisound.h
+        MidiSound/MidiSound.cpp
+        MidiSound/MidiSound.h
         MidiSound/muldiv32.h
         MidiSound/smf.cpp
         MidiSound/smf.h
