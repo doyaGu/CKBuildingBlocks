@@ -697,7 +697,7 @@ int ExecuteExtraOnHit(const CKBehaviorContext &behcontext)
 
         float collDistance = 2.0f;
         beh->GetInputParameterValue(EXTRA_POINTS_COLLDISTANCE, &collDistance);
-        if (SquareMagnitude(ballPos - pos) <= collDistance * collDistance)
+        if (SquareMagnitude(ballPos - pos) <= collDistance)
         {
             ++activatedBallCount;
             node->flag = false;
