@@ -249,7 +249,7 @@ void ApplyMatrixToTexture(CKTexture *tex, int matrix[3][3], int sum)
     tex->ReleaseSurfacePtr();
 }
 
-#if defined(WIN32) && !defined(_M_X64) //  || (defined(macintosh) && defined(__i386__))
+#if defined(WIN32) && defined(_M_IX86) // x86 inline asm/MMX path only
 
 //*************************************************************************
 //  SrcData doit etre de taille (Width+2)*(Height+2)
@@ -1249,7 +1249,7 @@ LastLine:
 }
 #endif
 
-#if (defined(WIN32) && !defined(_M_X64)) || (defined(macintosh) && defined(__i386__))
+#if (defined(WIN32) && defined(_M_IX86)) || (defined(macintosh) && defined(__i386__))
 
 /*****************************************************************************************************************
 /*																												 */
@@ -1679,7 +1679,7 @@ void BlendDataC(CKDWORD *ResData, CKDWORD *Data1, CKDWORD *Data2, int NbDword, f
 }
 #endif
 
-#elif !defined(WIN32) || defined(_M_X64)
+#elif !defined(WIN32) || defined(_M_X64) || defined(_M_ARM64) || defined(_M_ARM64EC)
 
 namespace {
 inline int ClampToByte(int value) {
@@ -1733,6 +1733,37 @@ inline void DecodeKernel(const short *matrixData, int kernel[3][3]) {
     kernel[2][2] = matrixData[20];
 }
 } // namespace
+
+void BlendDataMMX(void *ResData, void *Data1, void *Data2, int NbDword, float Factor)
+{
+    BlendDataC(static_cast<CKDWORD *>(ResData),
+               static_cast<CKDWORD *>(Data1),
+               static_cast<CKDWORD *>(Data2),
+               NbDword,
+               Factor);
+}
+
+void BlendDataC(CKDWORD *ResData, CKDWORD *Data1, CKDWORD *Data2, int NbDword, float Factor)
+{
+    if (!ResData || !Data1 || !Data2 || NbDword <= 0)
+        return;
+
+    CKDWORD *dst = ResData;
+    const CKDWORD *src1 = Data1;
+    const CKDWORD *src2 = Data2;
+    const float f1 = 1.0f - Factor;
+    const float f2 = Factor;
+
+    for (int i = 0; i < NbDword; ++i) {
+        const CKDWORD c1 = src1[i];
+        const CKDWORD c2 = src2[i];
+        const int r = static_cast<int>(ColorGetRed(c1) * f1 + ColorGetRed(c2) * f2);
+        const int g = static_cast<int>(ColorGetGreen(c1) * f1 + ColorGetGreen(c2) * f2);
+        const int b = static_cast<int>(ColorGetBlue(c1) * f1 + ColorGetBlue(c2) * f2);
+        const int a = static_cast<int>(ColorGetAlpha(c1) * f1 + ColorGetAlpha(c2) * f2);
+        dst[i] = RGBAITOCOLOR(r, g, b, a);
+    }
+}
 
 void ProcessPixelsMMX(void *SrcData, void *DstData, int width, int height, void *MatrixData)
 {
