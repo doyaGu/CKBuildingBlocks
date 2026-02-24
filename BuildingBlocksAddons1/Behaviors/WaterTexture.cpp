@@ -135,21 +135,8 @@ int WaterTexture(const CKBehaviorContext &behcontext)
     CKDWORD *CurrImage = (CKDWORD *)tex->LockSurfacePtr(CurrentSlot);
     CKDWORD *PrevImage = (CKDWORD *)tex->LockSurfacePtr(PreviousSlot);
 
-//------------- New pixel = 2*current pixel - neighborhood (old)
-#if defined(_M_IX86) || defined(_M_X64) || defined(_M_ARM64) || defined(_M_ARM64EC)
-    // MMX/x64 code
-    if (GetProcessorFeatures() & PROC_WNI)
-    {
-        WaterEffectWillamette(CurrImage, PrevImage, TextureDesc.Width, TextureDesc.Height, BorderColor, Damping);
-    }
-    else
-    {
-        WaterEffectMMX(CurrImage, PrevImage, TextureDesc.Width, TextureDesc.Height, BorderColor, Damping);
-    }
-#endif
-#ifdef macintosh
-#pragma message("Should implement Mac version of WaterEffect")
-#endif
+    // New pixel = 2*current pixel - neighborhood(previous)
+    ApplyWaterRipple(CurrImage, PrevImage, TextureDesc.Width, TextureDesc.Height, BorderColor, Damping);
 
     tex->ReleaseSurfacePtr(PreviousSlot);
     tex->ReleaseSurfacePtr(CurrentSlot);

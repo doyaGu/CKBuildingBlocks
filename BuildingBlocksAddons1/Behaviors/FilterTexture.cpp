@@ -82,14 +82,7 @@ int FilterTexture(const CKBehaviorContext &behcontext)
     int sum = 0;
     beh->GetInputParameterValue(3, &sum);
 
-#ifdef WIN32
-    // MMX asm code
-    ApplyMatrixToTexture((CKTexture *)beh->GetTarget(), matrix, sum);
-#endif
-#ifdef macintosh
-#pragma message("Should implement Altivec version of ApplyMatrixToTexture")
-    ApplyMatrixToTexture((CKTexture *)beh->GetTarget(), matrix, sum);
-#endif
+    ConvolveTexture3x3((CKTexture *)beh->GetTarget(), matrix, sum);
 
     return CKBR_OK;
 }

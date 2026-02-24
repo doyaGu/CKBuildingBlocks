@@ -149,17 +149,10 @@ int CombineTexture(const CKBehaviorContext &behcontext)
                     CKBYTE *tempdata = data;
                     for (int i = 0; i < width * height; ++i)
                     {
-#if (defined(macintosh) && defined(__ppc__))
-                        coldata += 3;
-                        *tempdata = (*coldata);
-                        tempdata += 4;
-                        coldata++;
-#else
                         tempdata += 3;
                         *tempdata = (*coldata);
                         tempdata++;
                         coldata += 4;
-#endif
                     }
                 }
             }
