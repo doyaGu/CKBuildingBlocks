@@ -111,8 +111,6 @@ int WaterTexture(const CKBehaviorContext &behcontext)
     CKTexture *tex = (CKTexture *)beh->GetTarget();
     if (!tex)
         return CKBR_OK; // We must have a valid owner
-    if (!(GetProcessorFeatures() & PROC_MMX))
-        return CKBR_OK; // Need at least MMX instructions
 
     beh->ActivateInput(0, FALSE);
     beh->ActivateOutput(0);
@@ -138,7 +136,7 @@ int WaterTexture(const CKBehaviorContext &behcontext)
     CKDWORD *PrevImage = (CKDWORD *)tex->LockSurfacePtr(PreviousSlot);
 
 //------------- New pixel = 2*current pixel - neighborhood (old)
-#if defined(_M_IX86) || defined(_M_X64)
+#if defined(_M_IX86) || defined(_M_X64) || defined(_M_ARM64) || defined(_M_ARM64EC)
     // MMX/x64 code
     if (GetProcessorFeatures() & PROC_WNI)
     {

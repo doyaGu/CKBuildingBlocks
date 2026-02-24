@@ -90,8 +90,6 @@ int BlendTextures(const CKBehaviorContext &behcontext)
     CKTexture *tex = (CKTexture *)beh->GetTarget();
     if (!tex)
         return CKBR_OK; // We must have a valid owner
-    if (!(GetProcessorFeatures() & PROC_MMX))
-        return CKBR_OK; // Need a MMX Cpu
 
     beh->ActivateInput(0, FALSE);
     beh->ActivateOutput(0);

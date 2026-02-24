@@ -33,7 +33,7 @@ extern int CMDecalTR[3][3];
 
 void ApplyMatrixToTexture(CKTexture *tex, int matrix[3][3], int sum);
 
-#if defined(_M_IX86) || defined(_M_X64) || (defined(macintosh) && defined(__i386__))
+#if defined(_M_IX86) || defined(_M_X64) || defined(_M_ARM64) || defined(_M_ARM64EC) || (defined(macintosh) && defined(__i386__))
 void ProcessPixelsTemporalMMX(void *SrcData, void *DstData, int width, int height, void *MatrixData, int Damping);
 void ExchangeMemoryMMX(void *Data1, void *Data2, CKDWORD sizet);
 void ProcessPixelsMMX(void *SrcData, void *DstData, int width, int height, void *MatrixData);
