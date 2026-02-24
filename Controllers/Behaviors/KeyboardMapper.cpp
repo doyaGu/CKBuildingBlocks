@@ -9,18 +9,6 @@
 
 #include "../ControllersParams.h"
 
-// When loading on a Big-Endian processor 
-// VOIDBUF Parameters need to be converted
-// only the owner knows the format of the underlying variables
-#ifdef macintosh
-    #include <Endian.h>
-    #define SWAP16(x)	x = Endian16_Swap(x)
-    #define SWAP32(x)	x = Endian32_Swap(x)
-#else
-    #define SWAP16(x)
-    #define SWAP32(x)
-#endif
-
 CKERROR CreateKeyboardMapperBehaviorProto(CKBehaviorPrototype **pproto);
 int KeyboardMapper(const CKBehaviorContext &behcontext);
 CKERROR KeyboardMapperCB(const CKBehaviorContext &behcontext);
@@ -156,7 +144,7 @@ CKERROR KeyboardMapperCB(const CKBehaviorContext &behcontext)
         beh->GetLocalParameterValue(1, &keyBindedNumber);
         for (int i = 0; i < keyBindedNumber; i++)
         {
-            SWAP32(keyBinded[i].key);
+            ENDIANSWAP32(keyBinded[i].key);
             keyBinded[i].messageType = behcontext.MessageManager->AddMessageType(keyBinded[i].messageName);
         }
     }
