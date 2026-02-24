@@ -141,7 +141,7 @@ CKERROR TextureSinusCallBackObject(const CKBehaviorContext &behcontext)
 
     switch (behcontext.CallbackMessage)
     {
-#ifdef macintosh
+#if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
     case CKM_BEHAVIORLOAD:
     {
         CKMesh *mesh = (CKMesh *)beh->GetOwner();
