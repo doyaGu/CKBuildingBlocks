@@ -1278,14 +1278,20 @@ int RenderParticles_PS(CKRenderContext *dev, CKRenderObject *obj, void *arg)
         const VxVector pos = p->pos;
         const float size = p->m_Size;
 
-        VxVector right(size, 0.0f, 0.0f);
-        VxVector forward(0.0f, 0.0f, size);
-        if (p->m_Angle != 0.0f)
+        VxVector right;
+        VxVector forward;
+        if (p->m_Angle == 0.0f)
         {
+            right.Set(size, 0.0f, 0.0f);
+            forward.Set(0.0f, 0.0f, size);
+        }
+        else
+        {
+            const float hs = size * 0.5f;
             const float ca = cosf(p->m_Angle);
             const float sa = sinf(p->m_Angle);
-            right.Set(ca * size, 0.0f, -sa * size);
-            forward.Set(sa * size, 0.0f, ca * size);
+            right.Set(ca * hs, 0.0f, -sa * hs);
+            forward.Set(sa * hs, 0.0f, ca * hs);
         }
 
         const VxVector v0 = pos - right + forward;
