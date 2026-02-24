@@ -15,18 +15,6 @@
 #define JOYRIGHT 1011
 #define JOYB     1012
 
-// When loading on a Big-Endian processor 
-// VOIDBUF Parameters need to be converted
-// only the owner knows the format of the underlying variables
-#ifdef macintosh
-    #include <Endian.h>
-    #define SWAP16(x)	x = Endian16_Swap(x)
-    #define SWAP32(x)	x = Endian32_Swap(x)
-#else
-    #define SWAP16(x)
-    #define SWAP32(x)
-#endif
-
 CKERROR CreateDigitalJoystickMapperBehaviorProto(CKBehaviorPrototype **pproto);
 int DigitalJoystickMapper(const CKBehaviorContext &behcontext);
 CKERROR DigitalJoystickMapperCB(const CKBehaviorContext &behcontext);
@@ -198,7 +186,7 @@ CKERROR DigitalJoystickMapperCB(const CKBehaviorContext &behcontext)
         beh->GetLocalParameterValue(1, &joyBindedNumber);
         for (int i = 0; i < joyBindedNumber; i++)
         {
-            SWAP32(joyBinded[i].joy);
+            ENDIANSWAP32(joyBinded[i].joy);
             joyBinded[i].messageType = behcontext.MessageManager->AddMessageType(joyBinded[i].messageName);
         }
     }
