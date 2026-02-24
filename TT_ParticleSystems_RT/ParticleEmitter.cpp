@@ -962,6 +962,7 @@ void ParticleEmitter::AddParticles2()
                     {
                     case PR_LINE:
                     case PR_OSPRITE:
+                    case PR_CSPRITE:
                         // we manage here latency
                         p->m_Angle = m_AngularSpeed;
                         p->m_DeltaAngle = m_AngularSpeedVariation;
@@ -1118,7 +1119,7 @@ void ParticleEmitter::AddParticles2()
                         p->m_CurrentFrametime = 0;
 
                         // Texture Delta time
-                        if (m_EvolutionsFlags & PE_TEXTURE)
+                        if ((m_EvolutionsFlags & PE_TEXTURE) && (m_TextureFrameCount > 1))
                         {
                             if (m_VariancesFlags & PV_SPEEDTEXTURE)
                             {
