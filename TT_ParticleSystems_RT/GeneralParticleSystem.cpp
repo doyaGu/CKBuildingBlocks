@@ -238,6 +238,10 @@ int GeneralParticleSystem(const CKBehaviorContext &behcontext)
             {
                 pe->AddParticles3();
             }
+            else if (pe->m_IsTimePointEmitter)
+            {
+                pe->AddParticles2();
+            }
             else
             {
                 float emissiondelay = 0;

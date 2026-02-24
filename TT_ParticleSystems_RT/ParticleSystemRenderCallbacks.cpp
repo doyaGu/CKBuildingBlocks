@@ -10,9 +10,6 @@ int RenderParticles_P(CKRenderContext *dev, CKRenderObject *obj, void *arg)
     CK3dEntity *mov = (CK3dEntity *)obj;
     ParticleEmitter *em = (ParticleEmitter *)arg;
 
-    if (em->m_IsTimePointEmitter)
-        em->AddParticles2();
-
     if (!em->particleCount)
         return 0;
 
@@ -73,9 +70,6 @@ int RenderParticles_L(CKRenderContext *dev, CKRenderObject *obj, void *arg)
 {
     CK3dEntity *mov = (CK3dEntity *)obj;
     ParticleEmitter *em = (ParticleEmitter *)arg;
-
-    if (em->m_IsTimePointEmitter)
-        em->AddParticles2();
 
     if (!em->particleCount)
         return 0;
@@ -163,9 +157,6 @@ int RenderParticles_S(CKRenderContext *dev, CKRenderObject *obj, void *arg)
 {
     CK3dEntity *mov = (CK3dEntity *)obj;
     ParticleEmitter *em = (ParticleEmitter *)arg;
-
-    if (em->m_IsTimePointEmitter)
-        em->AddParticles2();
 
     const int VBUFFERSIZE = 4000;
 
@@ -403,9 +394,6 @@ int RenderParticles_FS(CKRenderContext *dev, CKRenderObject *obj, void *arg)
     CK3dEntity *mov = (CK3dEntity *)obj;
     ParticleEmitter *em = (ParticleEmitter *)arg;
 
-    if (em->m_IsTimePointEmitter)
-        em->AddParticles2();
-
     int pc = em->particleCount;
     if (!pc)
         return 0;
@@ -531,9 +519,6 @@ int RenderParticles_OS(CKRenderContext *dev, CKRenderObject *obj, void *arg)
 {
     CK3dEntity *mov = (CK3dEntity *)obj;
     ParticleEmitter *em = (ParticleEmitter *)arg;
-
-    if (em->m_IsTimePointEmitter)
-        em->AddParticles2();
 
     int pc = em->particleCount;
     if (!pc)
@@ -749,9 +734,6 @@ int RenderParticles_CS(CKRenderContext *dev, CKRenderObject *obj, void *arg)
 {
     CK3dEntity *mov = (CK3dEntity *)obj;
     ParticleEmitter *em = (ParticleEmitter *)arg;
-
-    if (em->m_IsTimePointEmitter)
-        em->AddParticles2();
 
     int pc = em->particleCount;
     if (!pc)
@@ -974,9 +956,6 @@ int RenderParticles_RS(CKRenderContext *dev, CKRenderObject *obj, void *arg)
     CK3dEntity *mov = (CK3dEntity *)obj;
     ParticleEmitter *em = (ParticleEmitter *)arg;
 
-    if (em->m_IsTimePointEmitter)
-        em->AddParticles2();
-
     int pc = em->particleCount;
     if (!pc)
         return 0;
@@ -1172,9 +1151,6 @@ int RenderParticles_O(CKRenderContext *dev, CKRenderObject *obj, void *arg)
     CK3dEntity *mov = (CK3dEntity *)obj;
     ParticleEmitter *em = (ParticleEmitter *)arg;
 
-    if (em->m_IsTimePointEmitter)
-        em->AddParticles2();
-
     CKGroup *group = (CKGroup *)dev->GetCKContext()->GetObject(em->m_Group);
     if (!group)
         return 1;
@@ -1226,9 +1202,6 @@ int RenderParticles_PS(CKRenderContext *dev, CKRenderObject *obj, void *arg)
 {
     CK3dEntity *mov = (CK3dEntity *)obj;
     ParticleEmitter *em = (ParticleEmitter *)arg;
-
-    if (em->m_IsTimePointEmitter)
-        em->AddParticles2();
 
     int pc = em->particleCount;
     if (!pc)
