@@ -124,20 +124,7 @@ int BlendTextures(const CKBehaviorContext &behcontext)
     CKDWORD *TexData1 = (CKDWORD *)tex1->LockSurfacePtr();
     CKDWORD *TexData2 = (CKDWORD *)tex2->LockSurfacePtr();
 
-#if defined(_M_IX86) || (defined(macintosh) && defined(__i386__))
-    // MMX asm code
-    BlendDataMMX(TexData, TexData1, TexData2, Size, BlendFactor);
-#elif (defined(macintosh) && defined(__ppc__))
-#if G4 // sould be nerver defined because G3 processor don't have altivec instructions
-    // BlendDataAltivec(TexData,TexData1,TexData2,Size,BlendFactor);
-    BlendDataAltivec(TexData, TexData2, TexData1, Size, BlendFactor);
-#else
-    BlendDataC(TexData, TexData1, TexData2, Size, BlendFactor);
-#endif
-#else
-    // C++ fallback for x64 and other non-MMX/non-PPC platforms
-    BlendDataC(TexData, TexData1, TexData2, Size, BlendFactor);
-#endif
+    BlendPixelBuffers(TexData, TexData1, TexData2, Size, BlendFactor);
 
     // Force texture reload
     tex->ReleaseSurfacePtr();
