@@ -2,7 +2,7 @@
 #define COMPUTEPATH_BEHAVIOR
 
 /*
-Bidirectionnal Iterative Deepening Path-Finding
+Bidirectional Iterative Deepening Path-Finding
 -----------------------------------------------
 
   --- Beta-version Cool Stuffs : ----------------------------------------
@@ -15,23 +15,23 @@ Bidirectionnal Iterative Deepening Path-Finding
   --- Next-Version Improvements : ---------------------------------------
 
   - Multi-grid path-finding
-        Problems :
-        -- How can we determine the Input/Output point (or square) in a grid ?
-        -- Which policy to use ? (i.e. are there possible obstacles between grid ? Must we consider
-        the grid set as a nodal path ?)
+        Problems:
+        -- How can we determine the Input/Output point (or square) in a grid?
+        -- Which policy to use? (i.e., are there possible obstacles between grids? Must we consider
+        the grid set as a nodal path?)
 
-        => Current Policy : Grid are node's docks for nodal path.
-        => Check for direct and implied links (probs in updating implied links : this type of l).
-        => Where can we store informations about grid's nodal-path ?
-        => How to interface this knowledge ?
+        => Current Policy: Grids are node's docks for nodal paths.
+        => Check for direct and implied links (problems in updating implied links: this type of link).
+        => Where can we store information about the grid's nodal-path?
+        => How to interface this knowledge?
 
-  - Unit (i.e. problem solver) is contained in more than a square (i.e. 2x2, 3x3 ... squares schemes)
-    ( ugly implementation and bad results )
-        Problems :
+  - Unit (i.e., problem solver) is contained in more than a square (i.e., 2x2, 3x3 ... square schemes)
+    (ugly implementation and bad results)
+        Problems:
         -- Cursor location and transition
 
-  - Impermeable and shrinked memory use    ( ... hum ... )
-        -- Use only one matrix for the both side in spite of one for each ...
+  - Impermeable and reduced memory use    ( ... hmm ... )
+        -- Use only one matrix for both sides instead of one for each ...
         -- Better Open and Close list memory allocation
 
   - Nice slicing    ( ... problems with curve update slicing )
@@ -41,18 +41,18 @@ Bidirectionnal Iterative Deepening Path-Finding
         -- Add Orientation
         -- Obstacle avoidance cost estimation
         -- Moving Obstacle Estimation
-        ==> Probs with multi-layered system
+        ==> Problems with multi-layered systems
 
   - Improved child generation
         -- Use orientation to limit proposition generation
-        ==>  ... no significant results. possible results included in Improved Heuristics.
+        ==>  ... no significant results. Possible results included in Improved Heuristics.
 
   - Open list manager
         -- Too much time wasted in open list insertion - Use hashtable or local open list
-        Problems :
-        -- Local open list managment : 1st case => Complete position parsing, each grid square
-        has its open list. Useful for corrupted open node elimination => Less node to check.
-        2nd case => Score parsing ... o(n/2) => o(c * log n) (c = handicap factor implies by
+        Problems:
+        -- Local open list management: 1st case => Complete position parsing, each grid square
+        has its open list. Useful for corrupted open node elimination => Fewer nodes to check.
+        2nd case => Score parsing ... o(n/2) => o(c * log n) (c = handicap factor implied by
         added tests)
 */
 
@@ -92,22 +92,22 @@ public:
 
 // Flags Definition ---------------------------------------
 
-// Problem initialized ?
+// Problem initialized?
 #define INITIALIZED 1
 
-// Current Operation : Path-finding or Path-Reconstruction
+// Current Operation: Path-finding or Path-Reconstruction
 #define PATHFINDING 2
 
-// 4 or 8 connex
+// 4 or 8 connectivity
 #define FOURCONNEX 4
 
-// Goal or Start Side ?
+// Goal or Start Side?
 #define GOALSIDE 8
 
 // Success or Failure
 #define FAILURE 16
 
-// final path-construction phase
+// Final path-construction phase
 #define FINALPASS 32
 
 //---------------------------------
@@ -157,10 +157,10 @@ class PathFindingData : public Sliceable
 
     int m_WallLimit;
     // Constraint Grid
-    // CKLayer *m_Grid ; // => Faire tableaux avec grid active. (utiliser IsActive).
-    // peut-�tre mettre en place des attributs pour le threshold en fonction du layer
+    // CKLayer *m_Grid ; // => Create arrays with active grids. (use IsActive).
+    // Maybe set up attributes for the threshold depending on the layer
 
-    // 1ere Etape : Limite commune � tous les layers de la grille
+    // 1st Step: Common limit for all layers of the grid
     CKLayer **m_Grid;
     unsigned int m_LayerCount;
 
@@ -172,7 +172,7 @@ class PathFindingData : public Sliceable
     // Heuristic method
     ASTARPATH_HEURISTIC_METHOD m_HeuristicMethod;
 
-    // Class Managment
+    // Class Management
     unsigned char m_Flags;
 
     unsigned int m_count;

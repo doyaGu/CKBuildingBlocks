@@ -106,7 +106,7 @@ CKObjectDeclaration *FillBehaviorLensFlareDecl()
     <FONT COLOR=#000077>Fade In Time (Integer): </FONT>time in ms for the flare to appear.<BR>
     <FONT COLOR=#000077>Fade Out Time (Integer): </FONT>time in ms for the flare to disappear.<BR>
     <FONT COLOR=#000077>Visibility Angle (Parameter Angle): </FONT>angle from the center of the camera in which the flare is visible.
-    0 means in fact 90 degree so the entire half space before the camera. Use different values between 10 and 30�?for the rings
+    0 means in fact 90 degree so the entire half space before the camera. Use different values between 10 and 30 degree for the rings
     to see them disappear one after one.<BR>
     */
     od->SetType(CKDLL_BEHAVIORPROTOTYPE);

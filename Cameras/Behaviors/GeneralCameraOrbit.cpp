@@ -194,9 +194,9 @@ int GeneralCameraOrbit(const CKBehaviorContext &behcontext, INPUTPROCESSFUNCTION
     if ((InitialAngles.x == INF) || (RotationAngles.x == INF))
         return CKBR_OK;
 
-    // When we are exactly on the top or the bottom of the target, +/-90�,
+    // When we are exactly on the top or the bottom of the target, +/-90 degree,
     // The LookAt BB won't rotate the camera when we turn right or left as
-    // it already looks at the target. Therefore, when we are at +/-90�, we
+    // it already looks at the target. Therefore, when we are at +/-90 degree, we
     // add or remove a little something.
     if ((RotationAngles.y == PI / 2) || (RotationAngles.y == -PI / 2))
     {

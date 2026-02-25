@@ -1,12 +1,9 @@
-// ## Classe de base pour les processus sliceable
-
-#ifndef SLICEABLE_PROCESS_H
-#define SLICEABLE_PROCESS_H
+// ## Base class for sliceable processes
 
 /*
-Truc � revoir :
-    -- Typage des fonctions appel�es (marche po avec Visual, comprend po)
-    -- Gestion du Slicing
+Things to review:
+    -- Typing of called functions (doesn't work with Visual, doesn't understand)
+    -- Slicing management
 */
 
 #include "CKAll.h"
@@ -16,8 +13,8 @@ Truc � revoir :
 
 class Sliceable;
 
-// Ya un prob de typage !
-typedef int (*SliceableProcessFunction)(void); // Interference avec le typage des fonctions membres.
+// There's a typing problem!
+typedef int (*SliceableProcessFunction)(void); // Interference with the typing of member functions.
 
 class Sliceable
 {
@@ -56,7 +53,7 @@ public:
             delete[] m_ProcessPhaseFunction;
         m_ProcessPhaseCount = count;
         m_ProcessPhaseFunction = new SliceableProcessFunction[count];
-        m_ProcessPhaseNumber = 0; // par defaut ...
+        m_ProcessPhaseNumber = 0; // by default ...
         for (int i = 0; i < count; i++)
             m_ProcessPhaseFunction[i] = NULL;
     }
