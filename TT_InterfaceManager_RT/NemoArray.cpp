@@ -343,7 +343,7 @@ CNemoArray::CNemoArray(const char *cmoName, CKDataArray *array) : m_Flag(true), 
             void *value = NULL;
             if (type == CKARRAYTYPE_STRING)
             {
-                array->GetElementStringValue(0, c, str);
+                array->GetElementStringValue(0, c, str, sizeof(str));
                 value = (void *)str;
             }
             else
@@ -433,7 +433,7 @@ void CNemoArray::Write(CKDataArray *array)
                 if (type == CKARRAYTYPE_STRING)
                 {
                     char str[128];
-                    array->GetElementStringValue(0, c, str);
+                    array->GetElementStringValue(0, c, str, sizeof(str));
                     it->SetString(str);
                 }
                 else

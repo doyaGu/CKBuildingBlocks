@@ -190,7 +190,7 @@ int WriteRegistry(const CKBehaviorContext &behcontext)
                             beh->ActivateOutput(1);
                             return CKBR_OK;
                         }
-                        array->GetElementStringValue(i, c, buffer);
+                        array->GetElementStringValue(i, c, buffer, sizeof(buffer));
                         if (!WriteStringToRegistry(regSection, context, buffer, regEntry))
                         {
                             beh->ActivateOutput(1);
