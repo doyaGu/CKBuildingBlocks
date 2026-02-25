@@ -413,7 +413,7 @@ PolyhedronConstructor::PolyhedronConstructor(CKMesh *mesh)
     }
 }
 
-void PolyhedronConstructor::RSimplify(float threshold, Polyhedron &reference, Edge *edgefrom, Polyhedron &p) �
+void PolyhedronConstructor::RSimplify(float threshold, Polyhedron &reference, Edge *edgefrom, Polyhedron &p)
 {
     CKContext *ctx = m_Mesh->GetCKContext();
 

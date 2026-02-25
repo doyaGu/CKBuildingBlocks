@@ -60,7 +60,7 @@ CKObjectDeclaration *FillBehaviorModifyComponentDecl()
     See Also: Get Component, Set Component.<BR>
     */
     /* warning:
-    - COLOR componants are to be get from 0.0 to 1.0 (so it'll much easier for you to process calculs).
+    - COLOR components are to be retrieved from 0.0 to 1.0 (so it'll be much easier for you to process calculations).
     Therefore, [1,1,1]=white and [1,0,0]=red.<BR>
     */
 
@@ -185,7 +185,7 @@ CKERROR ModifyComponentCB(const CKBehaviorContext &BehContext)
 
 CKBOOL ComponentChange(const CKBehaviorContext &BehContext, int componentIndex)
 {
-    // remove all parameters except main p�n & pout
+    // remove all parameters except main pin & pout
     //+set pout's type to pin's
     ClearParameters(BehContext);
 

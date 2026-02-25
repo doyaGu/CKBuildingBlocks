@@ -17,7 +17,7 @@ CKObjectDeclaration *FillBehaviorObjectBetweenDecl()
 {
     CKObjectDeclaration *od = CreateCKObjectDeclaration("Object Between");
     od->SetDescription("Tests if there is an object between the two given entities");
-    /* rem:
+    /* Note:
     <SPAN CLASS=in>In: </SPAN>triggers the process.<BR>
     <BR>
     <SPAN CLASS=out>Yes: </SPAN>is activated if an obstacle is between the two given objects.<BR>
@@ -25,8 +25,8 @@ CKObjectDeclaration *FillBehaviorObjectBetweenDecl()
     <BR>
     <SPAN CLASS=pin>Object 1: </SPAN>the first object of the test.<BR>
     <SPAN CLASS=pin>Object 2: </SPAN>the second object of the test.<BR>
-    <SPAN CLASS=pin>Precision: </SPAN>level of precision of the intersection detection. whether 'Bounding Box' (tests only the intersection between bounding box) or 'Face' (test intersection with all the faces of obstacles)<BR>
-    <SPAN CLASS=pin>Test Only Obstacles: </SPAN>if this boolean is set to TRUE, only obstacles registred in the Collision Manager will be taken into account during the test.<BR>
+    <SPAN CLASS=pin>Precision: </SPAN>level of precision of the intersection detection. Whether 'Bounding Box' (tests only the intersection between bounding boxes) or 'Face' (tests intersection with all the faces of obstacles).<BR>
+    <SPAN CLASS=pin>Test Only Obstacles: </SPAN>if this boolean is set to TRUE, only obstacles registered in the Collision Manager will be taken into account during the test.<BR>
     <BR>
     <SPAN CLASS=pout>Obstacle: </SPAN> the nearest object from object #1 that is between object #1 and #2.<BR>
     */
@@ -154,7 +154,7 @@ CKBOOL RayFaceIntersection(VxVector &ori, VxVector &dest, VxVector &vect1, VxVec
         return FALSE;
     VxVector res = ori + t * V;
 
-    // i1 et i2 indices correspondant aux deux coordon�es min de la normale
+    // i1 and i2 are indices corresponding to the two smallest coordinates of the normal
     float cmax = (float)fabs(Normal.x);
     i1 = 1;
     i2 = 2;
