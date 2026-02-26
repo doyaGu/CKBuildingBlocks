@@ -330,13 +330,19 @@ ParticleEmitter *ParticleManager::CreateNewEmitter(CKGUID guid, CK_ID entity)
         em = new WaveEmitter(m_Context, entity, "WaveEmitter");
     }
 
-    ++m_TotalParticleCount;
+    if (em)
+        ++m_TotalParticleCount;
     return em;
 }
 
 void ParticleManager::DeleteEmitter(ParticleEmitter *iEmitter)
 {
+    if (!iEmitter)
+        return;
+
     delete iEmitter;
+    if (m_TotalParticleCount > 0)
+        --m_TotalParticleCount;
 }
 
 void ParticleManager::InteractorsSetRemoveMesh(CKBOOL iAdd)
@@ -355,7 +361,7 @@ void ParticleManager::InteractorsSetRemoveMesh(CKBOOL iAdd)
     _InteractorsSetRemoveMesh(m_DBoxAttribute, m_DBoxMesh, iAdd);
 }
 
-int InteractorsRC(CKRenderContext *dev, CKRenderObject *obj, void *arg)
+static int InteractorsRC(CKRenderContext *dev, CKRenderObject *obj, void *arg)
 {
     CK3dEntity *ent = (CK3dEntity *)obj;
     ParticleManager *pm = (ParticleManager *)arg;
@@ -371,6 +377,44 @@ int InteractorsRC(CKRenderContext *dev, CKRenderObject *obj, void *arg)
     }
 
     return 1;
+}
+
+static CKBOOL EntityHasInteractorAttribute(CKContext *ctx, ParticleManager *pm, CK3dEntity *ent)
+{
+    CKAttributeManager *attman = ctx->GetAttributeManager();
+    const int attributes[] = {
+        pm->m_GlobalWindAttribute,
+        pm->m_LocalWindAttribute,
+        pm->m_MagnetAttribute,
+        pm->m_VortexAttribute,
+        pm->m_DisruptionBoxAttribute,
+        pm->m_MutationBoxAttribute,
+        pm->m_TunnelAttribute,
+        pm->m_DPlaneAttribute,
+        pm->m_DInfinitePlaneAttribute,
+        pm->m_DCylinderAttribute,
+        pm->m_DSphereAttribute,
+        pm->m_DBoxAttribute
+    };
+
+    for (int attribute : attributes)
+    {
+        const XObjectPointerArray &array = attman->GetAttributeListPtr(attribute);
+        for (CKObject **o = array.Begin(); o != array.End(); ++o)
+        {
+            if (*o == ent)
+                return TRUE;
+        }
+    }
+
+    return FALSE;
+}
+
+static void RemoveInteractorMesh(CKContext *ctx, ParticleManager *pm, CK3dEntity *ent, CKMesh *mesh)
+{
+    ent->RemoveMesh(mesh);
+    if (!EntityHasInteractorAttribute(ctx, pm, ent))
+        ent->RemoveRenderCallBack();
 }
 
 void ParticleManager::_InteractorsSetRemoveMesh(int iAttribute, CK_ID iMeshID, CKBOOL iAdd)
@@ -559,9 +603,7 @@ void ParticleAttributeCallback(int AttribType, CKBOOL Set, CKBeObject *obj, void
         {
             if (!(ent->GetFlags() & CK_3DENTITY_FRAME))
                 return;
-            if (ent->GetMeshCount() == 1)
-                ent->RemoveRenderCallBack();
-            ent->RemoveMesh((CKMesh *)ctx->GetObject(pm->m_GlobalWindMesh));
+            RemoveInteractorMesh(ctx, pm, ent, (CKMesh *)ctx->GetObject(pm->m_GlobalWindMesh));
             if (!arraycount)
             {
                 CKDestroyObject(ctx->GetObject(pm->m_GlobalWindMesh));
@@ -573,9 +615,7 @@ void ParticleAttributeCallback(int AttribType, CKBOOL Set, CKBeObject *obj, void
         {
             if (!(ent->GetFlags() & CK_3DENTITY_FRAME))
                 return;
-            if (ent->GetMeshCount() == 1)
-                ent->RemoveRenderCallBack();
-            ent->RemoveMesh((CKMesh *)ctx->GetObject(pm->m_LocalWindMesh));
+            RemoveInteractorMesh(ctx, pm, ent, (CKMesh *)ctx->GetObject(pm->m_LocalWindMesh));
             if (!arraycount)
             {
                 CKDestroyObject(ctx->GetObject(pm->m_LocalWindMesh));
@@ -587,9 +627,7 @@ void ParticleAttributeCallback(int AttribType, CKBOOL Set, CKBeObject *obj, void
         {
             if (!(ent->GetFlags() & CK_3DENTITY_FRAME))
                 return;
-            if (ent->GetMeshCount() == 1)
-                ent->RemoveRenderCallBack();
-            ent->RemoveMesh((CKMesh *)ctx->GetObject(pm->m_MagnetMesh));
+            RemoveInteractorMesh(ctx, pm, ent, (CKMesh *)ctx->GetObject(pm->m_MagnetMesh));
             if (!arraycount)
             {
                 CKDestroyObject(ctx->GetObject(pm->m_MagnetMesh));
@@ -601,9 +639,7 @@ void ParticleAttributeCallback(int AttribType, CKBOOL Set, CKBeObject *obj, void
         {
             if (!(ent->GetFlags() & CK_3DENTITY_FRAME))
                 return;
-            if (ent->GetMeshCount() == 1)
-                ent->RemoveRenderCallBack();
-            ent->RemoveMesh((CKMesh *)ctx->GetObject(pm->m_VortexMesh));
+            RemoveInteractorMesh(ctx, pm, ent, (CKMesh *)ctx->GetObject(pm->m_VortexMesh));
             if (!arraycount)
             {
                 CKDestroyObject(ctx->GetObject(pm->m_VortexMesh));
@@ -615,9 +651,7 @@ void ParticleAttributeCallback(int AttribType, CKBOOL Set, CKBeObject *obj, void
         {
             if (!(ent->GetFlags() & CK_3DENTITY_FRAME))
                 return;
-            if (ent->GetMeshCount() == 1)
-                ent->RemoveRenderCallBack();
-            ent->RemoveMesh((CKMesh *)ctx->GetObject(pm->m_DisruptionBoxMesh));
+            RemoveInteractorMesh(ctx, pm, ent, (CKMesh *)ctx->GetObject(pm->m_DisruptionBoxMesh));
             if (!arraycount)
             {
                 CKDestroyObject(ctx->GetObject(pm->m_DisruptionBoxMesh));
@@ -629,9 +663,7 @@ void ParticleAttributeCallback(int AttribType, CKBOOL Set, CKBeObject *obj, void
         {
             if (!(ent->GetFlags() & CK_3DENTITY_FRAME))
                 return;
-            if (ent->GetMeshCount() == 1)
-                ent->RemoveRenderCallBack();
-            ent->RemoveMesh((CKMesh *)ctx->GetObject(pm->m_MutationBoxMesh));
+            RemoveInteractorMesh(ctx, pm, ent, (CKMesh *)ctx->GetObject(pm->m_MutationBoxMesh));
             if (!arraycount)
             {
                 CKDestroyObject(ctx->GetObject(pm->m_MutationBoxMesh));
@@ -643,9 +675,7 @@ void ParticleAttributeCallback(int AttribType, CKBOOL Set, CKBeObject *obj, void
         {
             if (!(ent->GetFlags() & CK_3DENTITY_FRAME))
                 return;
-            if (ent->GetMeshCount() == 1)
-                ent->RemoveRenderCallBack();
-            ent->RemoveMesh((CKMesh *)ctx->GetObject(pm->m_TunnelMesh));
+            RemoveInteractorMesh(ctx, pm, ent, (CKMesh *)ctx->GetObject(pm->m_TunnelMesh));
             if (!arraycount)
             {
                 CKDestroyObject(ctx->GetObject(pm->m_TunnelMesh));
@@ -657,9 +687,7 @@ void ParticleAttributeCallback(int AttribType, CKBOOL Set, CKBeObject *obj, void
         {
             if (!(ent->GetFlags() & CK_3DENTITY_FRAME))
                 return;
-            if (ent->GetMeshCount() == 1)
-                ent->RemoveRenderCallBack();
-            ent->RemoveMesh((CKMesh *)ctx->GetObject(pm->m_DPlaneMesh));
+            RemoveInteractorMesh(ctx, pm, ent, (CKMesh *)ctx->GetObject(pm->m_DPlaneMesh));
             if (!arraycount)
             {
                 CKDestroyObject(ctx->GetObject(pm->m_DPlaneMesh));
@@ -671,9 +699,7 @@ void ParticleAttributeCallback(int AttribType, CKBOOL Set, CKBeObject *obj, void
         {
             if (!(ent->GetFlags() & CK_3DENTITY_FRAME))
                 return;
-            if (ent->GetMeshCount() == 1)
-                ent->RemoveRenderCallBack();
-            ent->RemoveMesh((CKMesh *)ctx->GetObject(pm->m_DInfinitePlaneMesh));
+            RemoveInteractorMesh(ctx, pm, ent, (CKMesh *)ctx->GetObject(pm->m_DInfinitePlaneMesh));
             if (!arraycount)
             {
                 CKDestroyObject(ctx->GetObject(pm->m_DInfinitePlaneMesh));
@@ -685,10 +711,8 @@ void ParticleAttributeCallback(int AttribType, CKBOOL Set, CKBeObject *obj, void
         {
             if (!(ent->GetFlags() & CK_3DENTITY_FRAME))
                 return;
-            if (ent->GetMeshCount() == 1)
-                ent->RemoveRenderCallBack();
             CKMesh *mesh = (CKMesh *)ctx->GetObject(pm->m_DCylinderMesh);
-            ent->RemoveMesh(mesh);
+            RemoveInteractorMesh(ctx, pm, ent, mesh);
             if (!arraycount)
             {
                 CKDestroyObject(mesh);
@@ -700,10 +724,8 @@ void ParticleAttributeCallback(int AttribType, CKBOOL Set, CKBeObject *obj, void
         {
             if (!(ent->GetFlags() & CK_3DENTITY_FRAME))
                 return;
-            if (ent->GetMeshCount() == 1)
-                ent->RemoveRenderCallBack();
             CKMesh *mesh = (CKMesh *)ctx->GetObject(pm->m_DSphereMesh);
-            ent->RemoveMesh(mesh);
+            RemoveInteractorMesh(ctx, pm, ent, mesh);
             if (!arraycount)
             {
                 CKDestroyObject(mesh);
@@ -715,10 +737,8 @@ void ParticleAttributeCallback(int AttribType, CKBOOL Set, CKBeObject *obj, void
         {
             if (!(ent->GetFlags() & CK_3DENTITY_FRAME))
                 return;
-            if (ent->GetMeshCount() == 1)
-                ent->RemoveRenderCallBack();
             CKMesh *mesh = (CKMesh *)ctx->GetObject(pm->m_DBoxMesh);
-            ent->RemoveMesh(mesh);
+            RemoveInteractorMesh(ctx, pm, ent, mesh);
             if (!arraycount)
             {
                 CKDestroyObject(mesh);

@@ -431,6 +431,8 @@ void ParticleEmitter::UpdateParticles2(float rdeltat)
                 deltat = rdeltat;
             }
 
+            particle->prevpos = particle->pos;
+
             {
                 if (particle->pos.x < minv.x)
                 {
@@ -1103,6 +1105,7 @@ void ParticleEmitter::AddParticles2()
                     case PR_SPRITE:
                     case PR_FSPRITE:
                     case PR_OSPRITE:
+                    case PR_CSPRITE:
                     case PR_RSPRITE:
                     case PR_PSPRITE:
                         // Initial Texture
@@ -1239,6 +1242,10 @@ void ParticleEmitter::AddParticles3()
             particles = p;
 
             p->pos = pos;
+            p->prevpos = p->pos;
+
+            // Keep deflector-density filtering deterministic for wave particles too.
+            p->m_Density = rand() * INV_RAND;
 
             p->dir = VxVector(0, 0, 0);
 
@@ -1569,7 +1576,7 @@ void ParticleEmitter::ReadInputs(CKBehavior *beh)
     }
 
     // Wind parameters
-    if (m_InteractorsFlags & (PI_LOCALWIND | PI_GLOBALWIND))
+    if (m_InteractorsFlags & (PI_LOCALWIND | PI_GLOBALWIND | PI_ATMOSPHERE))
     {
         beh->GetInputParameterValue(SURFACE, &m_Surface);
         if (m_VariancesFlags & PV_SURFACE)
@@ -1794,6 +1801,11 @@ void ParticleEmitter::SetState(CKRenderContext *dev, CKBOOL gouraud)
     // States
     dev->SetState(VXRENDERSTATE_WRAP0, 0);
     dev->SetState(VXRENDERSTATE_CULLMODE, VXCULL_NONE);
+    // Post-render callbacks inherit the owner's material states, so force a stable depth/stencil setup.
+    dev->SetState(VXRENDERSTATE_ZENABLE, TRUE);
+    dev->SetState(VXRENDERSTATE_ZFUNC, VXCMP_LESSEQUAL);
+    dev->SetState(VXRENDERSTATE_ALPHATESTENABLE, FALSE);
+    dev->SetState(VXRENDERSTATE_STENCILENABLE, FALSE);
     dev->SetState(VXRENDERSTATE_SRCBLEND, m_SrcBlend);
     dev->SetState(VXRENDERSTATE_DESTBLEND, m_DestBlend);
     if (m_DestBlend == VXBLEND_ZERO && ((m_SrcBlend == VXBLEND_SRCALPHA) || (m_SrcBlend == VXBLEND_SRCCOLOR) || (m_SrcBlend == VXBLEND_ONE)))

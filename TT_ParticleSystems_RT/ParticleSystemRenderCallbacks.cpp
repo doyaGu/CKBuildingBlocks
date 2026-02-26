@@ -20,6 +20,10 @@ int RenderParticles_P(CKRenderContext *dev, CKRenderObject *obj, void *arg)
 
     // we don't let write to the ZBuffer
     dev->SetTexture(NULL);
+    dev->SetState(VXRENDERSTATE_ZENABLE, TRUE);
+    dev->SetState(VXRENDERSTATE_ZFUNC, VXCMP_LESSEQUAL);
+    dev->SetState(VXRENDERSTATE_ALPHATESTENABLE, FALSE);
+    dev->SetState(VXRENDERSTATE_STENCILENABLE, FALSE);
     dev->SetState(VXRENDERSTATE_ZWRITEENABLE, FALSE);
     dev->SetState(VXRENDERSTATE_SRCBLEND, em->m_SrcBlend);
     dev->SetState(VXRENDERSTATE_DESTBLEND, em->m_DestBlend);
@@ -81,6 +85,10 @@ int RenderParticles_L(CKRenderContext *dev, CKRenderObject *obj, void *arg)
 
     // we don't let write to the ZBuffer
     dev->SetTexture(NULL);
+    dev->SetState(VXRENDERSTATE_ZENABLE, TRUE);
+    dev->SetState(VXRENDERSTATE_ZFUNC, VXCMP_LESSEQUAL);
+    dev->SetState(VXRENDERSTATE_ALPHATESTENABLE, FALSE);
+    dev->SetState(VXRENDERSTATE_STENCILENABLE, FALSE);
     dev->SetState(VXRENDERSTATE_ZWRITEENABLE, FALSE);
     dev->SetState(VXRENDERSTATE_SRCBLEND, em->m_SrcBlend);
     dev->SetState(VXRENDERSTATE_DESTBLEND, em->m_DestBlend);
@@ -101,7 +109,8 @@ int RenderParticles_L(CKRenderContext *dev, CKRenderObject *obj, void *arg)
     CKDWORD *colors = (CKDWORD *)data->Colors.Ptr;
 #endif
 
-    while (p)
+    int renderedParticles = 0;
+    while (p && renderedParticles < em->particleCount)
     {
         // Colors
         oldColor.r = p->m_Color.r - p->deltaColor.r * p->m_DeltaTime;
@@ -141,10 +150,12 @@ int RenderParticles_L(CKRenderContext *dev, CKRenderObject *obj, void *arg)
 
         // Next particle
         p = p->next;
+        ++renderedParticles;
     }
 
     // the Drawing itself
-    dev->DrawPrimitive(VX_LINELIST, NULL, em->particleCount, data);
+    if (renderedParticles > 0)
+        dev->DrawPrimitive(VX_LINELIST, NULL, 2 * renderedParticles, data);
 
     // we let write to the ZBuffer
     dev->SetState(VXRENDERSTATE_ZWRITEENABLE, TRUE);
@@ -234,7 +245,8 @@ int RenderParticles_S(CKRenderContext *dev, CKRenderObject *obj, void *arg)
     int np = 0;
     int remaining = 4 * pc;
 
-    while (p)
+    int drawnParticles = 0;
+    while (p && drawnParticles < pc)
     {
         pos = p->pos;
 
@@ -352,6 +364,7 @@ int RenderParticles_S(CKRenderContext *dev, CKRenderObject *obj, void *arg)
 #endif
 
         ++np;
+        ++drawnParticles;
         p = p->next;
 
         if (np * 4 == VBUFFERSIZE)
@@ -595,7 +608,8 @@ int RenderParticles_OS(CKRenderContext *dev, CKRenderObject *obj, void *arg)
 
     int ni = 0;
     int fi = 0;
-    while (p)
+    int renderedParticles = 0;
+    while (p && renderedParticles < pc)
     {
         pos = p->pos;
         dir = p->dir;
@@ -609,7 +623,8 @@ int RenderParticles_OS(CKRenderContext *dev, CKRenderObject *obj, void *arg)
 
         vv = pos - old;
         vv.Normalize();
-        ww = Normalize(CrossProduct(camdir, vv));
+        ww = CrossProduct(camdir, vv);
+        ww.Normalize();
 
         // the colors
         oldColor.r = p->m_Color.r - p->deltaColor.r * p->m_DeltaTime;
@@ -717,10 +732,12 @@ int RenderParticles_OS(CKRenderContext *dev, CKRenderObject *obj, void *arg)
 
         p = p->next;
         ni += 4;
+        ++renderedParticles;
     }
 
     // The Primitive Drawing
-    dev->DrawPrimitive(VX_TRIANGLELIST, ParticleEmitter::m_GlobalIndices, 6 * pc, data);
+    if (renderedParticles > 0)
+        dev->DrawPrimitive(VX_TRIANGLELIST, ParticleEmitter::m_GlobalIndices, 6 * renderedParticles, data);
 
     // we let write to the ZBuffer
     dev->SetState(VXRENDERSTATE_ZWRITEENABLE, TRUE);
@@ -808,7 +825,9 @@ int RenderParticles_CS(CKRenderContext *dev, CKRenderObject *obj, void *arg)
 
     int ni = 0;
     int fi = 0;
-    while (p)
+    int processedParticles = 0;
+    int drawnParticles = 0;
+    while (p && processedParticles < pc)
     {
         pos = p->pos;
         dir = p->dir;
@@ -817,6 +836,7 @@ int RenderParticles_CS(CKRenderContext *dev, CKRenderObject *obj, void *arg)
         if (speed <= 0.0f)
         {
             p = p->next;
+            ++processedParticles;
             continue;
         }
         dir /= speed;
@@ -939,10 +959,13 @@ int RenderParticles_CS(CKRenderContext *dev, CKRenderObject *obj, void *arg)
 
         p = p->next;
         ni += 4;
+        ++processedParticles;
+        ++drawnParticles;
     }
 
     // The Primitive Drawing
-    dev->DrawPrimitive(VX_TRIANGLELIST, ParticleEmitter::m_GlobalIndices, 6 * pc, data);
+    if (drawnParticles > 0)
+        dev->DrawPrimitive(VX_TRIANGLELIST, ParticleEmitter::m_GlobalIndices, 6 * drawnParticles, data);
 
     // we let write to the ZBuffer
     dev->SetState(VXRENDERSTATE_ZWRITEENABLE, TRUE);
@@ -1020,11 +1043,14 @@ int RenderParticles_RS(CKRenderContext *dev, CKRenderObject *obj, void *arg)
 
     CK3dEntity *ent = (CK3dEntity *)dev->GetCKContext()->GetObject(em->m_Entity);
     cam->InverseTransform(&old, &vv, ent);
-    old += Normalize(old) * 40.0f;
+    VxVector oldDir = old;
+    oldDir.Normalize();
+    old += oldDir * 40.0f;
 
     const VxMatrix &invCam = cam->GetInverseWorldMatrix();
 
-    while (p)
+    int renderedParticles = 0;
+    while (p && renderedParticles < pc)
     {
         Vx3DMultiplyMatrixVector(&pos, invCam, &p->pos);
 
@@ -1133,9 +1159,11 @@ int RenderParticles_RS(CKRenderContext *dev, CKRenderObject *obj, void *arg)
 #endif
 
         p = p->next;
+        ++renderedParticles;
     }
 
-    dev->DrawPrimitive(VX_TRIANGLELIST, ParticleEmitter::m_GlobalIndices, pc * 6, data);
+    if (renderedParticles > 0)
+        dev->DrawPrimitive(VX_TRIANGLELIST, ParticleEmitter::m_GlobalIndices, 6 * renderedParticles, data);
 
     // we let write to the ZBuffer
     dev->SetState(VXRENDERSTATE_ZWRITEENABLE, TRUE);
@@ -1176,10 +1204,20 @@ int RenderParticles_O(CKRenderContext *dev, CKRenderObject *obj, void *arg)
                     mat->SetDiffuse((p->m_Color));
 
                 ent->SetPosition(&(p->pos), NULL);
-                dir = Normalize(p->dir);
+                dir = p->dir;
+                if (dir.SquareMagnitude() <= EPSILON)
+                    dir.Set(0, 0, 1);
+                else
+                    dir.Normalize();
+
                 up.Set(0, 1, 0);
+                if (fabsf(DotProduct(dir, up)) > 0.99f)
+                    up.Set(1, 0, 0);
+
                 right = CrossProduct(up, dir);
+                right.Normalize();
                 up = CrossProduct(dir, right);
+                up.Normalize();
                 ent->SetOrientation(&dir, &up, &right);
                 if (p->m_Angle)
                 {
@@ -1200,7 +1238,7 @@ int RenderParticles_O(CKRenderContext *dev, CKRenderObject *obj, void *arg)
 
 int RenderParticles_PS(CKRenderContext *dev, CKRenderObject *obj, void *arg)
 {
-    CK3dEntity *mov = (CK3dEntity *)obj;
+    (void)obj;
     ParticleEmitter *em = (ParticleEmitter *)arg;
 
     int pc = em->particleCount;
@@ -1208,7 +1246,7 @@ int RenderParticles_PS(CKRenderContext *dev, CKRenderObject *obj, void *arg)
         return 0;
 
     VxMatrix oldmatrix = dev->GetWorldTransformationMatrix();
-    dev->SetWorldTransformationMatrix(oldmatrix * mov->GetInverseWorldMatrix());
+    dev->SetWorldTransformationMatrix(VxMatrix::Identity());
 
     VxDrawPrimitiveData *data = dev->GetDrawPrimitiveStructure((CKRST_DPFLAGS)(CKRST_DP_TR_CL_VCT | CKRST_DP_VBUFFER), 4 * pc);
     CKWORD *indices = dev->GetDrawPrimitiveIndices(6 * pc);
@@ -1239,7 +1277,8 @@ int RenderParticles_PS(CKRenderContext *dev, CKRenderObject *obj, void *arg)
 
     int vertexBase = 0;
     int indexBase = 0;
-    while (p)
+    int renderedParticles = 0;
+    while (p && renderedParticles < pc)
     {
         indices[indexBase + 0] = (CKWORD)(vertexBase + 0);
         indices[indexBase + 1] = (CKWORD)(vertexBase + 1);
@@ -1368,9 +1407,10 @@ int RenderParticles_PS(CKRenderContext *dev, CKRenderObject *obj, void *arg)
         p = p->next;
         vertexBase += 4;
         indexBase += 6;
+        ++renderedParticles;
     }
 
-    dev->DrawPrimitive(VX_TRIANGLELIST, indices, 6 * pc, data);
+    dev->DrawPrimitive(VX_TRIANGLELIST, indices, 6 * renderedParticles, data);
 
     dev->SetState(VXRENDERSTATE_ZWRITEENABLE, TRUE);
     dev->SetWorldTransformationMatrix(oldmatrix);
