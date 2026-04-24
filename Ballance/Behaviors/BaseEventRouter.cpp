@@ -39,7 +39,7 @@ CKERROR CreateBallanceBaseEventRouterProto(CKBehaviorPrototype **pproto)
     }
 
     proto->SetFlags(CK_BEHAVIORPROTOTYPE_NORMAL);
-    proto->SetBehaviorFlags((CK_BEHAVIOR_FLAGS)(CKBEHAVIOR_MESSAGERECEIVER | CKBEHAVIOR_VARIABLEOUTPUTS));
+    proto->SetBehaviorFlags((CK_BEHAVIOR_FLAGS)(CKBEHAVIOR_MESSAGERECEIVER | CKBEHAVIOR_VARIABLEOUTPUTS | CKBEHAVIOR_INTERNALLYCREATEDINPUTPARAMS));
     proto->SetFunction(BallanceBaseEventRouter);
     proto->SetBehaviorCallbackFct(BallanceBaseEventRouterCallback);
 
