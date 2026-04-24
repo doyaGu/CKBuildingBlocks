@@ -214,13 +214,21 @@ namespace Ballance
 
     void ActivateScript(CKScene *scene, CKBehavior *script, CKBOOL reset)
     {
-        if (!scene || !script)
+        if (!script)
             return;
-        scene->Activate(script, reset);
+
+        CKScene *targetScene = scene;
+        if (!targetScene && script->GetSceneInCount() > 0)
+            targetScene = script->GetSceneIn(0);
+
+        if (targetScene)
+            targetScene->Activate(script, reset);
+        else
+            script->Activate(TRUE, reset);
 
         CKBeObject *owner = script->GetOwner();
-        if (owner && !owner->IsActiveInCurrentScene())
-            scene->Activate(owner, FALSE);
+        if (targetScene && owner && !owner->IsActiveInCurrentScene())
+            targetScene->Activate(owner, FALSE);
     }
 
     int AddRegisterRow(CKDataArray *registerArray, CKGroup *group, int loadId)
