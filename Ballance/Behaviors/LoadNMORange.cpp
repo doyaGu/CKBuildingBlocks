@@ -132,7 +132,7 @@ int BallanceLoadNMORange(const CKBehaviorContext &behcontext)
     int failedRow = -1;
     std::string failedFile;
 
-    if (!table || !level || start < 0 || end < start || table->GetColumnCount() < 3)
+    if (!table || !level || start < 0 || table->GetColumnCount() < 3)
     {
         Ballance::DebugLog(ctx, "LoadNMORange '%s': parameter error table=%p level=%p start=%d end=%d cols=%d",
                            beh->GetName(), table, level, start, end, table ? table->GetColumnCount() : -1);
@@ -147,8 +147,23 @@ int BallanceLoadNMORange(const CKBehaviorContext &behcontext)
         return CKBR_PARAMETERERROR;
     }
 
-    if (end >= table->GetRowCount())
-        end = table->GetRowCount() - 1;
+    const int rowCount = table->GetRowCount();
+    if (end < 0 || end >= rowCount)
+        end = rowCount - 1;
+    if (end < start)
+    {
+        Ballance::DebugLog(ctx, "LoadNMORange '%s': empty range start=%d end=%d rows=%d",
+                           beh->GetName(), start, end, rowCount);
+        if (outputParamCount > 0)
+            beh->SetOutputParameterValue(0, &loadedCount);
+        if (outputParamCount > 1)
+            beh->SetOutputParameterValue(1, &failedRow);
+        if (outputParamCount > 2)
+            beh->SetOutputParameterValue(2, "");
+        if (outputCount > 0)
+            beh->ActivateOutput(0);
+        return CKBR_OK;
+    }
     Ballance::DebugLog(ctx, "LoadNMORange '%s': clamped range start=%d end=%d", beh->GetName(), start, end);
 
     for (int row = start; row <= end; ++row)
@@ -204,7 +219,7 @@ int BallanceLoadNMORange(const CKBehaviorContext &behcontext)
         beh->SetOutputParameterValue(2, failedFile.c_str());
 
     CKBeObject *sender = (CKBeObject *)beh->GetOwner();
-    if (loadedMessage >= 0)
+    if (failedRow < 0 && loadedMessage >= 0)
         Ballance::SendBroadcast(behcontext.MessageManager, loadedMessage, sender);
     Ballance::DebugLog(ctx, "LoadNMORange '%s': done loaded=%d failedRow=%d failedFile='%s' sender=%s output=%d",
                        beh->GetName(), loadedCount, failedRow, failedFile.c_str(),
