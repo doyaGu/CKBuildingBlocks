@@ -8,8 +8,8 @@ CKERROR BallanceBaseEventRouterCallback(const CKBehaviorContext &behcontext);
 
 CKObjectDeclaration *FillBehaviorBallanceBaseEventRouterDecl()
 {
-    CKObjectDeclaration *od = CreateCKObjectDeclaration("Switch On Message");
-    od->SetDescription("Routes the base.cmo global event messages while preserving the original Switch On Message node signature.");
+    CKObjectDeclaration *od = CreateCKObjectDeclaration("Ballance Base Event Router");
+    od->SetDescription("Routes the base.cmo global event messages.");
     od->SetCategory("Ballance/Runtime");
     od->SetType(CKDLL_BEHAVIORPROTOTYPE);
     od->SetGuid(CKGUID(0x42414c07, 0x10000007));
@@ -23,7 +23,7 @@ CKObjectDeclaration *FillBehaviorBallanceBaseEventRouterDecl()
 
 CKERROR CreateBallanceBaseEventRouterProto(CKBehaviorPrototype **pproto)
 {
-    CKBehaviorPrototype *proto = CreateCKBehaviorPrototype("Switch On Message");
+    CKBehaviorPrototype *proto = CreateCKBehaviorPrototype("Ballance Base Event Router");
     if (!proto)
         return CKERR_OUTOFMEMORY;
 
