@@ -8,7 +8,7 @@ CKERROR BallanceBaseEventRouterCallback(const CKBehaviorContext &behcontext);
 
 CKObjectDeclaration *FillBehaviorBallanceBaseEventRouterDecl()
 {
-    CKObjectDeclaration *od = CreateCKObjectDeclaration("Ballance Base Event Router");
+    CKObjectDeclaration *od = CreateCKObjectDeclaration("Switch On Message");
     od->SetDescription("Routes the base.cmo global event messages while preserving the original Switch On Message node signature.");
     od->SetCategory("Ballance/Runtime");
     od->SetType(CKDLL_BEHAVIORPROTOTYPE);
@@ -23,7 +23,7 @@ CKObjectDeclaration *FillBehaviorBallanceBaseEventRouterDecl()
 
 CKERROR CreateBallanceBaseEventRouterProto(CKBehaviorPrototype **pproto)
 {
-    CKBehaviorPrototype *proto = CreateCKBehaviorPrototype("Ballance Base Event Router");
+    CKBehaviorPrototype *proto = CreateCKBehaviorPrototype("Switch On Message");
     if (!proto)
         return CKERR_OUTOFMEMORY;
 
@@ -106,6 +106,26 @@ CKERROR BallanceBaseEventRouterCallback(const CKBehaviorContext &behcontext)
         CKBeObject *owner = beh->GetOwner();
         if (owner)
             owner->SetAsWaitingForMessages(FALSE);
+    }
+    break;
+    case CKM_BEHAVIOREDITED:
+    {
+        int outputCount = beh->GetOutputCount();
+        int parameterCount = beh->GetInputParameterCount();
+        char parameterName[16];
+
+        while (parameterCount < outputCount)
+        {
+            sprintf(parameterName, "Message %d", parameterCount);
+            beh->CreateInputParameter(parameterName, CKPGUID_MESSAGE);
+            ++parameterCount;
+        }
+
+        while (parameterCount > outputCount)
+        {
+            --parameterCount;
+            CKDestroyObject(beh->RemoveInputParameter(parameterCount));
+        }
     }
     break;
     }
