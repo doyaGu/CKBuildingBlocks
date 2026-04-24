@@ -166,6 +166,7 @@ endif ()
 # =============================================================================
 set(CKBB_ALL_MODULES
         3DTrans
+        Ballance
         BuildingBlocksAddons1
         Cameras
         Characters
