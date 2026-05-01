@@ -12,6 +12,7 @@
 	#include "Xtl.h"
 #else
 	#include "windows.h"
+	#include <mmsystem.h>
 #endif
 
 //_________________Struct midiMessage
