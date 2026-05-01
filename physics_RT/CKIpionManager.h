@@ -23,6 +23,8 @@
 #include "ivp_phantom.hxx"
 #include "ivp_templates.hxx"
 #include "ivp_template_constraint.hxx"
+#include "ivp_controller_factory.hxx"
+#include "ivp_actuator_spring.hxx"
 #include "ivp_listener_object.hxx"
 #include "ivp_collision_filter.hxx"
 #include "ivp_surbuild_ledge_soup.hxx"
@@ -115,12 +117,12 @@ public:
 
     IVP_Constraint *CreateConstraint(const IVP_Template_Constraint *tmpl)
     {
-        return m_Environment->create_constraint(tmpl);
+        return IVP_Controller_Factory::create_constraint(m_Environment, tmpl);
     }
 
     IVP_Actuator_Spring *CreateSpring(IVP_Template_Spring *tmpl)
     {
-        return m_Environment->create_spring(tmpl);
+        return IVP_Controller_Factory::create_spring(m_Environment, tmpl);
     }
 
     IVP_Environment *GetEnvironment() const { return m_Environment; }
