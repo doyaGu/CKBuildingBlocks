@@ -17,7 +17,7 @@
 
 #include "DrawingPrimitives.h"
 
-#ifdef WIN32
+#if defined(_WIN32) || defined(WIN32)
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
@@ -45,7 +45,7 @@ struct LineData
     float stringwidth;
 };
 
-#if defined(WIN32) && !defined(FONTMANAGER_NOSYSFONT)
+#if (defined(_WIN32) || defined(WIN32)) && !defined(FONTMANAGER_NOSYSFONT)
 typedef HFONT FONTHANDLE;
 typedef TEXTMETRIC FONT_METRIC;
 typedef OUTLINETEXTMETRIC FONT_OUTLINEMETRIC;
@@ -378,7 +378,7 @@ private:
     int m_TextBatchIndices2D;
 
     // Win32 Specific (System TT fonts information)
-#ifndef FONTMANAGER_NOSYSFONT
+#if (defined(_WIN32) || defined(WIN32)) && !defined(FONTMANAGER_NOSYSFONT)
     // Memory device context for font rendering
     HDC m_DC;
     // Associative table 'font name' -> 'font handle'
