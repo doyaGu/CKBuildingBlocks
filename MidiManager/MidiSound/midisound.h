@@ -38,7 +38,6 @@
 #define SEQ_S_RESET         7
 
 #define MMSG_DONE                   (WM_USER+20)
-#define MMRESULT unsigned int
 
 typedef struct tag_preroll
 {
