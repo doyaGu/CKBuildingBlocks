@@ -2546,7 +2546,7 @@ CKTexture *CKFontManager::CreateTextureFromFont(int sysFontIndex, int resolution
 			// For each pixel of the bitmap, we reduce to a grayscale color
 			// and fill an alpha table
 			BITMAP dib;
-			GetObject(hBitmap, sizeof(BITMAP), &dib);
+			::GetObjectA(hBitmap, sizeof(BITMAP), &dib);
 			CKDWORD Bpp = dib.bmBitsPixel >> 3;
 			CKDWORD Pitch = dib.bmWidthBytes;
 			CKBYTE *Colors = (CKBYTE *)dib.bmBits + (dib.bmHeight - 1) * dib.bmWidthBytes;
