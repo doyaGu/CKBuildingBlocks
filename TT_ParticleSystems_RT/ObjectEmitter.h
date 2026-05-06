@@ -6,7 +6,7 @@
 class ObjectEmitter : public PointEmitter
 {
 public:
-    ObjectEmitter(CKContext *ctx, CK_ID ent, char *name) : PointEmitter(ctx, ent, name), m_Shape(NULL) {}
+    ObjectEmitter(CKContext *ctx, CK_ID ent, const char *name) : PointEmitter(ctx, ent, name), m_Shape(NULL) {}
 
     CKMesh *m_Shape;
 

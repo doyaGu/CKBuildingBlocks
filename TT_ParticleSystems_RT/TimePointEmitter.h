@@ -6,7 +6,7 @@
 class TimePointEmitter : public PointEmitter
 {
 public:
-    TimePointEmitter(CKContext *ctx, CK_ID ent, char *name) : PointEmitter(ctx, ent, name)
+    TimePointEmitter(CKContext *ctx, CK_ID ent, const char *name) : PointEmitter(ctx, ent, name)
     {
         m_Position = VxVector::axis0();
         m_Time = 0.0f;

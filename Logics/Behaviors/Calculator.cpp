@@ -566,7 +566,7 @@ int Calculator(const CKBehaviorContext& behcontext)
     if( retval ){
       ctx->OutputToConsole("Syntax Error in CALCULATOR");
 
-      char *local_expr = "#####";
+      char local_expr[] = "#####";
       beh->SetLocalParameterValue(0, local_expr,(int)strlen(local_expr)+1);
       
       return CKBR_OK;
@@ -608,7 +608,7 @@ CKERROR CalculatorCallBack(const CKBehaviorContext& behcontext)
   case CKM_BEHAVIORCREATE:
   case CKM_BEHAVIORLOAD:
     {
-      char *local_expr = "#####";
+      char local_expr[] = "#####";
       beh->SetLocalParameterValue(0, local_expr,(int)strlen(local_expr)+1);
       
       Node_Total_Struct nts;
@@ -638,7 +638,7 @@ CKERROR CalculatorCallBack(const CKBehaviorContext& behcontext)
     
   case CKM_BEHAVIOREDITED:
     {
-      char *local_expr = "#####";
+      char local_expr[] = "#####";
       beh->SetLocalParameterValue(0, local_expr,(int)strlen(local_expr)+1);
 
       int c_pin = beh->GetInputParameterCount();

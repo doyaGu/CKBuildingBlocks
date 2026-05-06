@@ -5,7 +5,7 @@
 #include "ParticleEmitter.h"
 #include "ParticleManager.h"
 
-char *ParticleManager::Name = "Particle Manager";
+const char *ParticleManager::Name = "Particle Manager";
 
 // This is the constructor of a class that has been exported.
 // see ParticleManager.h for the class definition

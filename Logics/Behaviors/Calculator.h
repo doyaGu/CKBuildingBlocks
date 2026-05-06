@@ -10,7 +10,7 @@
 //---------- Operation Struct
 typedef struct{
   int         token;
-  char        *tag;
+  const char  *tag;
   size_t      taglen;
   int         precedence;
 } Operation;

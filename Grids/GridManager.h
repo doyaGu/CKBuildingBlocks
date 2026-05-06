@@ -9,7 +9,7 @@
 // {secret}
 #define GridManager_H "$Id:$"
 
-extern char *GridManagerName;
+extern const char *GridManagerName;
 
 //{secret}
 #define GRID_FLAG_SCENE 0

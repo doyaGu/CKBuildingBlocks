@@ -6,7 +6,7 @@
 class LineEmitter : public PointEmitter
 {
 public:
-    LineEmitter(CKContext *ctx, CK_ID ent, char *name) : PointEmitter(ctx, ent, name){};
+    LineEmitter(CKContext *ctx, CK_ID ent, const char *name) : PointEmitter(ctx, ent, name){};
 
 protected:
     // add a particle

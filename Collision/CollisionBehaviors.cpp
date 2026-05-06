@@ -76,7 +76,7 @@ CKERROR RemoveFloorManager(CKContext *context)
     return CK_OK;
 }
 
-extern char *Network3dName;
+extern const char *Network3dName;
 
 CKERROR InitInstance(CKContext *context)
 {
