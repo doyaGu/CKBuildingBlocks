@@ -10,7 +10,7 @@ class ParticleEmitter
 {
 public:
     // Constructor
-    ParticleEmitter(CKContext *ctx, CK_ID entity, char *name);
+    ParticleEmitter(CKContext *ctx, CK_ID entity, const char *name);
     // Destructor
     ~ParticleEmitter();
 

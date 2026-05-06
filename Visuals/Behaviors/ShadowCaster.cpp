@@ -12,7 +12,7 @@
 #define PsycheProjector 2
 #define SphericalProjector 3
 
-char *materialname = "SC Material";
+const char *materialname = "SC Material";
 
 CKObjectDeclaration *FillBehaviorShadowCasterDecl();
 CKERROR CreateShadowCasterProto(CKBehaviorPrototype **);

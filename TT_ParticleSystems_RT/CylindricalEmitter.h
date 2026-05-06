@@ -5,7 +5,7 @@
 
 class CylindricalEmitter : public PointEmitter {
 public:
-    CylindricalEmitter(CKContext* ctx,CK_ID ent,char* name) : PointEmitter(ctx,ent,name) {}
+    CylindricalEmitter(CKContext* ctx,CK_ID ent,const char* name) : PointEmitter(ctx,ent,name) {}
 
 protected:
     // add a particle

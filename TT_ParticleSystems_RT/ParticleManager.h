@@ -142,7 +142,7 @@ public:
     CK_ID m_CylindricalMesh;
     CK_ID m_SphericalMesh;
 
-    static char *Name;
+    static const char *Name;
 
     CKBOOL m_ShowInteractors;
 

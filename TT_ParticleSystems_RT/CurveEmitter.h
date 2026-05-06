@@ -6,7 +6,7 @@
 class CurveEmitter : public PointEmitter
 {
 public:
-    CurveEmitter(CKContext *ctx, CK_ID ent, char *name) : PointEmitter(ctx, ent, name) { m_Curve = (CKCurve *)m_Context->GetObject(ent); }
+    CurveEmitter(CKContext *ctx, CK_ID ent, const char *name) : PointEmitter(ctx, ent, name) { m_Curve = (CKCurve *)m_Context->GetObject(ent); }
 
     CKCurve *m_Curve;
 

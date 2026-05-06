@@ -9,9 +9,9 @@
 #include "windows.h"
 #endif
 
-char *LODAttributeCategoryName = "LOD (Level Of Detail)";
-char *LODAttributeName = "LOD Object";
-char *LODManagerName = "LOD (Level Of Detail)";
+const char *LODAttributeCategoryName = "LOD (Level Of Detail)";
+const char *LODAttributeName = "LOD Object";
+const char *LODManagerName = "LOD (Level Of Detail)";
 
 int LODPreRender(CKRenderContext *dev, CKRenderObject *rent, void *arg);
 int LODPostRender(CKRenderContext *dev, CKRenderObject *rent, void *arg);

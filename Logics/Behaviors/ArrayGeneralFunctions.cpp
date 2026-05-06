@@ -73,7 +73,7 @@ void WriteOutputParameters(CKDataArray *array, CKDataRow *dr, CKBehavior *beh, i
                     pout->SetValue(ns, (int)strlen(ns) + 1);
                 else
                 {
-                    char *s = "";
+                    char s[] = "";
                     pout->SetValue(s, 1);
                 }
             }

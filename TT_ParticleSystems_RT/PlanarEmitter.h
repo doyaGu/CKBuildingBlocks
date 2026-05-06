@@ -6,7 +6,7 @@
 class PlanarEmitter : public PointEmitter
 {
 public:
-    PlanarEmitter(CKContext *ctx, CK_ID ent, char *name) : PointEmitter(ctx, ent, name) {}
+    PlanarEmitter(CKContext *ctx, CK_ID ent, const char *name) : PointEmitter(ctx, ent, name) {}
 
 protected:
     // add a particle

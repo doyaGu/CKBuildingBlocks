@@ -123,7 +123,7 @@ int ArrayGetElement(const CKBehaviorContext &behcontext)
                 pout->SetValue(ns, (int)strlen(ns) + 1);
             else
             {
-                char *s = "";
+                char s[] = "";
                 pout->SetValue(s, 1);
             }
         }

@@ -19,7 +19,7 @@ CKWORD *ParticleEmitter::m_GlobalIndices = NULL;
 int ParticleEmitter::m_GlobalIndicesCount = 0;
 
 // Constructor
-ParticleEmitter::ParticleEmitter(CKContext *ctx, CK_ID entity, char *name)
+ParticleEmitter::ParticleEmitter(CKContext *ctx, CK_ID entity, const char *name)
 {
     m_Context = ctx;
 

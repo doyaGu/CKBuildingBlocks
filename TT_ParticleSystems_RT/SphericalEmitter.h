@@ -6,7 +6,7 @@
 class SphericalEmitter : public PointEmitter
 {
 public:
-    SphericalEmitter(CKContext *ctx, CK_ID ent, char *name) : PointEmitter(ctx, ent, name) {}
+    SphericalEmitter(CKContext *ctx, CK_ID ent, const char *name) : PointEmitter(ctx, ent, name) {}
 
 protected:
     // add a particle

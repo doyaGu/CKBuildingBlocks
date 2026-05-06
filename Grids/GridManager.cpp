@@ -7,11 +7,11 @@
 #include "GridManager.h"
 
 // {secret}
-char *GridManagerName = "Grid Manager";
+const char *GridManagerName = "Grid Manager";
 // {secret}
-char *GridClassificationName = "Grid Classification";
+const char *GridClassificationName = "Grid Classification";
 // {secret}
-char *GridName = "Grid";
+const char *GridName = "Grid";
 
 // {secret}
 GridManager::GridManager(CKContext *Context) : CKGridManager(Context, GRID_MANAGER_GUID, "Grid Manager")

@@ -68,29 +68,29 @@ public:
 }; // Size = 128 !!!!!
 
 // GLOBALS
-extern char *ParticleSystemsName;
-extern char *ParticleSystemsInteractorsName;
-extern char *ParticleSystemsDeflectorsName;
+extern const char *ParticleSystemsName;
+extern const char *ParticleSystemsInteractorsName;
+extern const char *ParticleSystemsDeflectorsName;
 
 // INTERACTORS
-extern char *ParticleGravityName;
-extern char *ParticleGlobalWindName;
-extern char *ParticleLocalWindName;
-extern char *ParticleMagnetName;
-extern char *ParticleVortexName;
-extern char *ParticleDisruptionBoxName;
-extern char *ParticleMutationBoxName;
-extern char *ParticleAtmosphereName;
-extern char *ParticleTunnelName;
-extern char *ParticleProjectorName;
+extern const char *ParticleGravityName;
+extern const char *ParticleGlobalWindName;
+extern const char *ParticleLocalWindName;
+extern const char *ParticleMagnetName;
+extern const char *ParticleVortexName;
+extern const char *ParticleDisruptionBoxName;
+extern const char *ParticleMutationBoxName;
+extern const char *ParticleAtmosphereName;
+extern const char *ParticleTunnelName;
+extern const char *ParticleProjectorName;
 
 // DEFLECTORS
-extern char *ParticleDPlaneName;
-extern char *ParticleDInfinitePlaneName;
-extern char *ParticleDCylinderName;
-extern char *ParticleDSphereName;
-extern char *ParticleDBoxName;
-extern char *ParticleDObjectName;
+extern const char *ParticleDPlaneName;
+extern const char *ParticleDInfinitePlaneName;
+extern const char *ParticleDCylinderName;
+extern const char *ParticleDSphereName;
+extern const char *ParticleDBoxName;
+extern const char *ParticleDObjectName;
 
 #define PO_BOUNDINGBOX      0
 #define PO_BOUNDINGSPHERE   1

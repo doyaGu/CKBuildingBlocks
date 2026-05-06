@@ -2,7 +2,7 @@
 
 #include "CKAll.h"
 
-char *Network3dName = "Nodal Path";
+const char *Network3dName = "Nodal Path";
 
 N3DGraph::N3DGraph(CKContext *context) : m_Size(0), m_AllocatedSize(10)
 {

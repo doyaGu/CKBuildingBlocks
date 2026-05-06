@@ -6,7 +6,7 @@
 class WaveEmitter : public ParticleEmitter
 {
 public:
-    WaveEmitter(CKContext *ctx, CK_ID ent, char *name) : ParticleEmitter(ctx, ent, name)
+    WaveEmitter(CKContext *ctx, CK_ID ent, const char *name) : ParticleEmitter(ctx, ent, name)
     {
         CK3dEntity *entity = (CK3dEntity *)m_Context->GetObject(m_Entity);
         entity->GetPosition(&m_Position);

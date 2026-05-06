@@ -13,7 +13,7 @@
 #include "CKDefines.h"
 #include "CKBaseManager.h"
 
-extern char *LODManagerName;
+extern const char *LODManagerName;
 
 class LODManager;
 

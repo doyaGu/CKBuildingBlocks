@@ -6,7 +6,7 @@
 class PointEmitter : public ParticleEmitter
 {
 public:
-    PointEmitter(CKContext *ctx, CK_ID ent, char *name) : ParticleEmitter(ctx, ent, name) {}
+    PointEmitter(CKContext *ctx, CK_ID ent, const char *name) : ParticleEmitter(ctx, ent, name) {}
 
 protected:
     // add a particle

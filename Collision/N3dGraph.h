@@ -212,7 +212,7 @@ private:
     CKContext *m_Context;
 };
 
-extern char *Network3dName;
+extern const char *Network3dName;
 
 void GraphRender(CKRenderContext *ctx, void *arg);
 
