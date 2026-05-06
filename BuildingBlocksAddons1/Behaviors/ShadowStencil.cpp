@@ -11,8 +11,8 @@ CKObjectDeclaration *FillBehaviorShadowStencilDecl();
 CKERROR CreateShadowStencilProto(CKBehaviorPrototype **);
 int ShadowStencil(const CKBehaviorContext &behcontext);
 
-extern char *shadowStencilCasterAttributeName;
-extern char *shadowStencilCasterMeshAttributeName;
+extern const char shadowStencilCasterAttributeName[];
+extern const char shadowStencilCasterMeshAttributeName[];
 
 /**********************************************/
 /*				DECLARATION
