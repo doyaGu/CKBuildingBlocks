@@ -8,12 +8,12 @@
 #include "CKAll.h"
 #include "ToolboxGuids.h"
 
-CKObjectDeclaration *FillBehaviorJoystickWaiterDecl();
-CKERROR CreateJoystickWaiterProto(CKBehaviorPrototype **pproto);
-int JoystickWaiter(const CKBehaviorContext &behcontext);
-CKERROR JoystickWaiterCallBack(const CKBehaviorContext &behcontext);
+CKObjectDeclaration *FillBehaviorTTJoystickWaiterDecl();
+CKERROR CreateTTJoystickWaiterProto(CKBehaviorPrototype **pproto);
+int TTJoystickWaiter(const CKBehaviorContext &behcontext);
+CKERROR TTJoystickWaiterCallBack(const CKBehaviorContext &behcontext);
 
-CKObjectDeclaration *FillBehaviorJoystickWaiterDecl()
+CKObjectDeclaration *FillBehaviorTTJoystickWaiterDecl()
 {
     CKObjectDeclaration *od = CreateCKObjectDeclaration("TT Joystick Waiter");
     od->SetDescription("Activates different outputs according to Joystick commands.");
@@ -23,13 +23,13 @@ CKObjectDeclaration *FillBehaviorJoystickWaiterDecl()
     od->SetAuthorGuid(TERRATOOLS_GUID);
     od->SetAuthorName("Terratools");
     od->SetVersion(0x00020000);
-    od->SetCreationFunction(CreateJoystickWaiterProto);
+    od->SetCreationFunction(CreateTTJoystickWaiterProto);
     od->SetCompatibleClassId(CKCID_BEOBJECT);
     od->NeedManager(INPUT_MANAGER_GUID);
     return od;
 }
 
-CKERROR CreateJoystickWaiterProto(CKBehaviorPrototype **pproto)
+CKERROR CreateTTJoystickWaiterProto(CKBehaviorPrototype **pproto)
 {
     CKBehaviorPrototype *proto = CreateCKBehaviorPrototype("TT Joystick Waiter");
     if (!proto) return CKERR_OUTOFMEMORY;
@@ -55,16 +55,16 @@ CKERROR CreateJoystickWaiterProto(CKBehaviorPrototype **pproto)
     proto->DeclareSetting("Relative Moves", CKPGUID_JOYAXIS, "Slider 1,Slider 2,POV");
 
     proto->SetFlags(CK_BEHAVIORPROTOTYPE_NORMAL);
-    proto->SetFunction(JoystickWaiter);
+    proto->SetFunction(TTJoystickWaiter);
 
     proto->SetBehaviorFlags((CK_BEHAVIOR_FLAGS)(CKBEHAVIOR_INTERNALLYCREATEDOUTPUTS));
-    proto->SetBehaviorCallbackFct(JoystickWaiterCallBack);
+    proto->SetBehaviorCallbackFct(TTJoystickWaiterCallBack);
 
     *pproto = proto;
     return CK_OK;
 }
 
-int JoystickWaiter(const CKBehaviorContext &behcontext)
+int TTJoystickWaiter(const CKBehaviorContext &behcontext)
 {
     CKBehavior *beh = behcontext.Behavior;
 
@@ -152,7 +152,7 @@ int JoystickWaiter(const CKBehaviorContext &behcontext)
 #define F_S2 128
 #define F_POV 256
 
-int JoystickWaiterV2(const CKBehaviorContext &behcontext)
+int TTJoystickWaiterV2(const CKBehaviorContext &behcontext)
 {
     CKBehavior *beh = behcontext.Behavior;
 
@@ -467,7 +467,7 @@ int JoystickWaiterV2(const CKBehaviorContext &behcontext)
     return CKBR_ACTIVATENEXTFRAME;
 }
 
-CKERROR JoystickWaiterCallBack(const CKBehaviorContext &behcontext)
+CKERROR TTJoystickWaiterCallBack(const CKBehaviorContext &behcontext)
 {
     CKBehavior *beh = behcontext.Behavior;
 
@@ -475,7 +475,7 @@ CKERROR JoystickWaiterCallBack(const CKBehaviorContext &behcontext)
     {
         case CKM_BEHAVIORLOAD:
             if (beh->GetVersion() < 0x00020000)
-                beh->SetFunction(JoystickWaiter);
+                beh->SetFunction(TTJoystickWaiter);
             break;
         case CKM_BEHAVIORCREATE:
         case CKM_BEHAVIORSETTINGSEDITED:

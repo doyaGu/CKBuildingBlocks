@@ -8,11 +8,11 @@
 #include "CKAll.h"
 #include "ToolboxGuids.h"
 
-CKObjectDeclaration *FillBehaviorCounterDecl();
-CKERROR CreateCounterProto(CKBehaviorPrototype **pproto);
-int Counter(const CKBehaviorContext &behcontext);
+CKObjectDeclaration *FillBehaviorTTCounterDecl();
+CKERROR CreateTTCounterProto(CKBehaviorPrototype **pproto);
+int TTCounter(const CKBehaviorContext &behcontext);
 
-CKObjectDeclaration *FillBehaviorCounterDecl()
+CKObjectDeclaration *FillBehaviorTTCounterDecl()
 {
     CKObjectDeclaration *od = CreateCKObjectDeclaration("TT_Counter");
     od->SetDescription("Counts forward and backward with loop");
@@ -22,12 +22,12 @@ CKObjectDeclaration *FillBehaviorCounterDecl()
     od->SetAuthorGuid(TERRATOOLS_GUID);
     od->SetAuthorName("Klaus");
     od->SetVersion(0x00010000);
-    od->SetCreationFunction(CreateCounterProto);
+    od->SetCreationFunction(CreateTTCounterProto);
     od->SetCompatibleClassId(CKCID_OBJECT);
     return od;
 }
 
-CKERROR CreateCounterProto(CKBehaviorPrototype **pproto)
+CKERROR CreateTTCounterProto(CKBehaviorPrototype **pproto)
 {
     CKBehaviorPrototype *proto = CreateCKBehaviorPrototype("TT_Counter");
     if (!proto) return CKERR_OUTOFMEMORY;
@@ -49,13 +49,13 @@ CKERROR CreateCounterProto(CKBehaviorPrototype **pproto)
     proto->DeclareLocalParameter("Count", CKPGUID_INT, "0");
 
     proto->SetFlags(CK_BEHAVIORPROTOTYPE_NORMAL);
-    proto->SetFunction(Counter);
+    proto->SetFunction(TTCounter);
 
     *pproto = proto;
     return CK_OK;
 }
 
-int Counter(const CKBehaviorContext &behcontext)
+int TTCounter(const CKBehaviorContext &behcontext)
 {
     CKBehavior *beh = behcontext.Behavior;
     CKContext *context = behcontext.Context;

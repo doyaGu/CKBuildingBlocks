@@ -8,11 +8,11 @@
 #include "CKAll.h"
 #include "ToolboxGuids.h"
 
-CKObjectDeclaration *FillBehaviorBoundingSphereIntersectionDecl();
-CKERROR CreateBoundingSphereIntersectionProto(CKBehaviorPrototype **pproto);
-int BoundingSphereIntersection(const CKBehaviorContext &behcontext);
+CKObjectDeclaration *FillBehaviorTTBoundingSphereIntersectionDecl();
+CKERROR CreateTTBoundingSphereIntersectionProto(CKBehaviorPrototype **pproto);
+int TTBoundingSphereIntersection(const CKBehaviorContext &behcontext);
 
-CKObjectDeclaration *FillBehaviorBoundingSphereIntersectionDecl()
+CKObjectDeclaration *FillBehaviorTTBoundingSphereIntersectionDecl()
 {
     CKObjectDeclaration *od = CreateCKObjectDeclaration("TT Bounding Sphere Intersection");
     od->SetDescription("Detects the collision between two 3D entities at the bounding sphere level.");
@@ -22,12 +22,12 @@ CKObjectDeclaration *FillBehaviorBoundingSphereIntersectionDecl()
     od->SetAuthorGuid(TERRATOOLS_GUID);
     od->SetAuthorName("Virtools");
     od->SetVersion(0x00010000);
-    od->SetCreationFunction(CreateBoundingSphereIntersectionProto);
+    od->SetCreationFunction(CreateTTBoundingSphereIntersectionProto);
     od->SetCompatibleClassId(CKCID_BEOBJECT);
     return od;
 }
 
-CKERROR CreateBoundingSphereIntersectionProto(CKBehaviorPrototype **pproto)
+CKERROR CreateTTBoundingSphereIntersectionProto(CKBehaviorPrototype **pproto)
 {
     CKBehaviorPrototype *proto = CreateCKBehaviorPrototype("TT Bounding Sphere Intersection");
     if (!proto) return CKERR_OUTOFMEMORY;
@@ -44,7 +44,7 @@ CKERROR CreateBoundingSphereIntersectionProto(CKBehaviorPrototype **pproto)
     proto->DeclareInParameter("Threshold", CKPGUID_FLOAT, "0.5");
 
     proto->SetFlags(CK_BEHAVIORPROTOTYPE_NORMAL);
-    proto->SetFunction(BoundingSphereIntersection);
+    proto->SetFunction(TTBoundingSphereIntersection);
 
     *pproto = proto;
     return CK_OK;
@@ -81,7 +81,7 @@ static void GetEntityBoundingSphere(CK3dEntity *entity, CKBOOL hierarchy, float 
     center.z = (worldMin.z + worldMax.z) * threshold;
 }
 
-int BoundingSphereIntersection(const CKBehaviorContext &behcontext)
+int TTBoundingSphereIntersection(const CKBehaviorContext &behcontext)
 {
     CKBehavior *beh = behcontext.Behavior;
 

@@ -8,11 +8,11 @@
 #include "CKAll.h"
 #include "ToolboxGuids.h"
 
-CKObjectDeclaration *FillBehaviorChronoDecl();
-CKERROR CreateChronoProto(CKBehaviorPrototype **pproto);
-int Chrono(const CKBehaviorContext &behcontext);
+CKObjectDeclaration *FillBehaviorTTChronoDecl();
+CKERROR CreateTTChronoProto(CKBehaviorPrototype **pproto);
+int TTChrono(const CKBehaviorContext &behcontext);
 
-CKObjectDeclaration *FillBehaviorChronoDecl()
+CKObjectDeclaration *FillBehaviorTTChronoDecl()
 {
     CKObjectDeclaration *od = CreateCKObjectDeclaration("TT_Chrono");
     od->SetDescription("Chronometer (ON=Start, OFF=Stop).");
@@ -22,12 +22,12 @@ CKObjectDeclaration *FillBehaviorChronoDecl()
     od->SetAuthorGuid(TERRATOOLS_GUID);
     od->SetAuthorName("Virtools");
     od->SetVersion(0x00010000);
-    od->SetCreationFunction(CreateChronoProto);
+    od->SetCreationFunction(CreateTTChronoProto);
     od->SetCompatibleClassId(CKCID_BEOBJECT);
     return od;
 }
 
-CKERROR CreateChronoProto(CKBehaviorPrototype **pproto)
+CKERROR CreateTTChronoProto(CKBehaviorPrototype **pproto)
 {
     CKBehaviorPrototype *proto = CreateCKBehaviorPrototype("TT_Chrono");
     if (!proto) return CKERR_OUTOFMEMORY;
@@ -43,7 +43,7 @@ CKERROR CreateChronoProto(CKBehaviorPrototype **pproto)
     proto->DeclareOutParameter("Elapsed Time", CKPGUID_TIME, "0m 0s 0ms");
 
     proto->SetFlags(CK_BEHAVIORPROTOTYPE_NORMAL);
-    proto->SetFunction(Chrono);
+    proto->SetFunction(TTChrono);
 
     *pproto = proto;
     return CK_OK;
@@ -51,7 +51,7 @@ CKERROR CreateChronoProto(CKBehaviorPrototype **pproto)
 
 static CKBOOL chronoOn = FALSE;
 
-int Chrono(const CKBehaviorContext &behcontext)
+int TTChrono(const CKBehaviorContext &behcontext)
 {
     CKBehavior *beh = behcontext.Behavior;
     float elapsed = 0.0f;

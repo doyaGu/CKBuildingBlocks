@@ -8,11 +8,11 @@
 #include "CKAll.h"
 #include "ToolboxGuids.h"
 
-CKObjectDeclaration *FillBehaviorSaveICDecl();
-CKERROR CreateSaveICProto(CKBehaviorPrototype **pproto);
-int SaveIC(const CKBehaviorContext &behcontext);
+CKObjectDeclaration *FillBehaviorTTSaveICDecl();
+CKERROR CreateTTSaveICProto(CKBehaviorPrototype **pproto);
+int TTSaveIC(const CKBehaviorContext &behcontext);
 
-CKObjectDeclaration *FillBehaviorSaveICDecl()
+CKObjectDeclaration *FillBehaviorTTSaveICDecl()
 {
     CKObjectDeclaration *od = CreateCKObjectDeclaration("TT Save IC");
     od->SetDescription("Saves an object's Initial Condition in the scene being played.");
@@ -22,12 +22,12 @@ CKObjectDeclaration *FillBehaviorSaveICDecl()
     od->SetAuthorGuid(TERRATOOLS_GUID);
     od->SetAuthorName("Terratools");
     od->SetVersion(0x00010000);
-    od->SetCreationFunction(CreateSaveICProto);
+    od->SetCreationFunction(CreateTTSaveICProto);
     od->SetCompatibleClassId(CKCID_BEOBJECT);
     return od;
 }
 
-CKERROR CreateSaveICProto(CKBehaviorPrototype **pproto)
+CKERROR CreateTTSaveICProto(CKBehaviorPrototype **pproto)
 {
     CKBehaviorPrototype *proto = CreateCKBehaviorPrototype("TT Save IC");
     if (!proto) return CKERR_OUTOFMEMORY;
@@ -39,7 +39,7 @@ CKERROR CreateSaveICProto(CKBehaviorPrototype **pproto)
     proto->DeclareInParameter("Hierarchy?", CKPGUID_BOOL, "FALSE");
 
     proto->SetFlags(CK_BEHAVIORPROTOTYPE_NORMAL);
-    proto->SetFunction(SaveIC);
+    proto->SetFunction(TTSaveIC);
 
     proto->SetBehaviorFlags(CKBEHAVIOR_TARGETABLE);
 
@@ -47,7 +47,7 @@ CKERROR CreateSaveICProto(CKBehaviorPrototype **pproto)
     return CK_OK;
 }
 
-int SaveIC(const CKBehaviorContext &behcontext)
+int TTSaveIC(const CKBehaviorContext &behcontext)
 {
     CKBehavior *beh = behcontext.Behavior;
 

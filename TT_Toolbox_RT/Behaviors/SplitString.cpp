@@ -10,11 +10,11 @@
 
 #include <string.h>
 
-CKObjectDeclaration *FillBehaviorSplitStringDecl();
-CKERROR CreateSplitStringProto(CKBehaviorPrototype **pproto);
-int SplitString(const CKBehaviorContext &behcontext);
+CKObjectDeclaration *FillBehaviorTTSplitStringDecl();
+CKERROR CreateTTSplitStringProto(CKBehaviorPrototype **pproto);
+int TTSplitString(const CKBehaviorContext &behcontext);
 
-CKObjectDeclaration *FillBehaviorSplitStringDecl()
+CKObjectDeclaration *FillBehaviorTTSplitStringDecl()
 {
     CKObjectDeclaration *od = CreateCKObjectDeclaration("TT_SplitString");
     od->SetDescription("Split a string into Sub-Elements.");
@@ -24,12 +24,12 @@ CKObjectDeclaration *FillBehaviorSplitStringDecl()
     od->SetAuthorGuid(TERRATOOLS_GUID);
     od->SetAuthorName("Terratools");
     od->SetVersion(0x00010000);
-    od->SetCreationFunction(CreateSplitStringProto);
+    od->SetCreationFunction(CreateTTSplitStringProto);
     od->SetCompatibleClassId(CKCID_BEOBJECT);
     return od;
 }
 
-CKERROR CreateSplitStringProto(CKBehaviorPrototype **pproto)
+CKERROR CreateTTSplitStringProto(CKBehaviorPrototype **pproto)
 {
     CKBehaviorPrototype *proto = CreateCKBehaviorPrototype("TT_SplitString");
     if (!proto) return CKERR_OUTOFMEMORY;
@@ -44,7 +44,7 @@ CKERROR CreateSplitStringProto(CKBehaviorPrototype **pproto)
     proto->DeclareOutParameter("Elements Found", CKPGUID_INT);
 
     proto->SetFlags(CK_BEHAVIORPROTOTYPE_NORMAL);
-    proto->SetFunction(SplitString);
+    proto->SetFunction(TTSplitString);
 
     proto->SetBehaviorFlags(CKBEHAVIOR_VARIABLEPARAMETEROUTPUTS);
 
@@ -52,7 +52,7 @@ CKERROR CreateSplitStringProto(CKBehaviorPrototype **pproto)
     return CK_OK;
 }
 
-int SplitString(const CKBehaviorContext &behcontext)
+int TTSplitString(const CKBehaviorContext &behcontext)
 {
     CKBehavior *beh = behcontext.Behavior;
 
