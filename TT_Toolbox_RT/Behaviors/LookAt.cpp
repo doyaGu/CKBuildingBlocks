@@ -8,13 +8,13 @@
 #include "CKAll.h"
 #include "ToolboxGuids.h"
 
-CKObjectDeclaration *FillBehaviorLookAtDecl();
-CKERROR CreateLookAtProto(CKBehaviorPrototype **pproto);
-int LookAt(const CKBehaviorContext &behcontext);
+CKObjectDeclaration *FillBehaviorTTLookAtDecl();
+CKERROR CreateTTLookAtProto(CKBehaviorPrototype **pproto);
+int TTLookAt(const CKBehaviorContext &behcontext);
 
-VxVector BB_Orientate(CK3dEntity *ent, VxVector dir, int dirMode = 5, float roll = 0.0f, VxVector up = VxVector::axisY(), float speedValue = 1.0f, CKBOOL k = FALSE, CKBOOL unitaryScale = FALSE);
+static VxVector BB_Orientate(CK3dEntity *ent, VxVector dir, int dirMode = 5, float roll = 0.0f, VxVector up = VxVector::axisY(), float speedValue = 1.0f, CKBOOL k = FALSE, CKBOOL unitaryScale = FALSE);
 
-CKObjectDeclaration *FillBehaviorLookAtDecl()
+CKObjectDeclaration *FillBehaviorTTLookAtDecl()
 {
     CKObjectDeclaration *od = CreateCKObjectDeclaration("TT LookAt");
     od->SetDescription("Axis constrained lock at.");
@@ -24,12 +24,12 @@ CKObjectDeclaration *FillBehaviorLookAtDecl()
     od->SetAuthorGuid(TERRATOOLS_GUID);
     od->SetAuthorName("Terratools");
     od->SetVersion(0x00010000);
-    od->SetCreationFunction(CreateLookAtProto);
+    od->SetCreationFunction(CreateTTLookAtProto);
     od->SetCompatibleClassId(CKCID_3DENTITY);
     return od;
 }
 
-CKERROR CreateLookAtProto(CKBehaviorPrototype **pproto)
+CKERROR CreateTTLookAtProto(CKBehaviorPrototype **pproto)
 {
     CKBehaviorPrototype *proto = CreateCKBehaviorPrototype("TT LookAt");
     if (!proto)
@@ -52,7 +52,7 @@ CKERROR CreateLookAtProto(CKBehaviorPrototype **pproto)
     proto->DeclareSetting("Roll", CKPGUID_ANGLE, "0:0");
 
     proto->SetFlags(CK_BEHAVIORPROTOTYPE_NORMAL);
-    proto->SetFunction(LookAt);
+    proto->SetFunction(TTLookAt);
 
     proto->SetBehaviorFlags(CKBEHAVIOR_TARGETABLE);
 
@@ -60,7 +60,7 @@ CKERROR CreateLookAtProto(CKBehaviorPrototype **pproto)
     return CK_OK;
 }
 
-int LookAt(const CKBehaviorContext &behcontext)
+int TTLookAt(const CKBehaviorContext &behcontext)
 {
     CKBehavior *beh = behcontext.Behavior;
 
@@ -141,7 +141,7 @@ int LookAt(const CKBehaviorContext &behcontext)
     return CKBR_OK;
 }
 
-VxVector BB_Orientate(CK3dEntity *ent, VxVector dir, int dirMode, float roll, VxVector up, float speedValue, CKBOOL k, CKBOOL unitaryScale)
+static VxVector BB_Orientate(CK3dEntity *ent, VxVector dir, int dirMode, float roll, VxVector up, float speedValue, CKBOOL k, CKBOOL unitaryScale)
 {
 
     VxVector scale;

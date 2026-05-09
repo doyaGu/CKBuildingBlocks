@@ -13,7 +13,7 @@ CKERROR CreateScaleableProximityProto(CKBehaviorPrototype **pproto);
 int ScaleableProximity(const CKBehaviorContext &behcontext);
 CKERROR ScaleableProximityCallBack(const CKBehaviorContext &behcontext);
 
-CKSTRING A_outputname[4] = {
+static CKSTRING A_outputname[4] = {
     "In Range",
     "Out Range",
     "Enter Range",

@@ -8,11 +8,11 @@
 #include "CKAll.h"
 #include "ToolboxGuids.h"
 
-CKObjectDeclaration *FillBehaviorPushButtonDecl();
-CKERROR CreatePushButtonProto(CKBehaviorPrototype **pproto);
-int PushButton(const CKBehaviorContext &behcontext);
+CKObjectDeclaration *FillBehaviorTTPushButtonDecl();
+CKERROR CreateTTPushButtonProto(CKBehaviorPrototype **pproto);
+int TTPushButton(const CKBehaviorContext &behcontext);
 
-CKObjectDeclaration *FillBehaviorPushButtonDecl()
+CKObjectDeclaration *FillBehaviorTTPushButtonDecl()
 {
     CKObjectDeclaration *od = CreateCKObjectDeclaration("TT PushButton");
     od->SetDescription("Transforms a 2D Frame into a push button.");
@@ -22,12 +22,12 @@ CKObjectDeclaration *FillBehaviorPushButtonDecl()
     od->SetAuthorGuid(TERRATOOLS_GUID);
     od->SetAuthorName("Terratools");
     od->SetVersion(0x00010000);
-    od->SetCreationFunction(CreatePushButtonProto);
+    od->SetCreationFunction(CreateTTPushButtonProto);
     od->SetCompatibleClassId(CKCID_2DENTITY);
     return od;
 }
 
-CKERROR CreatePushButtonProto(CKBehaviorPrototype **pproto)
+CKERROR CreateTTPushButtonProto(CKBehaviorPrototype **pproto)
 {
     CKBehaviorPrototype *proto = CreateCKBehaviorPrototype("TT PushButton");
     if (!proto) return CKERR_OUTOFMEMORY;
@@ -48,7 +48,7 @@ CKERROR CreatePushButtonProto(CKBehaviorPrototype **pproto)
     proto->DeclareLocalParameter("", CKPGUID_BOOL, "FALSE");
 
     proto->SetFlags(CK_BEHAVIORPROTOTYPE_NORMAL);
-    proto->SetFunction(PushButton);
+    proto->SetFunction(TTPushButton);
 
     proto->SetBehaviorFlags(CKBEHAVIOR_TARGETABLE);
 
@@ -56,7 +56,7 @@ CKERROR CreatePushButtonProto(CKBehaviorPrototype **pproto)
     return CK_OK;
 }
 
-int PushButton(const CKBehaviorContext &behcontext)
+int TTPushButton(const CKBehaviorContext &behcontext)
 {
     CKBehavior *beh = behcontext.Behavior;
     CKContext *ctx = behcontext.Context;

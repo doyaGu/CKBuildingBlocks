@@ -8,11 +8,11 @@
 #include "CKAll.h"
 #include "ToolboxGuids.h"
 
-CKObjectDeclaration *FillBehaviorRestoreICDecl();
-CKERROR CreateRestoreICProto(CKBehaviorPrototype **pproto);
-int RestoreIC(const CKBehaviorContext &behcontext);
+CKObjectDeclaration *FillBehaviorTTRestoreICDecl();
+CKERROR CreateTTRestoreICProto(CKBehaviorPrototype **pproto);
+int TTRestoreIC(const CKBehaviorContext &behcontext);
 
-CKObjectDeclaration *FillBehaviorRestoreICDecl()
+CKObjectDeclaration *FillBehaviorTTRestoreICDecl()
 {
     CKObjectDeclaration *od = CreateCKObjectDeclaration("TT Restore IC");
     od->SetDescription("Restores an object's Initial Condition for the scene being played.");
@@ -22,12 +22,12 @@ CKObjectDeclaration *FillBehaviorRestoreICDecl()
     od->SetAuthorGuid(TERRATOOLS_GUID);
     od->SetAuthorName("Terratools");
     od->SetVersion(0x00010000);
-    od->SetCreationFunction(CreateRestoreICProto);
+    od->SetCreationFunction(CreateTTRestoreICProto);
     od->SetCompatibleClassId(CKCID_BEOBJECT);
     return od;
 }
 
-CKERROR CreateRestoreICProto(CKBehaviorPrototype **pproto)
+CKERROR CreateTTRestoreICProto(CKBehaviorPrototype **pproto)
 {
     CKBehaviorPrototype *proto = CreateCKBehaviorPrototype("TT Restore IC");
     if (!proto) return CKERR_OUTOFMEMORY;
@@ -39,7 +39,7 @@ CKERROR CreateRestoreICProto(CKBehaviorPrototype **pproto)
     proto->DeclareInParameter("Hierarchy?", CKPGUID_BOOL, "FALSE");
 
     proto->SetFlags(CK_BEHAVIORPROTOTYPE_NORMAL);
-    proto->SetFunction(RestoreIC);
+    proto->SetFunction(TTRestoreIC);
 
     proto->SetBehaviorFlags(CKBEHAVIOR_TARGETABLE);
 
@@ -47,7 +47,7 @@ CKERROR CreateRestoreICProto(CKBehaviorPrototype **pproto)
     return CK_OK;
 }
 
-int RestoreIC(const CKBehaviorContext &behcontext)
+int TTRestoreIC(const CKBehaviorContext &behcontext)
 {
     CKBehavior *beh = behcontext.Behavior;
 

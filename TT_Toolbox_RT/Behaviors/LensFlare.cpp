@@ -9,9 +9,9 @@
 #include "ToolboxGuids.h"
 #include <math.h>
 
-CKObjectDeclaration *FillBehaviorLensFlareDecl();
-CKERROR CreateLensFlareProto(CKBehaviorPrototype **pproto);
-int LensFlare(const CKBehaviorContext &behcontext);
+CKObjectDeclaration *FillBehaviorTTLensFlareDecl();
+CKERROR CreateTTLensFlareProto(CKBehaviorPrototype **pproto);
+int TTLensFlare(const CKBehaviorContext &behcontext);
 CKERROR LensFlareCallBack(const CKBehaviorContext &behcontext);
 int LensFlareRenderCallback(CKRenderContext *dev, void *arg, CKBehavior *beh);
 
@@ -401,7 +401,7 @@ int LensFlareRenderCallback(CKRenderContext *dev, void *arg, CKBehavior *beh)
     return 1;
 }
 
-CKObjectDeclaration *FillBehaviorLensFlareDecl()
+CKObjectDeclaration *FillBehaviorTTLensFlareDecl()
 {
     CKObjectDeclaration *od = CreateCKObjectDeclaration("TT_LensFlare");
     od->SetDescription("Creates camera reflections");
@@ -411,12 +411,12 @@ CKObjectDeclaration *FillBehaviorLensFlareDecl()
     od->SetAuthorGuid(TERRATOOLS_GUID);
     od->SetAuthorName("Terratools");
     od->SetVersion(0x00010000);
-    od->SetCreationFunction(CreateLensFlareProto);
+    od->SetCreationFunction(CreateTTLensFlareProto);
     od->SetCompatibleClassId(CKCID_3DENTITY);
     return od;
 }
 
-CKERROR CreateLensFlareProto(CKBehaviorPrototype **pproto)
+CKERROR CreateTTLensFlareProto(CKBehaviorPrototype **pproto)
 {
     CKBehaviorPrototype *proto = CreateCKBehaviorPrototype("TT_LensFlare");
     if (!proto) return CKERR_OUTOFMEMORY;
@@ -436,7 +436,7 @@ CKERROR CreateLensFlareProto(CKBehaviorPrototype **pproto)
     proto->DeclareSetting("Read Array Each Frame", CKPGUID_BOOL, "FALSE");
 
     proto->SetFlags(CK_BEHAVIORPROTOTYPE_NORMAL);
-    proto->SetFunction(LensFlare);
+    proto->SetFunction(TTLensFlare);
 
     proto->SetBehaviorFlags(CKBEHAVIOR_TARGETABLE);
     proto->SetBehaviorCallbackFct(LensFlareCallBack);
@@ -445,7 +445,7 @@ CKERROR CreateLensFlareProto(CKBehaviorPrototype **pproto)
     return CK_OK;
 }
 
-int LensFlare(const CKBehaviorContext &behcontext)
+int TTLensFlare(const CKBehaviorContext &behcontext)
 {
     CKBehavior *beh = behcontext.Behavior;
     CKContext *ctx = behcontext.Context;

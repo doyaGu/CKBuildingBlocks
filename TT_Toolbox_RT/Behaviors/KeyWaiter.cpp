@@ -8,13 +8,13 @@
 #include "CKAll.h"
 #include "ToolboxGuids.h"
 
-CKObjectDeclaration *FillBehaviorKeyWaiterDecl();
-CKERROR CreateKeyWaiterProto(CKBehaviorPrototype **pproto);
-int KeyWaiter(const CKBehaviorContext &behcontext);
-int ReadKey(const CKBehaviorContext &behcontext);
-CKERROR KeyWaiterCallBack(const CKBehaviorContext &behcontext);
+CKObjectDeclaration *FillBehaviorTTKeyWaiterDecl();
+CKERROR CreateTTKeyWaiterProto(CKBehaviorPrototype **pproto);
+int TTKeyWaiter(const CKBehaviorContext &behcontext);
+int TTReadKey(const CKBehaviorContext &behcontext);
+CKERROR TTKeyWaiterCallBack(const CKBehaviorContext &behcontext);
 
-CKObjectDeclaration *FillBehaviorKeyWaiterDecl()
+CKObjectDeclaration *FillBehaviorTTKeyWaiterDecl()
 {
     CKObjectDeclaration *od = CreateCKObjectDeclaration("TT_Key Waiter");
     od->SetDescription("Waits for a key to be pressed.");
@@ -24,13 +24,13 @@ CKObjectDeclaration *FillBehaviorKeyWaiterDecl()
     od->SetAuthorGuid(TERRATOOLS_GUID);
     od->SetAuthorName("Terratools");
     od->SetVersion(0x00010000);
-    od->SetCreationFunction(CreateKeyWaiterProto);
+    od->SetCreationFunction(CreateTTKeyWaiterProto);
     od->SetCompatibleClassId(CKCID_BEOBJECT);
     od->NeedManager(INPUT_MANAGER_GUID);
     return od;
 }
 
-CKERROR CreateKeyWaiterProto(CKBehaviorPrototype **pproto)
+CKERROR CreateTTKeyWaiterProto(CKBehaviorPrototype **pproto)
 {
     CKBehaviorPrototype *proto = CreateCKBehaviorPrototype("TT_Key Waiter");
     if (!proto) return CKERR_OUTOFMEMORY;
@@ -45,10 +45,10 @@ CKERROR CreateKeyWaiterProto(CKBehaviorPrototype **pproto)
     proto->DeclareSetting("Wait For Any Key", CKPGUID_BOOL, "FALSE");
 
     proto->SetFlags(CK_BEHAVIORPROTOTYPE_NORMAL);
-    proto->SetFunction(KeyWaiter);
+    proto->SetFunction(TTKeyWaiter);
 
     proto->SetBehaviorFlags((CK_BEHAVIOR_FLAGS)(CKBEHAVIOR_INTERNALLYCREATEDINPUTPARAMS | CKBEHAVIOR_INTERNALLYCREATEDOUTPUTPARAMS));
-    proto->SetBehaviorCallbackFct(KeyWaiterCallBack);
+    proto->SetBehaviorCallbackFct(TTKeyWaiterCallBack);
 
     *pproto = proto;
     return CK_OK;
@@ -57,7 +57,7 @@ CKERROR CreateKeyWaiterProto(CKBehaviorPrototype **pproto)
 /*******************************************************/
 /*                     CALLBACK                        */
 /*******************************************************/
-CKERROR KeyWaiterCallBack(const CKBehaviorContext &behcontext)
+CKERROR TTKeyWaiterCallBack(const CKBehaviorContext &behcontext)
 {
 
     CKBehavior *beh = behcontext.Behavior;
@@ -73,7 +73,7 @@ CKERROR KeyWaiterCallBack(const CKBehaviorContext &behcontext)
             CKParameterIn *pin = beh->GetInputParameter(0);
             if (anyKey) // wait any Key
             {
-                beh->SetFunction(ReadKey);
+                beh->SetFunction(TTReadKey);
                 if (pin)
                 {
                     CKDestroyObject(beh->RemoveInputParameter(0));
@@ -82,7 +82,7 @@ CKERROR KeyWaiterCallBack(const CKBehaviorContext &behcontext)
             }
             else // wait specific Key
             {
-                beh->SetFunction(KeyWaiter);
+                beh->SetFunction(TTKeyWaiter);
                 if (!pin)
                 {
                     CKDestroyObject(beh->RemoveOutputParameter(0));
@@ -99,7 +99,7 @@ CKERROR KeyWaiterCallBack(const CKBehaviorContext &behcontext)
 /*******************************************************/
 /*               Main Function 1                       */
 /*******************************************************/
-int KeyWaiter(const CKBehaviorContext &behcontext)
+int TTKeyWaiter(const CKBehaviorContext &behcontext)
 {
     CKBehavior *beh = behcontext.Behavior;
 
@@ -126,7 +126,7 @@ int KeyWaiter(const CKBehaviorContext &behcontext)
 /*******************************************************/
 /*               Main Function 2                       */
 /*******************************************************/
-int ReadKey(const CKBehaviorContext &behcontext)
+int TTReadKey(const CKBehaviorContext &behcontext)
 {
     CKBehavior *beh = behcontext.Behavior;
 

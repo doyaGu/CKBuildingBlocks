@@ -159,18 +159,18 @@ PLUGIN_EXPORT void RegisterBehaviorDeclarations(XObjectDeclarationArray *reg);
 
 void RegisterBehaviorDeclarations(XObjectDeclarationArray *reg)
 {
-    RegisterBehavior(reg, FillBehaviorHomingMissileDecl);
+    RegisterBehavior(reg, FillBehaviorTTHomingMissileDecl);
     RegisterBehavior(reg, FillBehaviorSetDynamicPositionDecl);
     RegisterBehavior(reg, FillBehaviorFollowCameraDecl);
 
     RegisterBehavior(reg, FillBehaviorGetCurvePointDecl);
-    RegisterBehavior(reg, FillBehaviorBoundingSphereIntersectionDecl);
+    RegisterBehavior(reg, FillBehaviorTTBoundingSphereIntersectionDecl);
     RegisterBehavior(reg, FillBehaviorCheckCurveCollisionDecl);
 
     RegisterBehavior(reg, FillBehaviorBitmapFontDecl);
-    RegisterBehavior(reg, FillBehaviorLensFlareDecl);
+    RegisterBehavior(reg, FillBehaviorTTLensFlareDecl);
     RegisterBehavior(reg, FillBehaviorSetFSAADecl);
-    RegisterBehavior(reg, FillBehaviorSkyAroundDecl);
+    RegisterBehavior(reg, FillBehaviorTTSkyAroundDecl);
     RegisterBehavior(reg, FillBehaviorSceneStencilShadowDecl);
     RegisterBehavior(reg, FillBehaviorShadowMappingDecl);
     RegisterBehavior(reg, FillBehaviorShadowPlaneDecl);
@@ -181,18 +181,18 @@ void RegisterBehaviorDeclarations(XObjectDeclarationArray *reg)
     RegisterBehavior(reg, FillBehaviorGetGroupBoundingBoxDecl);
     RegisterBehavior(reg, FillBehaviorGetNearestCurvePositionDecl);
     RegisterBehavior(reg, FillBehaviorGetZOrderDecl);
-    RegisterBehavior(reg, FillBehaviorLookAtDecl);
+    RegisterBehavior(reg, FillBehaviorTTLookAtDecl);
     RegisterBehavior(reg, FillBehaviorShowVectorDecl);
     RegisterBehavior(reg, FillBehaviorViewFrustumClippingDecl);
 
-    RegisterBehavior(reg, FillBehaviorChronoDecl);
+    RegisterBehavior(reg, FillBehaviorTTChronoDecl);
     RegisterBehavior(reg, FillBehaviorSearchRowDecl);
     RegisterBehavior(reg, FillBehaviorChildrenIteratorDecl);
     RegisterBehavior(reg, FillBehaviorConvertPixelHomogenDecl);
     RegisterBehavior(reg, FillBehaviorConvertTimeToStringDecl);
     RegisterBehavior(reg, FillBehaviorParameterMapperDecl);
-    RegisterBehavior(reg, FillBehaviorCounterDecl);
-    RegisterBehavior(reg, FillBehaviorSplitStringDecl);
+    RegisterBehavior(reg, FillBehaviorTTCounterDecl);
+    RegisterBehavior(reg, FillBehaviorTTSplitStringDecl);
 
     RegisterBehavior(reg, FillBehaviorBumpMapDecl);
     RegisterBehavior(reg, FillBehaviorSetMappingDecl);
@@ -220,10 +220,10 @@ void RegisterBehaviorDeclarations(XObjectDeclarationArray *reg)
     RegisterBehavior(reg, FillBehaviorScaleableProximityDecl);
     RegisterBehavior(reg, FillBehaviorIsScriptActiveDecl);
     RegisterBehavior(reg, FillBehaviorIsObjectVisibleDecl);
-    RegisterBehavior(reg, FillBehaviorActivateObjectDecl);
+    RegisterBehavior(reg, FillBehaviorTTActivateObjectDecl);
     RegisterBehavior(reg, FillBehaviorRestoreDynamicICDecl);
-    RegisterBehavior(reg, FillBehaviorRestoreICDecl);
-    RegisterBehavior(reg, FillBehaviorSaveICDecl);
+    RegisterBehavior(reg, FillBehaviorTTRestoreICDecl);
+    RegisterBehavior(reg, FillBehaviorTTSaveICDecl);
     RegisterBehavior(reg, FillBehaviorReplaceInputparameterDecl);
     RegisterBehavior(reg, FillBehaviorWriteBackDecl);
 
@@ -239,15 +239,15 @@ void RegisterBehaviorDeclarations(XObjectDeclarationArray *reg)
     RegisterBehavior(reg, FillBehaviorListDirDecl);
     RegisterBehavior(reg, FillBehaviorGetFileNameFromPathDecl);
 
-    RegisterBehavior(reg, FillBehaviorPushButtonDecl);
+    RegisterBehavior(reg, FillBehaviorTTPushButtonDecl);
     RegisterBehavior(reg, FillBehaviorPushButton2Decl);
 
     RegisterBehavior(reg, FillBehaviorJoystickVectorMapperDecl);
     RegisterBehavior(reg, FillBehaviorKeySwitchDecl);
     RegisterBehavior(reg, FillBehaviorInputStringDecl);
     RegisterBehavior(reg, FillBehaviorTestForJoystickDecl);
-    RegisterBehavior(reg, FillBehaviorKeyWaiterDecl);
-    RegisterBehavior(reg, FillBehaviorJoystickWaiterDecl);
+    RegisterBehavior(reg, FillBehaviorTTKeyWaiterDecl);
+    RegisterBehavior(reg, FillBehaviorTTJoystickWaiterDecl);
 
     RegisterBehavior(reg, FillBehaviorTimerDecl);
     RegisterBehavior(reg, FillBehaviorGetTimeDecl);

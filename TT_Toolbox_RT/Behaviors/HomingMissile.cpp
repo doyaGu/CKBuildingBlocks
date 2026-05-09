@@ -8,11 +8,11 @@
 #include "CKAll.h"
 #include "ToolboxGuids.h"
 
-CKObjectDeclaration *FillBehaviorHomingMissileDecl();
-CKERROR CreateHomingMissileProto(CKBehaviorPrototype **pproto);
-int HomingMissile(const CKBehaviorContext &behcontext);
+CKObjectDeclaration *FillBehaviorTTHomingMissileDecl();
+CKERROR CreateTTHomingMissileProto(CKBehaviorPrototype **pproto);
+int TTHomingMissile(const CKBehaviorContext &behcontext);
 
-CKObjectDeclaration *FillBehaviorHomingMissileDecl()
+CKObjectDeclaration *FillBehaviorTTHomingMissileDecl()
 {
     CKObjectDeclaration *od = CreateCKObjectDeclaration("TT Homing Missile");
     od->SetDescription("Leads a 3D Entity towards its target.");
@@ -22,13 +22,13 @@ CKObjectDeclaration *FillBehaviorHomingMissileDecl()
     od->SetAuthorGuid(TERRATOOLS_GUID);
     od->SetAuthorName("Virtools");
     od->SetVersion(0x00010000);
-    od->SetCreationFunction(CreateHomingMissileProto);
+    od->SetCreationFunction(CreateTTHomingMissileProto);
     od->SetCompatibleClassId(CKCID_3DENTITY);
     od->NeedManager(COLLISION_MANAGER_GUID);
     return od;
 }
 
-CKERROR CreateHomingMissileProto(CKBehaviorPrototype **pproto)
+CKERROR CreateTTHomingMissileProto(CKBehaviorPrototype **pproto)
 {
     CKBehaviorPrototype *proto = CreateCKBehaviorPrototype("TT Homing Missile");
     if (!proto) return CKERR_OUTOFMEMORY;
@@ -46,7 +46,7 @@ CKERROR CreateHomingMissileProto(CKBehaviorPrototype **pproto)
     proto->DeclareOutParameter("Current Velocity", CKPGUID_VECTOR);
 
     proto->SetFlags(CK_BEHAVIORPROTOTYPE_NORMAL);
-    proto->SetFunction(HomingMissile);
+    proto->SetFunction(TTHomingMissile);
 
     proto->SetBehaviorFlags(CKBEHAVIOR_TARGETABLE);
 
@@ -54,7 +54,7 @@ CKERROR CreateHomingMissileProto(CKBehaviorPrototype **pproto)
     return CK_OK;
 }
 
-int HomingMissile(const CKBehaviorContext &behcontext)
+int TTHomingMissile(const CKBehaviorContext &behcontext)
 {
     CKBehavior *beh = behcontext.Behavior;
     CKContext *context = behcontext.Context;

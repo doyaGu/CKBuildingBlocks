@@ -8,11 +8,11 @@
 #include "CKAll.h"
 #include "ToolboxGuids.h"
 
-CKObjectDeclaration *FillBehaviorActivateObjectDecl();
-CKERROR CreateActivateObjectProto(CKBehaviorPrototype **pproto);
-int ActivateObject(const CKBehaviorContext &behcontext);
+CKObjectDeclaration *FillBehaviorTTActivateObjectDecl();
+CKERROR CreateTTActivateObjectProto(CKBehaviorPrototype **pproto);
+int TTActivateObject(const CKBehaviorContext &behcontext);
 
-CKObjectDeclaration *FillBehaviorActivateObjectDecl()
+CKObjectDeclaration *FillBehaviorTTActivateObjectDecl()
 {
     CKObjectDeclaration *od = CreateCKObjectDeclaration("TT Activate Object");
     od->SetDescription("Activates all the scripts of an object, either in the state they were before deactivation or once reset.");
@@ -22,12 +22,12 @@ CKObjectDeclaration *FillBehaviorActivateObjectDecl()
     od->SetAuthorGuid(TERRATOOLS_GUID);
     od->SetAuthorName("Virtools");
     od->SetVersion(0x00010000);
-    od->SetCreationFunction(CreateActivateObjectProto);
+    od->SetCreationFunction(CreateTTActivateObjectProto);
     od->SetCompatibleClassId(CKCID_BEOBJECT);
     return od;
 }
 
-CKERROR CreateActivateObjectProto(CKBehaviorPrototype **pproto)
+CKERROR CreateTTActivateObjectProto(CKBehaviorPrototype **pproto)
 {
     CKBehaviorPrototype *proto = CreateCKBehaviorPrototype("TT Activate Object");
     if (!proto) return CKERR_OUTOFMEMORY;
@@ -41,13 +41,13 @@ CKERROR CreateActivateObjectProto(CKBehaviorPrototype **pproto)
     proto->DeclareInParameter("Activate All Scripts", CKPGUID_BOOL, "FALSE");
 
     proto->SetFlags(CK_BEHAVIORPROTOTYPE_NORMAL);
-    proto->SetFunction(ActivateObject);
+    proto->SetFunction(TTActivateObject);
 
     *pproto = proto;
     return CK_OK;
 }
 
-int ActivateObject(const CKBehaviorContext &behcontext)
+int TTActivateObject(const CKBehaviorContext &behcontext)
 {
     CKBehavior *beh = behcontext.Behavior;
 

@@ -8,16 +8,16 @@
 #include "CKAll.h"
 #include "ToolboxGuids.h"
 
-CKObjectDeclaration *FillBehaviorSkyAroundDecl();
-CKERROR CreateSkyAroundProto(CKBehaviorPrototype **);
-int SkyAround(const CKBehaviorContext &behcontext);
+CKObjectDeclaration *FillBehaviorTTSkyAroundDecl();
+CKERROR CreateTTSkyAroundProto(CKBehaviorPrototype **);
+int TTSkyAround(const CKBehaviorContext &behcontext);
 
 CKERROR SkyAroundCallBack(const CKBehaviorContext &behcontext); // CallBack Functioon
 
-int prerender(CKRenderContext *dev, CKRenderObject *mov, void *arg);  // UnZ-Buffer the rendering of the cube
-int postrender(CKRenderContext *dev, CKRenderObject *mov, void *arg); // Z-Buffer the rendering of the cube
+static int prerender(CKRenderContext *dev, CKRenderObject *mov, void *arg);  // UnZ-Buffer the rendering of the cube
+static int postrender(CKRenderContext *dev, CKRenderObject *mov, void *arg); // Z-Buffer the rendering of the cube
 
-void A_SkyShow(CK3dEntity *ent, CK_OBJECT_SHOWOPTION b)
+static void A_SkyShow(CK3dEntity *ent, CK_OBJECT_SHOWOPTION b)
 {
     if ((b == CKHIDE) == (ent->IsVisible()))
         ent->Show(b);
@@ -35,7 +35,7 @@ typedef struct
     CKBOOL is_on;
 } Effect_ProjMat;
 
-CKObjectDeclaration *FillBehaviorSkyAroundDecl()
+CKObjectDeclaration *FillBehaviorTTSkyAroundDecl()
 {
     CKObjectDeclaration *od = CreateCKObjectDeclaration("TT SkyAround");
     od->SetDescription("Creates a skyaround object with any number of faces");
@@ -45,12 +45,12 @@ CKObjectDeclaration *FillBehaviorSkyAroundDecl()
     od->SetAuthorGuid(TERRATOOLS_GUID);
     od->SetAuthorName("Terratools");
     od->SetVersion(0x00010000);
-    od->SetCreationFunction(CreateSkyAroundProto);
+    od->SetCreationFunction(CreateTTSkyAroundProto);
     od->SetCompatibleClassId(CKCID_BEOBJECT);
     return od;
 }
 
-CKERROR CreateSkyAroundProto(CKBehaviorPrototype **pproto)
+CKERROR CreateTTSkyAroundProto(CKBehaviorPrototype **pproto)
 {
     CKBehaviorPrototype *proto = CreateCKBehaviorPrototype("TT SkyAround");
     if (!proto) return CKERR_OUTOFMEMORY;
@@ -78,7 +78,7 @@ CKERROR CreateSkyAroundProto(CKBehaviorPrototype **pproto)
     proto->DeclareSetting("Bottom Materials", CKPGUID_BOOL, "True");
 
     proto->SetFlags(CK_BEHAVIORPROTOTYPE_NORMAL);
-    proto->SetFunction(SkyAround);
+    proto->SetFunction(TTSkyAround);
 
     proto->SetBehaviorCallbackFct(SkyAroundCallBack);
 
@@ -86,7 +86,7 @@ CKERROR CreateSkyAroundProto(CKBehaviorPrototype **pproto)
     return CK_OK;
 }
 
-int SkyAround(const CKBehaviorContext &behcontext)
+int TTSkyAround(const CKBehaviorContext &behcontext)
 {
     CKBehavior *beh = behcontext.Behavior;
 
@@ -425,7 +425,7 @@ CKERROR SkyAroundCallBack(const CKBehaviorContext &behcontext)
 
 /***********************************************************/
 /****************** PRE-RENDER CALLBACK ********************/
-int prerender(CKRenderContext *dev, CKRenderObject *obj, void *arg)
+static int prerender(CKRenderContext *dev, CKRenderObject *obj, void *arg)
 {
 
     CK3dEntity *mov = (CK3dEntity *)obj;
@@ -469,7 +469,7 @@ int prerender(CKRenderContext *dev, CKRenderObject *obj, void *arg)
 
 /***********************************************************/
 /****************** POST-RENDER CALLBACK *******************/
-int postrender(CKRenderContext *dev, CKRenderObject *obj, void *arg)
+static int postrender(CKRenderContext *dev, CKRenderObject *obj, void *arg)
 {
 
     CK3dEntity *mov = (CK3dEntity *)obj;
