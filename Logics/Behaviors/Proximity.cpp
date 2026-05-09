@@ -13,7 +13,7 @@ int Proximity(const CKBehaviorContext &behcontext);
 
 CKERROR ProximityCallBack(const CKBehaviorContext &behcontext); // CallBack Function
 
-CKSTRING A_outputname[4] = {
+static CKSTRING A_outputname[4] = {
     "In Range",
     "Out Range",
     "Enter Range",

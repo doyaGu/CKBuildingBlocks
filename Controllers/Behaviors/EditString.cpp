@@ -109,14 +109,14 @@ CKERROR CreateEditStringProto(CKBehaviorPrototype **pproto)
     return CK_OK;
 }
 
-void RemoveCaret(char *str, int &caret, int len)
+static void RemoveCaret(char *str, int &caret, int len)
 {
     memmove(str + caret, str + caret + 1, len - caret);
     str[len - 1] = '\0';
     caret = 0;
 }
 
-void RemoveAllCaret(char *str)
+static void RemoveAllCaret(char *str)
 {
     int i = 0;
     int len = (int)strlen(str);
@@ -137,14 +137,14 @@ void RemoveAllCaret(char *str)
     }
 }
 
-void PageUp(char *str, int &caret)
+static void PageUp(char *str, int &caret)
 {
     memmove(str + 1, str, caret);
     *str = '\b';
     caret = 0;
 }
 
-CKBOOL Home(CKBOOL multi, char *str, int &caret)
+static CKBOOL Home(CKBOOL multi, char *str, int &caret)
 {
     if (caret <= 0 || str[caret - 1] == '\n')
     {
@@ -177,7 +177,7 @@ CKBOOL Home(CKBOOL multi, char *str, int &caret)
     return TRUE;
 }
 
-CKBOOL PageDown(int currentlength, char *str, int &caret, int len, int max)
+static CKBOOL PageDown(int currentlength, char *str, int &caret, int len, int max)
 {
     if (caret >= (currentlength - 1))
         return FALSE;
@@ -200,7 +200,7 @@ CKBOOL PageDown(int currentlength, char *str, int &caret, int len, int max)
     return TRUE;
 }
 
-CKBOOL End(int currentlength, CKBOOL multi, char *str, int &caret, int len, int max)
+static CKBOOL End(int currentlength, CKBOOL multi, char *str, int &caret, int len, int max)
 {
     if (!multi)
         return PageDown(currentlength, str, caret, len, max);
@@ -216,7 +216,7 @@ CKBOOL End(int currentlength, CKBOOL multi, char *str, int &caret, int len, int 
     return TRUE;
 }
 
-CKBOOL AddCharacter(char c, char *str, int &caret, int &currentlength, int size)
+static CKBOOL AddCharacter(char c, char *str, int &caret, int &currentlength, int size)
 {
     if ((currentlength - 1) == size && caret == (currentlength - 2))
     {
