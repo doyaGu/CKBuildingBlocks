@@ -20,6 +20,62 @@ CKERROR BitmapTextDisplayCallBackObject(const CKBehaviorContext &behcontext);
 // void BitmapTextRender(CKRenderContext *rc, void *arg);
 void BitmapTextRender(CKRenderContext *context, void *arg);
 
+static void AppendBitmapTextParameter(XString &buffer, CKParameter *param, XArray<char> &scratch, CKBOOL replaceCarriageReturns, CKBOOL prependSpace)
+{
+    if (!param)
+        return;
+
+    const char *text = NULL;
+    char localBuffer[256];
+
+    if (param->GetGUID() == CKPGUID_STRING)
+    {
+        text = (const char *)param->GetReadDataPtr(TRUE);
+        if (!text || !*text)
+            return;
+
+        if (replaceCarriageReturns && strchr(text, '|'))
+        {
+            const size_t length = strlen(text) + 1;
+            char *mutableText = localBuffer;
+            if (length > sizeof(localBuffer))
+            {
+                scratch.Resize((int)length);
+                mutableText = scratch.Begin();
+            }
+            memcpy(mutableText, text, length);
+            for (char *foundcr = strchr(mutableText, '|'); foundcr; foundcr = strchr(foundcr, '|'))
+                *foundcr = '\n';
+            text = mutableText;
+        }
+    }
+    else
+    {
+        int paramSize = param->GetStringValue(NULL);
+        if (!paramSize)
+            return;
+
+        char *paramString = localBuffer;
+        if (paramSize > (int)sizeof(localBuffer))
+        {
+            scratch.Resize(paramSize);
+            paramString = scratch.Begin();
+        }
+        param->GetStringValue(paramString, FALSE);
+
+        if (replaceCarriageReturns)
+        {
+            for (char *foundcr = strchr(paramString, '|'); foundcr; foundcr = strchr(foundcr, '|'))
+                *foundcr = '\n';
+        }
+        text = paramString;
+    }
+
+    if (prependSpace)
+        buffer << " ";
+    buffer << text;
+}
+
 CKObjectDeclaration *FillBehaviorBitmapTextDisplayDecl()
 {
     CKObjectDeclaration *od = CreateCKObjectDeclaration("BitmapText Display");
@@ -126,7 +182,8 @@ int BitmapTextDisplay(const CKBehaviorContext &behcontext)
         beh->SetLocalParameterValue(1, &buffer, sizeof(buffer));
     }
 
-    XString buffer;
+    XString buffer(128);
+    XArray<char> scratch;
 
     CKParameterIn *pin;
     CKParameter *pout;
@@ -143,16 +200,7 @@ int BitmapTextDisplay(const CKBehaviorContext &behcontext)
             if (!pout)
                 continue;
 
-            int paramSize = pout->GetStringValue(NULL);
-            if (paramSize)
-            {
-                XAP<char> paramString(new char[paramSize]);
-                pout->GetStringValue(paramString, FALSE);
-
-                if (i != 4)
-                    buffer << " ";
-                buffer << (char *)paramString;
-            }
+            AppendBitmapTextParameter(buffer, pout, scratch, FALSE, i != 4);
         }
     }
     else
@@ -169,24 +217,7 @@ int BitmapTextDisplay(const CKBehaviorContext &behcontext)
                 if (!pout)
                     continue;
 
-                int paramSize = pout->GetStringValue(NULL);
-                if (paramSize)
-                {
-                    XAP<char> paramString(new char[paramSize]);
-                    pout->GetStringValue(paramString, FALSE);
-
-                    char *foundcr = paramString;
-                    foundcr = strchr(foundcr, '|');
-                    while (foundcr)
-                    {
-                        *foundcr = '\n';
-                        foundcr = strchr(foundcr, '|');
-                    }
-
-                    if (i != 5)
-                        buffer << " ";
-                    buffer << (char *)paramString;
-                }
+                AppendBitmapTextParameter(buffer, pout, scratch, TRUE, i != 5);
             }
         }
     }

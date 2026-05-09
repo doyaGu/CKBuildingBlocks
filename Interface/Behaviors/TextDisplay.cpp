@@ -24,6 +24,39 @@ CKERROR CreateTextDisplayProto(CKBehaviorPrototype **pproto);
 int TextDisplay(const CKBehaviorContext &behcontext);
 CKERROR TextDisplayCallBackObject(const CKBehaviorContext &behcontext);
 
+static void AppendTextDisplayParameter(XString &buffer, CKParameter *param, XArray<char> &scratch)
+{
+    if (!param)
+        return;
+
+    if (param->GetGUID() == CKPGUID_STRING)
+    {
+        const char *text = (const char *)param->GetReadDataPtr(TRUE);
+        if (text && *text)
+        {
+            buffer << text;
+            buffer << " ";
+        }
+        return;
+    }
+
+    int paramsize = param->GetStringValue(NULL);
+    if (!paramsize)
+        return;
+
+    char localBuffer[256];
+    char *paramstring = localBuffer;
+    if (paramsize > (int)sizeof(localBuffer))
+    {
+        scratch.Resize(paramsize);
+        paramstring = scratch.Begin();
+    }
+
+    param->GetStringValue(paramstring, FALSE);
+    buffer << paramstring;
+    buffer << " ";
+}
+
 CKObjectDeclaration *FillBehaviorTextDisplayDecl()
 {
     CKObjectDeclaration *od = CreateCKObjectDeclaration("Text Display");
@@ -125,7 +158,8 @@ int TextDisplay(const CKBehaviorContext &behcontext)
     CKParameterIn *pin;
     CKParameter *pout;
 
-    XString buffer;
+    XString buffer(128);
+    XArray<char> scratch;
 
     // we construct the string
     int pinc = beh->GetInputParameterCount();
@@ -133,40 +167,32 @@ int TextDisplay(const CKBehaviorContext &behcontext)
     {
         pin = beh->GetInputParameter(i);
         pout = pin->GetRealSource();
-        if (pout)
-        {
-            int paramsize = pout->GetStringValue(NULL);
-            if (paramsize)
-            {
-                XAP<char> paramstring(new char[paramsize]);
-                pout->GetStringValue(paramstring, FALSE);
-
-                buffer << (char *)paramstring;
-                buffer << " ";
-            }
-        }
+        AppendTextDisplayParameter(buffer, pout, scratch);
     }
 
     Vx2DVector off;
     beh->GetInputParameterValue(0, &off);
 
-    CKDWORD col;
-    VxColor color;
-    beh->GetInputParameterValue(1, &color);
-    // warning inversion of the red and blue due to a BUG
-    col = RGBAFTOCOLOR(color.r, color.g, color.b, color.a);
+    Vx2DVector currentOff;
+    if (tt->GetPosition(currentOff) != CK_OK || currentOff != off)
+        tt->SetPosition(off);
 
-    // we get an int (input parameter)
-    int align;
-    beh->GetInputParameterValue(2, &align);
-
-    // we get an int (input parameter)
-    int size;
-    beh->GetInputParameterValue(3, &size);
-
-    tt->SetPosition(off);
     if (!string || strcmp(buffer.Str(), string))
     {
+        CKDWORD col;
+        VxColor color;
+        beh->GetInputParameterValue(1, &color);
+        // warning inversion of the red and blue due to a BUG
+        col = RGBAFTOCOLOR(color.r, color.g, color.b, color.a);
+
+        // we get an int (input parameter)
+        int align;
+        beh->GetInputParameterValue(2, &align);
+
+        // we get an int (input parameter)
+        int size;
+        beh->GetInputParameterValue(3, &size);
+
         tdFontInfo fi;
         beh->GetLocalParameterValue(1, &fi);
 
