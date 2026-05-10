@@ -964,9 +964,9 @@ PortalsManager::Occluder::Occluder(CKMesh *iMesh)
             m_HullVertices.Expand();
             VxVector &point = m_HullVertices.Back();
 
-            point.x = vertex->point[0];
-            point.y = vertex->point[1];
-            point.z = vertex->point[2];
+            point.x = static_cast<float>(vertex->point[0]);
+            point.y = static_cast<float>(vertex->point[1]);
+            point.z = static_cast<float>(vertex->point[2]);
 
             id2vertices[vertex->id] = index++;
         }
@@ -989,7 +989,7 @@ PortalsManager::Occluder::Occluder(CKMesh *iMesh)
             // store its normal
             for (int k = 0; k < qh->hull_dim; k++)
             {
-                face.normal[k] = facet->normal[k];
+                face.normal[k] = static_cast<float>(facet->normal[k]);
             }
 
             vertexT *vertex, **vertexp;
