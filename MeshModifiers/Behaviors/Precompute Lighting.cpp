@@ -172,7 +172,7 @@ void LightingEngine::LitVertex(VxVector *pos, VxVector *norm)
                     {
                         spot = (rho - light->cosphi) * (light->invthetaminusphi);
                         if (light->falloff != 1.0f)
-                            pow(spot, light->falloff); // TODO is falloff THIS important ?
+                            spot = pow(spot, light->falloff); // TODO is falloff THIS important ?
                     }
                     attspot = light->att0;
                     att = (light->Range - att) * light->InvRange;
