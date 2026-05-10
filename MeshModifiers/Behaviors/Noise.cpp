@@ -95,7 +95,7 @@ float noise3(const VxVector &vect)
     const float *vec = vect.v;
     int bx0, bx1, by0, by1, bz0, bz1, b00, b10, b01, b11;
     float rx0, rx1, ry0, ry1, rz0, rz1, *q, sy, sz, a, b, c, d, t, u, v;
-    register int i, j;
+    int i, j;
 
     if (start)
     {
