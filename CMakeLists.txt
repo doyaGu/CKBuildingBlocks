@@ -244,8 +244,8 @@ function(ckbb_add_module TARGET_NAME)
 
         if (CKBB_INSTALL)
             install(TARGETS ${TARGET_NAME}
-                    RUNTIME DESTINATION BuildingBlocks
-                    LIBRARY DESTINATION BuildingBlocks
+                    RUNTIME DESTINATION BuildingBlocks COMPONENT Runtime
+                    LIBRARY DESTINATION BuildingBlocks COMPONENT Runtime
             )
         endif ()
     endif ()
@@ -282,7 +282,7 @@ function(ckbb_add_module TARGET_NAME)
 
         if (CKBB_INSTALL)
             install(TARGETS ${TARGET_NAME}Static
-                    ARCHIVE DESTINATION lib
+                    ARCHIVE DESTINATION lib COMPONENT Development
             )
         endif ()
     endif ()
