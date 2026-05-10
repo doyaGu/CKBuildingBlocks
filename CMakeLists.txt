@@ -100,6 +100,28 @@ endif ()
 # =============================================================================
 # Virtools SDK
 # =============================================================================
+if (NOT TARGET VxMath AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../VxMath/CMakeLists.txt")
+    if (CKBB_BUILD_STATIC AND NOT CKBB_BUILD_SHARED)
+        set(VXMATH_BUILD_SHARED OFF CACHE BOOL "" FORCE)
+        set(VXMATH_BUILD_STATIC ON CACHE BOOL "" FORCE)
+    endif ()
+    if (CKBB_INSTALL)
+        set(VXMATH_INSTALL ON CACHE BOOL "Generate install target" FORCE)
+    endif ()
+    add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../VxMath" "${CMAKE_CURRENT_BINARY_DIR}/VxMath")
+endif ()
+
+if (NOT TARGET CK2 AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../CK2/CMakeLists.txt")
+    if (CKBB_BUILD_STATIC AND NOT CKBB_BUILD_SHARED)
+        set(CK2_BUILD_SHARED OFF CACHE BOOL "" FORCE)
+        set(CK2_BUILD_STATIC ON CACHE BOOL "" FORCE)
+    endif ()
+    if (CKBB_INSTALL)
+        set(CK2_INSTALL ON CACHE BOOL "Generate install target" FORCE)
+    endif ()
+    add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../CK2" "${CMAKE_CURRENT_BINARY_DIR}/CK2")
+endif ()
+
 if (NOT TARGET VxMath OR NOT TARGET CK2)
     set(VIRTOOLS_SDK_PATH "" CACHE PATH "Path to the Virtools SDK")
     option(VIRTOOLS_SDK_FETCH_FROM_GIT "Fetch Virtools SDK from git if not found" OFF)
