@@ -1,0 +1,77 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 25,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Visual Studio 17 2022",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/build/${presetName}/stage"
+      }
+    },
+    {
+      "name": "buildingblocks-runtime-msvc-win32",
+      "inherits": "base",
+      "architecture": "Win32",
+      "cacheVariables": {
+        "CKBB_BUILD_SHARED": "ON",
+        "CKBB_BUILD_STATIC": "OFF"
+      }
+    },
+    {
+      "name": "buildingblocks-runtime-msvc-x64",
+      "inherits": "base",
+      "architecture": "x64",
+      "cacheVariables": {
+        "CKBB_BUILD_SHARED": "ON",
+        "CKBB_BUILD_STATIC": "OFF"
+      }
+    },
+    {
+      "name": "buildingblocks-static-msvc-win32",
+      "inherits": "base",
+      "architecture": "Win32",
+      "cacheVariables": {
+        "CKBB_BUILD_SHARED": "OFF",
+        "CKBB_BUILD_STATIC": "ON"
+      }
+    },
+    {
+      "name": "buildingblocks-static-msvc-x64",
+      "inherits": "base",
+      "architecture": "x64",
+      "cacheVariables": {
+        "CKBB_BUILD_SHARED": "OFF",
+        "CKBB_BUILD_STATIC": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "buildingblocks-runtime-win32-release",
+      "configurePreset": "buildingblocks-runtime-msvc-win32",
+      "configuration": "Release"
+    },
+    {
+      "name": "buildingblocks-runtime-x64-release",
+      "configurePreset": "buildingblocks-runtime-msvc-x64",
+      "configuration": "Release"
+    },
+    {
+      "name": "buildingblocks-static-win32-release",
+      "configurePreset": "buildingblocks-static-msvc-win32",
+      "configuration": "Release"
+    },
+    {
+      "name": "buildingblocks-static-x64-release",
+      "configurePreset": "buildingblocks-static-msvc-x64",
+      "configuration": "Release"
+    }
+  ]
+}
