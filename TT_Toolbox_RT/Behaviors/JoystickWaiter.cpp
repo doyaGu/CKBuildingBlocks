@@ -11,6 +11,7 @@
 CKObjectDeclaration *FillBehaviorTTJoystickWaiterDecl();
 CKERROR CreateTTJoystickWaiterProto(CKBehaviorPrototype **pproto);
 int TTJoystickWaiter(const CKBehaviorContext &behcontext);
+int TTJoystickWaiterV2(const CKBehaviorContext &behcontext);
 CKERROR TTJoystickWaiterCallBack(const CKBehaviorContext &behcontext);
 
 CKObjectDeclaration *FillBehaviorTTJoystickWaiterDecl()
@@ -55,7 +56,7 @@ CKERROR CreateTTJoystickWaiterProto(CKBehaviorPrototype **pproto)
     proto->DeclareSetting("Relative Moves", CKPGUID_JOYAXIS, "Slider 1,Slider 2,POV");
 
     proto->SetFlags(CK_BEHAVIORPROTOTYPE_NORMAL);
-    proto->SetFunction(TTJoystickWaiter);
+    proto->SetFunction(TTJoystickWaiterV2);
 
     proto->SetBehaviorFlags((CK_BEHAVIOR_FLAGS)(CKBEHAVIOR_INTERNALLYCREATEDOUTPUTS));
     proto->SetBehaviorCallbackFct(TTJoystickWaiterCallBack);

@@ -34,6 +34,13 @@ CKERROR CreatePMSMeshdeformProto(CKBehaviorPrototype **pproto);
 int PMSMeshdeform(const CKBehaviorContext &behcontext);
 CKERROR PMSMeshdeformCallBack(const CKBehaviorContext &behcontext);
 
+#define LOCAL_WAVE_COUNT   0
+#define LOCAL_VERTEX_ARRAY 1
+#define LOCAL_TIME         2
+#define LOCAL_WAVE_X       3
+#define LOCAL_WAVE_Y       4
+#define LOCAL_WIND_MATRIX  5
+
 CKObjectDeclaration *FillBehaviorPMSMeshdeformDecl()
 {
     CKObjectDeclaration *od = CreateCKObjectDeclaration("TT PMS_Meshdeform");
@@ -68,13 +75,13 @@ CKERROR CreatePMSMeshdeformProto(CKBehaviorPrototype **pproto)
     proto->DeclareInParameter("1.WaveLength in X", CKPGUID_FLOAT, "10");
     proto->DeclareInParameter("1.Amplitude in X", CKPGUID_FLOAT, "0.5");
 
+    proto->DeclareSetting("Wellenanzahl", CKPGUID_INT, "1");
+
     proto->DeclareLocalParameter("Vertex Array", CKPGUID_VOIDBUF);
     proto->DeclareLocalParameter("Time", CKPGUID_FLOAT);
     proto->DeclareLocalParameter("WaveX", CKPGUID_POINTER);
     proto->DeclareLocalParameter("WaveY", CKPGUID_POINTER);
     proto->DeclareLocalParameter("WindMatrix", CKPGUID_MATRIX);
-
-    proto->DeclareSetting("Wellenanzahl", CKPGUID_INT, "1");
 
     proto->SetFlags(CK_BEHAVIORPROTOTYPE_NORMAL);
     proto->SetFunction(PMSMeshdeform);
@@ -100,7 +107,7 @@ int PMSMeshdeform(const CKBehaviorContext &behcontext)
 
     // Get wave count from settings
     int waveCount = 1;
-    beh->GetLocalParameterValue(0, &waveCount);
+    beh->GetLocalParameterValue(LOCAL_WAVE_COUNT, &waveCount);
 
     // Get input parameters
     float windDirection = 0.0f;
@@ -177,14 +184,14 @@ int PMSMeshdeform(const CKBehaviorContext &behcontext)
         }
 
         // Store wave parameters
-        beh->SetLocalParameterValue(3, waveY, sizeof(WaveParams) * waveCount);
-        beh->SetLocalParameterValue(4, waveX, sizeof(WaveParams) * waveCount);
+        beh->SetLocalParameterValue(LOCAL_WAVE_X, waveY, sizeof(WaveParams) * waveCount);
+        beh->SetLocalParameterValue(LOCAL_WAVE_Y, waveX, sizeof(WaveParams) * waveCount);
 
         // Create wind rotation matrix
         VxVector axis = {0.0f, 1.0f, 0.0f};
         VxMatrix windMatrix;
         Vx3DMatrixFromRotation(windMatrix, axis, windDirection);
-        beh->SetLocalParameterValue(5, &windMatrix);
+        beh->SetLocalParameterValue(LOCAL_WIND_MATRIX, &windMatrix);
 
         delete[] waveY;
         delete[] waveX;
@@ -192,17 +199,17 @@ int PMSMeshdeform(const CKBehaviorContext &behcontext)
 
     // Get time and update
     float time = 0.0f;
-    beh->GetLocalParameterValue(2, &time);
+    beh->GetLocalParameterValue(LOCAL_TIME, &time);
     time += timeScale.x * behcontext.DeltaTime * 0.0001f;
-    beh->SetLocalParameterValue(2, &time);
+    beh->SetLocalParameterValue(LOCAL_TIME, &time);
 
     // Get wave parameters
-    WaveParams *waveY = (WaveParams *)beh->GetLocalParameterReadDataPtr(3);
-    WaveParams *waveX = (WaveParams *)beh->GetLocalParameterReadDataPtr(4);
+    WaveParams *waveY = (WaveParams *)beh->GetLocalParameterReadDataPtr(LOCAL_WAVE_X);
+    WaveParams *waveX = (WaveParams *)beh->GetLocalParameterReadDataPtr(LOCAL_WAVE_Y);
 
     // Get wind matrix
     VxMatrix windMatrix;
-    beh->GetLocalParameterValue(5, &windMatrix);
+    beh->GetLocalParameterValue(LOCAL_WIND_MATRIX, &windMatrix);
 
     // Update wave phases
     for (int i = 0; i < waveCount; i++)

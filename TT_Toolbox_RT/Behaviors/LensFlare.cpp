@@ -15,6 +15,9 @@ int TTLensFlare(const CKBehaviorContext &behcontext);
 CKERROR LensFlareCallBack(const CKBehaviorContext &behcontext);
 int LensFlareRenderCallback(CKRenderContext *dev, void *arg, CKBehavior *beh);
 
+#define LOCAL_FLARE_DATA            0
+#define LOCAL_READ_ARRAY_EACH_FRAME 1
+
 // Lens flare element structure (64 bytes)
 struct FlareElement
 {
@@ -137,7 +140,7 @@ int LensFlareRenderCallback(CKRenderContext *dev, void *arg, CKBehavior *beh)
     beh->GetInputParameterValue(4, &destBlend);
 
     // Get flare data
-    FlareData **dataPtr = (FlareData **)beh->GetLocalParameterReadDataPtr(0);
+    FlareData **dataPtr = (FlareData **)beh->GetLocalParameterReadDataPtr(LOCAL_FLARE_DATA);
     if (!dataPtr || !*dataPtr)
         return 1;
 
@@ -431,8 +434,6 @@ CKERROR CreateTTLensFlareProto(CKBehaviorPrototype **pproto)
     proto->DeclareInParameter("Dest Blend", CKPGUID_BLENDFACTOR, "Zero");
 
     proto->DeclareLocalParameter("", CKPGUID_POINTER);
-    proto->DeclareLocalParameter("Active", CKPGUID_BOOL, "FALSE");
-
     proto->DeclareSetting("Read Array Each Frame", CKPGUID_BOOL, "FALSE");
 
     proto->SetFlags(CK_BEHAVIORPROTOTYPE_NORMAL);
@@ -454,8 +455,8 @@ int TTLensFlare(const CKBehaviorContext &behcontext)
     if (!target)
         return CKBR_PARAMETERERROR;
 
-    CKBOOL active = FALSE;
-    beh->GetLocalParameterValue(1, &active);
+    CKBOOL readArray = FALSE;
+    beh->GetLocalParameterValue(LOCAL_READ_ARRAY_EACH_FRAME, &readArray);
 
     // Set up render callback
     target->ModifyMoveableFlags(VX_MOVEABLE_RENDERLAST, 0);
@@ -465,7 +466,7 @@ int TTLensFlare(const CKBehaviorContext &behcontext)
     if (beh->IsInputActive(0))
     {
         beh->ActivateInput(0, FALSE);
-        active = TRUE;
+        readArray = TRUE;
     }
     // Handle Off input
     else if (beh->IsInputActive(1))
@@ -477,14 +478,12 @@ int TTLensFlare(const CKBehaviorContext &behcontext)
         return CKBR_OK;
     }
 
-    if (!active)
+    if (!readArray)
         return CKBR_ACTIVATENEXTFRAME;
-
-    beh->SetLocalParameterValue(1, &active);
 
     // Get data array
     CKDataArray *array = (CKDataArray *)beh->GetInputParameterObject(0);
-    FlareData **dataPtr = (FlareData **)beh->GetLocalParameterReadDataPtr(0);
+    FlareData **dataPtr = (FlareData **)beh->GetLocalParameterReadDataPtr(LOCAL_FLARE_DATA);
     
     if (array && dataPtr && *dataPtr)
     {
@@ -586,7 +585,7 @@ CKERROR LensFlareCallBack(const CKBehaviorContext &behcontext)
             data->elements = NULL;
             data->elementCount = 0;
         }
-        beh->SetLocalParameterValue(0, &data, sizeof(void *));
+        beh->SetLocalParameterValue(LOCAL_FLARE_DATA, &data, sizeof(void *));
     }
     break;
 
@@ -595,7 +594,7 @@ CKERROR LensFlareCallBack(const CKBehaviorContext &behcontext)
     case CKM_BEHAVIORDEACTIVATESCRIPT:
     {
         // Free flare data
-        FlareData **dataPtr = (FlareData **)beh->GetLocalParameterReadDataPtr(0);
+        FlareData **dataPtr = (FlareData **)beh->GetLocalParameterReadDataPtr(LOCAL_FLARE_DATA);
         if (dataPtr && *dataPtr)
         {
             FlareData *data = *dataPtr;
@@ -606,7 +605,7 @@ CKERROR LensFlareCallBack(const CKBehaviorContext &behcontext)
             delete data;
 
             void *nullPtr = NULL;
-            beh->SetLocalParameterValue(0, &nullPtr, sizeof(void *));
+            beh->SetLocalParameterValue(LOCAL_FLARE_DATA, &nullPtr, sizeof(void *));
         }
 
         // Remove render callback

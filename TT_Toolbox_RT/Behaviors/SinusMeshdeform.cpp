@@ -13,6 +13,10 @@ CKERROR CreateSinusMeshdeformProto(CKBehaviorPrototype **pproto);
 int SinusMeshdeform(const CKBehaviorContext &behcontext);
 CKERROR SinusMeshdeformCallBack(const CKBehaviorContext &behcontext);
 
+#define LOCAL_SINUS_COUNT  0
+#define LOCAL_VERTEX_ARRAY 1
+#define LOCAL_WAVE_PARAMS  2
+
 // Precomputed sine table (361 entries for 0-360 degrees)
 static float g_SinusTable[361];
 static bool g_SinusTableInitialized = false;
@@ -71,11 +75,10 @@ CKERROR CreateSinusMeshdeformProto(CKBehaviorPrototype **pproto)
     proto->DeclareInParameter("1. Wavelength", CKPGUID_FLOAT, "20");
     proto->DeclareInParameter("1. Sinpos", CKPGUID_VECTOR, "0.0,0.0,0.0");
 
-    proto->DeclareLocalParameter("SinusCount", CKPGUID_INT, "1");
+    proto->DeclareSetting("SinusCount", CKPGUID_INT, "1");
+
     proto->DeclareLocalParameter("Vertex Array", CKPGUID_VOIDBUF);
     proto->DeclareLocalParameter("Wave Params", CKPGUID_POINTER);
-
-    proto->DeclareSetting("SinusCount", CKPGUID_INT, "1");
 
     proto->SetFlags(CK_BEHAVIORPROTOTYPE_NORMAL);
     proto->SetFunction(SinusMeshdeform);
@@ -98,7 +101,7 @@ int SinusMeshdeform(const CKBehaviorContext &behcontext)
         return CKBR_PARAMETERERROR;
 
     int sinusCount = 0;
-    beh->GetLocalParameterValue(0, &sinusCount);
+    beh->GetLocalParameterValue(LOCAL_SINUS_COUNT, &sinusCount);
 
     // Handle Off input - stop processing
     if (beh->IsInputActive(1))
@@ -156,11 +159,11 @@ int SinusMeshdeform(const CKBehaviorContext &behcontext)
             baseParam += 4;
         }
 
-        beh->SetLocalParameterValue(2, &params, sizeof(void *));
+        beh->SetLocalParameterValue(LOCAL_WAVE_PARAMS, &params, sizeof(void *));
     }
 
     // Get wave parameters pointer
-    SinusWaveParams *waveParams = *(SinusWaveParams **)beh->GetLocalParameterReadDataPtr(2);
+    SinusWaveParams *waveParams = *(SinusWaveParams **)beh->GetLocalParameterReadDataPtr(LOCAL_WAVE_PARAMS);
 
     // Update time and phase for each wave
     for (int i = 0; i < sinusCount; i++)
@@ -240,7 +243,7 @@ CKERROR SinusMeshdeformCallBack(const CKBehaviorContext &behcontext)
                 modVerts = (VxVector *)((CKBYTE *)modVerts + stride);
             }
 
-            beh->SetLocalParameterValue(1, vertexBuffer, sizeof(VxVector) * vertexCount);
+            beh->SetLocalParameterValue(LOCAL_VERTEX_ARRAY, vertexBuffer, sizeof(VxVector) * vertexCount);
             delete[] vertexBuffer;
         }
         break;
@@ -261,7 +264,7 @@ CKERROR SinusMeshdeformCallBack(const CKBehaviorContext &behcontext)
             CKDWORD stride = 0;
             VxVector *modVerts = (VxVector *)mesh->GetModifierVertices(&stride);
 
-            VxVector *savedVerts = (VxVector *)beh->GetLocalParameterReadDataPtr(1);
+            VxVector *savedVerts = (VxVector *)beh->GetLocalParameterReadDataPtr(LOCAL_VERTEX_ARRAY);
             if (!savedVerts)
                 return CKBR_OK;
 
@@ -279,11 +282,11 @@ CKERROR SinusMeshdeformCallBack(const CKBehaviorContext &behcontext)
     case CKM_BEHAVIORSETTINGSEDITED:
         {
             int sinusCount = 1;
-            beh->GetLocalParameterValue(0, &sinusCount);
+            beh->GetLocalParameterValue(LOCAL_SINUS_COUNT, &sinusCount);
             if (sinusCount < 1)
             {
                 sinusCount = 1;
-                beh->SetLocalParameterValue(0, &sinusCount);
+                beh->SetLocalParameterValue(LOCAL_SINUS_COUNT, &sinusCount);
             }
 
             int inputCount = beh->GetInputParameterCount();
