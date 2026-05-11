@@ -122,7 +122,6 @@ void RegisterBehaviorDeclarations(XObjectDeclarationArray *reg)
 {
 #if defined(BBADONS_2_0_0_14)
     RegisterBehavior(reg, FillBehaviorCombineTextureDecl);
-    RegisterBehavior(reg, FillBehaviorGetTextureInfoDecl);
     RegisterBehavior(reg, FillBehaviorMovieLoaderDecl);
 #else
     RegisterBehavior(reg, FillBehaviorAnimRecorderDecl);
@@ -164,7 +163,6 @@ void RegisterBehaviorDeclarations(XObjectDeclarationArray *reg)
     RegisterBehavior(reg, FillBehaviorTimeSettingsDecl);
 
     // Texture
-    RegisterBehavior(reg, FillBehaviorGetTextureInfoDecl);
     RegisterBehavior(reg, FillBehaviorMovieLoaderDecl);
     RegisterBehavior(reg, FillBehaviorPixelValueDecl);
 
