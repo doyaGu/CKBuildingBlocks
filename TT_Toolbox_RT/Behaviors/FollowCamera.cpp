@@ -13,6 +13,13 @@ CKERROR CreateFollowCameraProto(CKBehaviorPrototype **pproto);
 int FollowCamera(const CKBehaviorContext &behcontext);
 CKERROR FollowCameraCallBack(const CKBehaviorContext &behcontext);
 
+#define LOCAL_TIME_BASED      0
+#define LOCAL_INIT_ACT_POS    1
+#define LOCAL_VIEW_POS_OLD    2
+#define LOCAL_CAM_POS_OLD     3
+#define LOCAL_OLD_DELTA_TIME  4
+#define LOCAL_INIT            5
+
 CKObjectDeclaration *FillBehaviorFollowCameraDecl()
 {
     CKObjectDeclaration *od = CreateCKObjectDeclaration("TT FollowCamera");
@@ -47,13 +54,13 @@ CKERROR CreateFollowCameraProto(CKBehaviorPrototype **pproto)
     proto->DeclareInParameter("FOV Angle", CKPGUID_ANGLE, "0:50");
     proto->DeclareInParameter("Back Attenuation", CKPGUID_PERCENTAGE, "25");
 
+    proto->DeclareSetting("Time Based", CKPGUID_BOOL, "TRUE");
+    proto->DeclareSetting("Init actPos", CKPGUID_BOOL, "FALSE");
+
     proto->DeclareLocalParameter("ViewPosOld", CKPGUID_VECTOR);
     proto->DeclareLocalParameter("CamPosOld", CKPGUID_VECTOR);
     proto->DeclareLocalParameter("oldDeltaTime", CKPGUID_FLOAT);
     proto->DeclareLocalParameter("init", CKPGUID_BOOL, "true");
-
-    proto->DeclareSetting("Time Based", CKPGUID_BOOL, "TRUE");
-    proto->DeclareSetting("Init actPos", CKPGUID_BOOL, "FALSE");
 
     proto->SetFlags(CK_BEHAVIORPROTOTYPE_NORMAL);
     proto->SetFunction(FollowCamera);
@@ -125,10 +132,10 @@ int FollowCamera(const CKBehaviorContext &behcontext)
         beh->ActivateInput(0, FALSE);
         beh->ActivateOutput(0, TRUE);
 
-        CKBOOL initActPos = FALSE;
-        beh->GetLocalParameterValue(5, &initActPos);
+        CKBOOL init = FALSE;
+        beh->GetLocalParameterValue(LOCAL_INIT, &init);
 
-        if (!initActPos)
+        if (!init)
         {
             viewPosOld = targetViewPos;
             camPosOld = targetCamPos;
@@ -141,27 +148,27 @@ int FollowCamera(const CKBehaviorContext &behcontext)
             viewPosOld = targetViewPos;
         }
 
-        beh->SetLocalParameterValue(0, &viewPosOld);
-        beh->SetLocalParameterValue(1, &camPosOld);
+        beh->SetLocalParameterValue(LOCAL_VIEW_POS_OLD, &viewPosOld);
+        beh->SetLocalParameterValue(LOCAL_CAM_POS_OLD, &camPosOld);
 
         float deltaTime = behcontext.DeltaTime;
-        beh->SetLocalParameterValue(2, &deltaTime);
+        beh->SetLocalParameterValue(LOCAL_OLD_DELTA_TIME, &deltaTime);
     }
 
-    beh->GetLocalParameterValue(0, &viewPosOld);
-    beh->GetLocalParameterValue(1, &camPosOld);
+    beh->GetLocalParameterValue(LOCAL_VIEW_POS_OLD, &viewPosOld);
+    beh->GetLocalParameterValue(LOCAL_CAM_POS_OLD, &camPosOld);
 
     VxVector viewDelta = targetViewPos - viewPosOld;
     VxVector camDelta = targetCamPos - camPosOld;
 
     CKBOOL timeBased = FALSE;
-    beh->GetLocalParameterValue(3, &timeBased);
+    beh->GetLocalParameterValue(LOCAL_TIME_BASED, &timeBased);
 
     if (timeBased)
     {
         float deltaTime = behcontext.DeltaTime;
         float oldDeltaTime = 0.0f;
-        beh->GetLocalParameterValue(2, &oldDeltaTime);
+        beh->GetLocalParameterValue(LOCAL_OLD_DELTA_TIME, &oldDeltaTime);
 
         float maxDelta = deltaTime * 1.1f;
         if (oldDeltaTime > maxDelta)
@@ -184,7 +191,7 @@ int FollowCamera(const CKBehaviorContext &behcontext)
         viewAtt = viewFactor;
         cameraAtt = camFactor;
 
-        beh->SetLocalParameterValue(2, &avgDelta);
+        beh->SetLocalParameterValue(LOCAL_OLD_DELTA_TIME, &avgDelta);
     }
 
     viewPosOld += viewDelta * viewAtt;
@@ -203,8 +210,8 @@ int FollowCamera(const CKBehaviorContext &behcontext)
     camera->SetPosition(&camPosOld);
     camera->LookAt(&viewPosOld);
 
-    beh->SetLocalParameterValue(0, &viewPosOld);
-    beh->SetLocalParameterValue(1, &camPosOld);
+    beh->SetLocalParameterValue(LOCAL_VIEW_POS_OLD, &viewPosOld);
+    beh->SetLocalParameterValue(LOCAL_CAM_POS_OLD, &camPosOld);
 
     return CKBR_ACTIVATENEXTFRAME;
 }
@@ -221,7 +228,7 @@ CKERROR FollowCameraCallBack(const CKBehaviorContext &behcontext)
     case CKM_BEHAVIORPAUSE:
         {
             CKBOOL init = TRUE;
-            beh->SetLocalParameterValue(5, &init);
+            beh->SetLocalParameterValue(LOCAL_INIT, &init);
         }
         break;
     default:
