@@ -11,11 +11,11 @@
 
 #define A_MAX_NUMBER_OF_FLOOR_UNDER_OBJECT 50
 
-CKObjectDeclaration *FillBehaviorSimpleShadowDecl();
-CKERROR CreateSimpleShadowProto(CKBehaviorPrototype **pproto);
-int SimpleShadow(const CKBehaviorContext &behcontext);
-CKERROR SimpleShadowCallBack(const CKBehaviorContext &behcontext);
-void SimpleShadowRenderCallback(CKRenderContext *dev, void *arg);
+CKObjectDeclaration *FillBehaviorTTSimpleShadowDecl();
+CKERROR CreateTTSimpleShadowProto(CKBehaviorPrototype **pproto);
+int TTSimpleShadow(const CKBehaviorContext &behcontext);
+CKERROR TTSimpleShadowCallBack(const CKBehaviorContext &behcontext);
+void TTSimpleShadowRenderCallback(CKRenderContext *dev, void *arg);
 
 ////////////////////////
 //   Local Structure
@@ -29,9 +29,8 @@ typedef struct
     int nb_floors_under;                             // number of floors being under the object...
 } SimpleShadowStruct;
 
-void A_GetFloors(SimpleShadowStruct *tss, CK3dEntity *ent, CKBehavior *beh, VxVector *pos_rel, VxVector *scale, float maxHeight);
-void A_Delete_SoftShadow_From_Floors(CK_ID *floor, CKMaterial *cmat, int nb_floors);
-static void A_ResetSimpleShadowData(CKBehavior *beh, CKContext *context);
+static void A_GetFloors(SimpleShadowStruct *tss, CK3dEntity *ent, CKBehavior *beh, VxVector *pos_rel, VxVector *scale, float maxHeight);
+static void A_Delete_SoftShadow_From_Floors(CK_ID *floor, CKMaterial *cmat, int nb_floors);
 
 static void A_ResetSimpleShadowData(CKBehavior *beh, CKContext *context)
 {
@@ -56,7 +55,7 @@ static void A_ResetSimpleShadowData(CKBehavior *beh, CKContext *context)
     beh->SetLocalParameterValue(0, &tss);
 }
 
-CKObjectDeclaration *FillBehaviorSimpleShadowDecl()
+CKObjectDeclaration *FillBehaviorTTSimpleShadowDecl()
 {
     CKObjectDeclaration *od = CreateCKObjectDeclaration("TT Simple Shadow");
     od->SetDescription("Display a little soft shadow on floors beneath the object.");
@@ -66,13 +65,13 @@ CKObjectDeclaration *FillBehaviorSimpleShadowDecl()
     od->SetAuthorGuid(TERRATOOLS_GUID);
     od->SetAuthorName("Terratools");
     od->SetVersion(0x00010000);
-    od->SetCreationFunction(CreateSimpleShadowProto);
+    od->SetCreationFunction(CreateTTSimpleShadowProto);
     od->SetCompatibleClassId(CKCID_3DOBJECT);
     od->NeedManager(FLOOR_MANAGER_GUID);
     return od;
 }
 
-CKERROR CreateSimpleShadowProto(CKBehaviorPrototype **pproto)
+CKERROR CreateTTSimpleShadowProto(CKBehaviorPrototype **pproto)
 {
     CKBehaviorPrototype *proto = CreateCKBehaviorPrototype("TT Simple Shadow");
     if (!proto) return CKERR_OUTOFMEMORY;
@@ -90,16 +89,16 @@ CKERROR CreateSimpleShadowProto(CKBehaviorPrototype **pproto)
     proto->DeclareLocalParameter("Data", CKPGUID_POINTER, "NULL");
 
     proto->SetFlags(CK_BEHAVIORPROTOTYPE_NORMAL);
-    proto->SetFunction(SimpleShadow);
+    proto->SetFunction(TTSimpleShadow);
 
     proto->SetBehaviorFlags(CKBEHAVIOR_TARGETABLE);
-    proto->SetBehaviorCallbackFct(SimpleShadowCallBack);
+    proto->SetBehaviorCallbackFct(TTSimpleShadowCallBack);
 
     *pproto = proto;
     return CK_OK;
 }
 
-int SimpleShadow(const CKBehaviorContext &behcontext)
+int TTSimpleShadow(const CKBehaviorContext &behcontext)
 {
     CKBehavior *beh = behcontext.Behavior;
     CKRenderContext *dev = behcontext.CurrentRenderContext;
@@ -148,11 +147,11 @@ int SimpleShadow(const CKBehaviorContext &behcontext)
         beh->SetLocalParameterValue(0, &tss);
     }
 
-    dev->AddPreRenderCallBack(SimpleShadowRenderCallback, beh, TRUE);
+    dev->AddPreRenderCallBack(TTSimpleShadowRenderCallback, beh, TRUE);
     return CKBR_ACTIVATENEXTFRAME;
 }
 
-CKERROR SimpleShadowCallBack(const CKBehaviorContext &behcontext)
+CKERROR TTSimpleShadowCallBack(const CKBehaviorContext &behcontext)
 {
     CKBehavior *beh = behcontext.Behavior;
     CKRenderContext *dev = behcontext.CurrentRenderContext;
@@ -166,23 +165,23 @@ CKERROR SimpleShadowCallBack(const CKBehaviorContext &behcontext)
     case CKM_BEHAVIORNEWSCENE:
     case CKM_BEHAVIORDEACTIVATESCRIPT:
         if (dev)
-            dev->RemovePreRenderCallBack(SimpleShadowRenderCallback, beh);
+            dev->RemovePreRenderCallBack(TTSimpleShadowRenderCallback, beh);
         A_ResetSimpleShadowData(beh, context);
         break;
     case CKM_BEHAVIORPAUSE:
         if (dev)
-            dev->RemovePreRenderCallBack(SimpleShadowRenderCallback, beh);
+            dev->RemovePreRenderCallBack(TTSimpleShadowRenderCallback, beh);
         break;
     case CKM_BEHAVIORRESUME:
         if (dev)
-            dev->AddPreRenderCallBack(SimpleShadowRenderCallback, beh, TRUE);
+            dev->AddPreRenderCallBack(TTSimpleShadowRenderCallback, beh, TRUE);
         break;
     }
 
     return CKBR_OK;
 }
 
-void SimpleShadowRenderCallback(CKRenderContext *dev, void *arg)
+void TTSimpleShadowRenderCallback(CKRenderContext *dev, void *arg)
 {
     CKBehavior *beh = (CKBehavior *)arg;
     if (!beh)
@@ -368,7 +367,7 @@ void SimpleShadowRenderCallback(CKRenderContext *dev, void *arg)
 /*                  A_GetFloors                      */
 /*****************************************************/
 //  This function puts in the local structures, the floors under the object
-void A_GetFloors(SimpleShadowStruct *tss, CK3dEntity *ent, CKBehavior *beh, VxVector *pos_rel, VxVector *scale_array, float maxHeight)
+static void A_GetFloors(SimpleShadowStruct *tss, CK3dEntity *ent, CKBehavior *beh, VxVector *pos_rel, VxVector *scale_array, float maxHeight)
 {
     CKContext *context = beh->GetCKContext();
 
@@ -457,7 +456,7 @@ void A_GetFloors(SimpleShadowStruct *tss, CK3dEntity *ent, CKBehavior *beh, VxVe
 /*        A_Delete_SoftShadow_From_Floors            */
 /*****************************************************/
 //  This function remove the material channel 'cmat' from all floors stocked in 'floor[]'
-void A_Delete_SoftShadow_From_Floors(CK_ID *floor, CKMaterial *cmat, int nb_floors)
+static void A_Delete_SoftShadow_From_Floors(CK_ID *floor, CKMaterial *cmat, int nb_floors)
 {
     CKContext *context = cmat->GetCKContext();
 

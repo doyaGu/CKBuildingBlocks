@@ -55,7 +55,7 @@ void RegisterBehaviorDeclarations(XObjectDeclarationArray *reg)
     RegisterBehavior(reg, FillBehaviorExtraDecl);
     RegisterBehavior(reg, FillBehaviorProximityVolumeControlDecl);
     RegisterBehavior(reg, FillBehaviorSpeedOMeterDecl);
-    RegisterBehavior(reg, FillBehaviorSimpleShadowDecl);
+    RegisterBehavior(reg, FillBehaviorTTSimpleShadowDecl);
     RegisterBehavior(reg, FillBehaviorRealShadowMappingDecl);
     RegisterBehavior(reg, FillBehaviorSkyDecl);
     RegisterBehavior(reg, FillBehaviorTextureSineDecl);
