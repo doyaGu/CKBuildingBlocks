@@ -224,8 +224,8 @@ CKERROR FollowCameraCallBack(const CKBehaviorContext &behcontext)
     {
     case CKM_BEHAVIORATTACH:
     case CKM_BEHAVIORLOAD:
-    case CKM_BEHAVIORRESET:
-    case CKM_BEHAVIORPAUSE:
+    case CKM_BEHAVIORNEWSCENE:
+    case CKM_BEHAVIORACTIVATESCRIPT:
         {
             CKBOOL init = TRUE;
             beh->SetLocalParameterValue(LOCAL_INIT, &init);
