@@ -65,7 +65,7 @@ int SetMapping(const CKBehaviorContext &behcontext)
 
     CK3dEntity *target = (CK3dEntity *)beh->GetTarget();
     if (!target)
-        return CKBR_PARAMETERERROR;
+        return CKBR_OWNERERROR;
 
     // Get input parameters
     int matChannel = -1;
@@ -88,8 +88,6 @@ int SetMapping(const CKBehaviorContext &behcontext)
         return CKBR_OK;
 
     int channelCount = mesh->GetChannelCount();
-    if (matChannel < 0)
-        matChannel = 0;
     if (matChannel >= channelCount)
         return CKBR_PARAMETERERROR;
 
@@ -159,15 +157,14 @@ int SetMapping(const CKBehaviorContext &behcontext)
     }
 
     // Apply rotation and tiling
-    float halfRangeX = (uvMaxX - uvMinX) * 0.5f;
-    float halfRangeY = (uvMaxY - uvMinY) * 0.5f;
+    float halfRange = (uvMaxX - uvMinX) * 0.5f;
 
     Vx2DVector *uv = uvCoords;
     for (int i = 0; i < vertexCount; i++)
     {
         // Center UV around (0,0) then rotate
-        float centeredX = uv->x - halfRangeX - uvMinX;
-        float centeredY = uvMaxY - uv->y - halfRangeY - uvMinY;
+        float centeredX = uv->x - halfRange - uvMinX;
+        float centeredY = uvMaxY - uv->y - halfRange - uvMinY;
 
         float cosAngle = cosf(rotateAngle);
         float sinAngle = sinf(rotateAngle);
@@ -177,8 +174,8 @@ int SetMapping(const CKBehaviorContext &behcontext)
         float rotatedY = cosAngle * centeredY - sinAngle * centeredX;
 
         // Apply tiling and recenter
-        uv->x = tileUV.x * rotatedX + halfRangeX + uvMinX;
-        uv->y = halfRangeY - tileUV.y * rotatedY + uvMinY;
+        uv->x = tileUV.x * rotatedX + halfRange + uvMinX;
+        uv->y = halfRange - tileUV.y * rotatedY + uvMinY;
 
         // Apply offset
         uv->x += offsetUV.x;
