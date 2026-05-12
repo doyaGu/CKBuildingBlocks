@@ -188,8 +188,8 @@ CKERROR BitmapFontCallBack(const CKBehaviorContext &behcontext)
     CKBehavior *beh = behcontext.Behavior;
     CKContext *context = behcontext.Context;
 
-    if (behcontext.CallbackMessage == CKM_BEHAVIORDEACTIVATESCRIPT ||
-        behcontext.CallbackMessage == CKM_BEHAVIORRESET)
+    if (behcontext.CallbackMessage == CKM_BEHAVIORDELETE ||
+        behcontext.CallbackMessage == CKM_BEHAVIORDETACH)
     {
         CKObject *entity = context->GetObjectByName("Ent");
         if (entity)
