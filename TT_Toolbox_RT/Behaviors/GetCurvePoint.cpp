@@ -75,5 +75,5 @@ int GetCurvePoint(const CKBehaviorContext &behcontext)
     point->SetName("Curvepoints", TRUE);
 
     beh->SetOutputParameterObject(0, point);
-	return CK_OK;
+    return CK_OK;
 }
