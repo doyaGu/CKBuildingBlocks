@@ -199,8 +199,8 @@ CKERROR MagnetMeshFormCallBack(const CKBehaviorContext &behcontext)
 
     switch (behcontext.CallbackMessage)
     {
+    case CKM_BEHAVIORDELETE:
     case CKM_BEHAVIORDETACH:
-    case CKM_BEHAVIORPAUSE:
     case CKM_BEHAVIORRESET:
         {
             // Restore original vertices
@@ -232,8 +232,8 @@ CKERROR MagnetMeshFormCallBack(const CKBehaviorContext &behcontext)
         break;
 
     case CKM_BEHAVIORATTACH:
-    case CKM_BEHAVIORACTIVATESCRIPT:
-    case CKM_BEHAVIORRESUME:
+    case CKM_BEHAVIORLOAD:
+    case CKM_BEHAVIOREDITED:
         {
             // Store original vertices
             CK3dEntity *target = (CK3dEntity *)beh->GetTarget();
