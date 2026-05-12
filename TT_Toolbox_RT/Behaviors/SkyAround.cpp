@@ -16,6 +16,7 @@ CKERROR SkyAroundCallBack(const CKBehaviorContext &behcontext); // CallBack Func
 
 static int prerender(CKRenderContext *dev, CKRenderObject *mov, void *arg);  // UnZ-Buffer the rendering of the cube
 static int postrender(CKRenderContext *dev, CKRenderObject *mov, void *arg); // Z-Buffer the rendering of the cube
+static CK3dEntity *CreateSkyAroundCube(const CKBehaviorContext &behcontext);
 
 static void A_SkyShow(CK3dEntity *ent, CK_OBJECT_SHOWOPTION b)
 {
@@ -32,8 +33,46 @@ typedef struct
     float effect;     // Distortion Effect
     VxMatrix projmat; // Projection Matrix
     CK3dEntity *cube; // Entity of the Sky-Cube
-    CKBOOL is_on;
+    CK3dEntity *orientation;
 } Effect_ProjMat;
+
+static void ResetSkyAroundData(Effect_ProjMat *efp)
+{
+    if (!efp)
+        return;
+    memset(efp, 0, sizeof(Effect_ProjMat));
+}
+
+static void SetSkyAroundPlanarUv(CKMesh *mesh, int index, float x, float z)
+{
+    float u = 0.5f;
+    float v = 0.5f;
+    float length = sqrtf(x * x + z * z);
+    if (length > 0.0f)
+    {
+        float invLength = 1.0f / length;
+        u += x * invLength * 0.5f;
+        v += z * invLength * 0.5f;
+    }
+    mesh->SetVertexTextureCoordinates(index, u, v);
+}
+
+#define PIN_DISTORTION 0
+#define PIN_FILTERING_COLOR 1
+#define PIN_ADDITIONAL_COLOR 2
+#define PIN_SOURCE_BLEND 3
+#define PIN_DEST_BLEND 4
+#define PIN_ORIENTATION_OBJECT 5
+#define PIN_RADIUS 6
+#define PIN_QUADRATIC_SIDEFACES 7
+#define PIN_SIDEFACE_HEIGHT 8
+#define PIN_SKY_Y 9
+#define PIN_SIDE_MATERIALS 10
+
+#define LOCAL_SKYAROUND 0
+#define SETTING_SIDE_MATERIALS 1
+#define SETTING_TOP_MATERIAL 2
+#define SETTING_BOTTOM_MATERIAL 3
 
 CKObjectDeclaration *FillBehaviorTTSkyAroundDecl()
 {
@@ -61,7 +100,7 @@ CKERROR CreateTTSkyAroundProto(CKBehaviorPrototype **pproto)
     proto->DeclareOutput("Exit On");
     proto->DeclareOutput("Exit Off");
 
-    proto->DeclareInParameter("Distortion", CKPGUID_PERCENTAGE, "20");
+    proto->DeclareInParameter("Distortion", CKPGUID_PERCENTAGE, "30");
     proto->DeclareInParameter("Filtering Color", CKPGUID_COLOR, "255, 255, 255, 128");
     proto->DeclareInParameter("Additional Color", CKPGUID_COLOR, "0, 0, 0, 0");
     proto->DeclareInParameter("Source Blend", CKPGUID_BLENDFACTOR, "One");
@@ -74,8 +113,8 @@ CKERROR CreateTTSkyAroundProto(CKBehaviorPrototype **pproto)
 
     proto->DeclareLocalParameter("Skyaround", CKPGUID_VOIDBUF);
     proto->DeclareSetting("Side Materials", CKPGUID_INT, "4");
-    proto->DeclareSetting("Top Materials", CKPGUID_BOOL, "True");
-    proto->DeclareSetting("Bottom Materials", CKPGUID_BOOL, "True");
+    proto->DeclareSetting("Top Material", CKPGUID_BOOL, "True");
+    proto->DeclareSetting("Bottom Material", CKPGUID_BOOL, "True");
 
     proto->SetFlags(CK_BEHAVIORPROTOTYPE_NORMAL);
     proto->SetFunction(TTSkyAround);
@@ -91,10 +130,25 @@ int TTSkyAround(const CKBehaviorContext &behcontext)
     CKBehavior *beh = behcontext.Behavior;
 
     Effect_ProjMat *efp = (Effect_ProjMat *)beh->GetLocalParameterWriteDataPtr(0);
-    efp->effect = 0.2f;
-    beh->GetInputParameterValue(6, &(efp->effect));
-    if (efp->effect > 1.0f)
-        efp->effect = 1.0f;
+    if (!efp)
+        return CKBR_PARAMETERERROR;
+
+    if (beh->IsInputActive(0))
+    {
+        efp->effect = 0.3f;
+        beh->GetInputParameterValue(PIN_DISTORTION, &efp->effect);
+        if (efp->effect > 1.0f)
+            efp->effect = 1.0f;
+        efp->orientation = (CK3dEntity *)beh->GetInputParameterObject(PIN_ORIENTATION_OBJECT);
+        efp->cube = CreateSkyAroundCube(behcontext);
+        if (!efp->cube)
+            return CKBR_PARAMETERERROR;
+        efp->cube->AddPreRenderCallBack(prerender, efp);
+        efp->cube->AddPostRenderCallBack(postrender, efp);
+
+        beh->ActivateInput(0, FALSE);
+        beh->ActivateOutput(0, TRUE);
+    }
 
     // We get the cube
     CK3dEntity *ent = efp->cube;
@@ -107,54 +161,9 @@ int TTSkyAround(const CKBehaviorContext &behcontext)
         beh->ActivateOutput(1, TRUE);
 
         A_SkyShow(ent, CKHIDE);
-        efp->is_on = FALSE;
         return CKBR_OK;
     }
-
-    CKMesh *mesh = ent->GetCurrentMesh();
-
-    if (beh->IsInputActive(0))
-    { // we enter by 'ON'
-
-        CKTexture *texture;
-        CKMaterial *mat;
-        // We put the textures
-        for (int a = 0; a < 6; a++)
-        {
-            texture = (CKTexture *)beh->GetInputParameterObject(a);
-            mat = mesh->GetFaceMaterial(a * 2);
-
-            mat->SetTexture0(texture);
-        }
-        beh->ActivateInput(0, FALSE);
-        beh->ActivateOutput(0, TRUE);
-        efp->is_on = TRUE;
-    }
-
-    if (efp->is_on)
-        A_SkyShow(ent, CKSHOW);
-
-    // we change the color of the vertex
-    VxColor col(1.0f, 1.0f, 1.0f, 0.5f);
-    beh->GetInputParameterValue(7, &col); // we get the filtering color
-    CKDWORD dcol = RGBAFTOCOLOR(col.r, col.g, col.b, col.a);
-
-    col.r = 0;
-    col.g = 0;
-    col.b = 0;
-    col.a = 0;
-    beh->GetInputParameterValue(8, &col); // we get the additionnal color
-    CKDWORD dspeccol = RGBAFTOCOLOR(col.r, col.g, col.b, col.a);
-
-    CKDWORD cStride, sStride;
-    CKBYTE *colp = (CKBYTE *)mesh->GetColorsPtr(&cStride);
-    CKBYTE *spcp = (CKBYTE *)mesh->GetSpecularColorsPtr(&sStride);
-    for (int a = 0; a < 24; a++, colp += cStride, spcp += sStride)
-    {
-        *(CKDWORD *)colp = dcol;     // the vertex color is multiplied by the texture
-        *(CKDWORD *)spcp = dspeccol; // the spec. is added to the global color
-    }
-    mesh->ColorChanged();
+    A_SkyShow(ent, CKSHOW);
 
     CK3dEntity *cam = behcontext.CurrentRenderContext->GetAttachedCamera();
     if (!cam)
@@ -162,262 +171,262 @@ int TTSkyAround(const CKBehaviorContext &behcontext)
     if (!cam)
         return CKBR_PARAMETERERROR;
 
-    // we set the position of the cube to the position of the viewpoint.
-    VxVector pos_cam;
-    cam->GetPosition(&pos_cam, NULL);
-
+    if (efp->orientation)
+        ent->SetWorldMatrix(efp->orientation->GetWorldMatrix());
+    else
+        ent->SetWorldMatrix(VxMatrix::Identity());
     ent->SetPosition3f(0.0f, 0.0f, 0.0f, cam);
 
     return CKBR_ACTIVATENEXTFRAME;
 }
 
-CKERROR SkyAroundCallBack(const CKBehaviorContext &behcontext)
+static CK3dEntity *CreateSkyAroundCube(const CKBehaviorContext &behcontext)
 {
     CKBehavior *beh = behcontext.Behavior;
     CKContext *ctx = behcontext.Context;
 
+    int sideCount = 4;
+    CKBOOL topMaterial = FALSE;
+    CKBOOL bottomMaterial = FALSE;
+    beh->GetLocalParameterValue(SETTING_SIDE_MATERIALS, &sideCount);
+    beh->GetLocalParameterValue(SETTING_TOP_MATERIAL, &topMaterial);
+    beh->GetLocalParameterValue(SETTING_BOTTOM_MATERIAL, &bottomMaterial);
+    if (sideCount < 4)
+        sideCount = 4;
+
+    float radius = 70.0f;
+    beh->GetInputParameterValue(PIN_RADIUS, &radius);
+
+    CKBOOL quadraticSideFaces = TRUE;
+    beh->GetInputParameterValue(PIN_QUADRATIC_SIDEFACES, &quadraticSideFaces);
+
+    float sideFaceHeight = 10.0f;
+    if (!quadraticSideFaces)
+        beh->GetInputParameterValue(PIN_SIDEFACE_HEIGHT, &sideFaceHeight);
+
+    float skyY = 0.0f;
+    beh->GetInputParameterValue(PIN_SKY_Y, &skyY);
+
+    if (quadraticSideFaces)
+    {
+        float angle = (2 * PI) / (float)sideCount;
+        float dx = radius - cosf(angle) * radius;
+        float dz = sinf(angle) * radius;
+        sideFaceHeight = sqrtf(dx * dx + dz * dz);
+    }
+
+    float topY = skyY + sideFaceHeight * 0.5f;
+    float bottomY = skyY - sideFaceHeight * 0.5f;
+    int verticesPerSegment = 4 + (topMaterial ? 3 : 0) + (bottomMaterial ? 3 : 0);
+    int facesPerSegment = 2 + (topMaterial ? 1 : 0) + (bottomMaterial ? 1 : 0);
+
+    VxColor filteringColor(1.0f, 1.0f, 1.0f, 0.5f);
+    VxColor additionalColor(0.0f, 0.0f, 0.0f, 0.0f);
+    beh->GetInputParameterValue(PIN_FILTERING_COLOR, &filteringColor);
+    beh->GetInputParameterValue(PIN_ADDITIONAL_COLOR, &additionalColor);
+    CKDWORD vertexColor = RGBAFTOCOLOR(filteringColor.r, filteringColor.g, filteringColor.b, filteringColor.a);
+    CKDWORD specularColor = RGBAFTOCOLOR(additionalColor.r, additionalColor.g, additionalColor.b, additionalColor.a);
+
+    CKMesh *mesh = (CKMesh *)ctx->CreateObject(CKCID_MESH, "TT_SkyAround_Mesh", beh->IsDynamic() ? CK_OBJECTCREATION_DYNAMIC : CK_OBJECTCREATION_NONAMECHECK);
+    if (!mesh)
+        return NULL;
+
+    mesh->ModifyObjectFlags(CK_OBJECT_NOTTOBELISTEDANDSAVED, 0);
+    mesh->SetVertexCount(sideCount * verticesPerSegment);
+    mesh->SetLitMode((VXMESH_LITMODE)VX_PRELITMESH);
+    mesh->SetFaceCount(sideCount * facesPerSegment);
+
+    VXBLEND_MODE sourceBlend = VXBLEND_ONE;
+    VXBLEND_MODE destBlend = VXBLEND_ZERO;
+    beh->GetInputParameterValue(PIN_SOURCE_BLEND, &sourceBlend);
+    beh->GetInputParameterValue(PIN_DEST_BLEND, &destBlend);
+
+    int materialIndex = PIN_SIDE_MATERIALS;
+    int vertexIndex = 0;
+    int faceIndex = 0;
+    for (int side = 0; side < sideCount; ++side)
+    {
+        float angle0 = 6.2831855f * (float)side / (float)sideCount;
+        float angle1 = 6.2831855f * (float)(side + 1) / (float)sideCount;
+        float x0 = cosf(angle0) * radius;
+        float z0 = sinf(angle0) * radius;
+        float x1 = cosf(angle1) * radius;
+        float z1 = sinf(angle1) * radius;
+
+        mesh->SetVertexPosition(vertexIndex + 0, &VxVector(x0, bottomY, z0));
+        mesh->SetVertexPosition(vertexIndex + 1, &VxVector(x1, bottomY, z1));
+        mesh->SetVertexPosition(vertexIndex + 2, &VxVector(x1, topY, z1));
+        mesh->SetVertexPosition(vertexIndex + 3, &VxVector(x0, topY, z0));
+
+        mesh->SetVertexTextureCoordinates(vertexIndex + 0, 1.0f, 1.0f);
+        mesh->SetVertexTextureCoordinates(vertexIndex + 1, 0.0f, 1.0f);
+        mesh->SetVertexTextureCoordinates(vertexIndex + 2, 0.0f, 0.0f);
+        mesh->SetVertexTextureCoordinates(vertexIndex + 3, 1.0f, 0.0f);
+
+        mesh->SetFaceVertexIndex(faceIndex + 0, vertexIndex + 2, vertexIndex + 0, vertexIndex + 1);
+        mesh->SetFaceVertexIndex(faceIndex + 1, vertexIndex + 2, vertexIndex + 3, vertexIndex + 0);
+
+        CKMaterial *sideMat = (CKMaterial *)beh->GetInputParameterObject(materialIndex++);
+        if (sideMat)
+        {
+            sideMat->SetSourceBlend(sourceBlend);
+            sideMat->SetDestBlend(destBlend);
+            sideMat->EnableAlphaBlend(TRUE);
+            sideMat->SetTextureAddressMode(VXTEXTURE_ADDRESSCLAMP);
+        }
+        mesh->SetFaceMaterial(faceIndex + 0, sideMat);
+        mesh->SetFaceMaterial(faceIndex + 1, sideMat);
+
+        vertexIndex += 4;
+        faceIndex += 2;
+
+        if (topMaterial)
+        {
+            mesh->SetVertexPosition(vertexIndex + 0, &VxVector(x0, topY, z0));
+            mesh->SetVertexPosition(vertexIndex + 1, &VxVector(x1, topY, z1));
+            mesh->SetVertexPosition(vertexIndex + 2, &VxVector(0.0f, topY, 0.0f));
+
+            SetSkyAroundPlanarUv(mesh, vertexIndex + 0, x0, z0);
+            SetSkyAroundPlanarUv(mesh, vertexIndex + 1, x1, z1);
+            mesh->SetVertexTextureCoordinates(vertexIndex + 2, 0.5f, 0.5f);
+
+            mesh->SetFaceVertexIndex(faceIndex, vertexIndex + 0, vertexIndex + 1, vertexIndex + 2);
+
+            CKMaterial *topMat = (CKMaterial *)beh->GetInputParameterObject(PIN_SIDE_MATERIALS + sideCount);
+            if (topMat)
+            {
+                topMat->SetSourceBlend(sourceBlend);
+                topMat->SetDestBlend(destBlend);
+                topMat->EnableAlphaBlend(TRUE);
+                topMat->SetTextureAddressMode(VXTEXTURE_ADDRESSCLAMP);
+            }
+            mesh->SetFaceMaterial(faceIndex, topMat);
+
+            vertexIndex += 3;
+            faceIndex += 1;
+        }
+
+        if (bottomMaterial)
+        {
+            mesh->SetVertexPosition(vertexIndex + 0, &VxVector(x0, bottomY, z0));
+            mesh->SetVertexPosition(vertexIndex + 1, &VxVector(0.0f, bottomY, 0.0f));
+            mesh->SetVertexPosition(vertexIndex + 2, &VxVector(x1, bottomY, z1));
+
+            SetSkyAroundPlanarUv(mesh, vertexIndex + 0, x0, z0);
+            mesh->SetVertexTextureCoordinates(vertexIndex + 1, 0.5f, 0.5f);
+            SetSkyAroundPlanarUv(mesh, vertexIndex + 2, x1, z1);
+
+            mesh->SetFaceVertexIndex(faceIndex, vertexIndex + 0, vertexIndex + 1, vertexIndex + 2);
+
+            int bottomIndex = PIN_SIDE_MATERIALS + sideCount + (topMaterial ? 1 : 0);
+            CKMaterial *bottomMat = (CKMaterial *)beh->GetInputParameterObject(bottomIndex);
+            if (bottomMat)
+            {
+                bottomMat->SetSourceBlend(sourceBlend);
+                bottomMat->SetDestBlend(destBlend);
+                bottomMat->EnableAlphaBlend(TRUE);
+                bottomMat->SetTextureAddressMode(VXTEXTURE_ADDRESSCLAMP);
+            }
+            mesh->SetFaceMaterial(faceIndex, bottomMat);
+
+            vertexIndex += 3;
+            faceIndex += 1;
+        }
+    }
+
+    for (int i = 0; i < mesh->GetVertexCount(); ++i)
+    {
+        mesh->SetVertexColor(i, vertexColor);
+        mesh->SetVertexSpecularColor(i, specularColor);
+    }
+
+    mesh->ColorChanged();
+    mesh->BuildFaceNormals();
+
+    CK3dEntity *ent = (CK3dEntity *)ctx->CreateObject(CKCID_3DENTITY, "TT_SkyAround_Entity", beh->IsDynamic() ? CK_OBJECTCREATION_DYNAMIC : CK_OBJECTCREATION_NONAMECHECK);
+    if (!ent)
+        return NULL;
+
+    ent->ModifyObjectFlags(CK_OBJECT_NOTTOBELISTEDANDSAVED, 0);
+    ent->SetMoveableFlags(ent->GetMoveableFlags() | VX_MOVEABLE_RENDERFIRST);
+    behcontext.CurrentLevel->AddObject(ent);
+
+    A_SkyShow(ent, CKHIDE);
+
+    ent->AddMesh(mesh);
+    ent->SetCurrentMesh(mesh);
+    ent->SetPickable(FALSE);
+
+    CKDWORD flags = ent->GetMoveableFlags();
+    flags |= VX_MOVEABLE_NOZBUFFERTEST;
+    flags |= VX_MOVEABLE_NOZBUFFERWRITE;
+    ent->SetMoveableFlags(flags);
+
+    return ent;
+}
+
+CKERROR SkyAroundCallBack(const CKBehaviorContext &behcontext)
+{
+    CKBehavior *beh = behcontext.Behavior;
+
     switch (behcontext.CallbackMessage)
     {
-
-    case CKM_BEHAVIORCREATE:
+    case CKM_BEHAVIORATTACH:
     case CKM_BEHAVIORLOAD:
     {
-        CKMesh *mesh = (CKMesh *)ctx->CreateObject(CKCID_MESH, "SkyAround-cube", beh->IsDynamic() ? CK_OBJECTCREATION_DYNAMIC : CK_OBJECTCREATION_NONAMECHECK);
-        if (!mesh)
-            return CKBR_PARAMETERERROR;
-
-        mesh->ModifyObjectFlags(CK_OBJECT_NOTTOBELISTEDANDSAVED, 0);
-
-        //--------------------------------------  Vertices
-        int a;
-        float s = 10.0f; // length by default (at top)
-        VxVector V;
-
-        mesh->SetVertexCount(24);
-
-#define PUTVERTEX(i, a, b, c) \
-    V.x = a;                  \
-    V.y = b;                  \
-    V.z = c;                  \
-    mesh->SetVertexPosition(i, &V)
-
-        PUTVERTEX(0, -s, -s, -s);
-        PUTVERTEX(1, -s, s, -s);
-        PUTVERTEX(2, s, s, -s);
-        PUTVERTEX(3, s, -s, -s);
-
-        PUTVERTEX(4, s, -s, -s);
-        PUTVERTEX(5, s, s, -s);
-        PUTVERTEX(6, s, s, s);
-        PUTVERTEX(7, s, -s, s);
-
-        PUTVERTEX(8, s, -s, s);
-        PUTVERTEX(9, s, s, s);
-        PUTVERTEX(10, -s, s, s);
-        PUTVERTEX(11, -s, -s, s);
-
-        PUTVERTEX(12, -s, -s, s);
-        PUTVERTEX(13, -s, s, s);
-        PUTVERTEX(14, -s, s, -s);
-        PUTVERTEX(15, -s, -s, -s);
-
-        PUTVERTEX(16, s, s, s);
-        PUTVERTEX(17, s, s, -s);
-        PUTVERTEX(18, -s, s, -s);
-        PUTVERTEX(19, -s, s, s);
-
-        PUTVERTEX(20, s, -s, -s);
-        PUTVERTEX(21, s, -s, s);
-        PUTVERTEX(22, -s, -s, s);
-        PUTVERTEX(23, -s, -s, -s);
-
-        mesh->SetLitMode((VXMESH_LITMODE)VX_PRELITMESH);
-
-        for (a = 0; a < 24; a++)
-        {
-            mesh->SetVertexColor(a, RGBAITOCOLOR(255, 255, 255, 255));
-            mesh->SetVertexSpecularColor(a, RGBAITOCOLOR(0, 0, 0, 255));
-        }
-
-        for (a = 0; a < 24; a += 4)
-        {
-            mesh->SetVertexTextureCoordinates(a, 1.0f, 1.0f);
-            mesh->SetVertexTextureCoordinates(a + 1, 1.0f, 0.0f);
-            mesh->SetVertexTextureCoordinates(a + 2, 0.0f, 0.0f);
-            mesh->SetVertexTextureCoordinates(a + 3, 0.0f, 1.0f);
-        }
-
-        //--------------------------------------  Faces
-        mesh->SetFaceCount(12);
-
-        mesh->SetFaceVertexIndex(0, 2, 1, 0); // BACK
-        mesh->SetFaceVertexIndex(1, 2, 0, 3);
-
-        mesh->SetFaceVertexIndex(2, 6, 5, 4); // RIGHT
-        mesh->SetFaceVertexIndex(3, 6, 4, 7);
-
-        mesh->SetFaceVertexIndex(4, 10, 9, 8); // FRONT
-        mesh->SetFaceVertexIndex(5, 10, 8, 11);
-
-        mesh->SetFaceVertexIndex(6, 14, 13, 12); // LEFT
-        mesh->SetFaceVertexIndex(7, 14, 12, 15);
-
-        mesh->SetFaceVertexIndex(8, 18, 17, 16); // UP
-        mesh->SetFaceVertexIndex(9, 18, 16, 19);
-
-        mesh->SetFaceVertexIndex(10, 22, 21, 20); // DOWN
-        mesh->SetFaceVertexIndex(11, 22, 20, 23);
-
-        //--------------------------------------  Normals
-        mesh->BuildFaceNormals();
-
-        //--------------------------------------  Material
-        CKTexture *texture;
-        char str[128];
-        for (a = 0; a < 6; a++)
-        {
-            sprintf(str, "Sky-Cube Material %d", a);
-
-            CKMaterial *mat = (CKMaterial *)ctx->CreateObject(CKCID_MATERIAL, str, beh->IsDynamic() ? CK_OBJECTCREATION_DYNAMIC : CK_OBJECTCREATION_NONAMECHECK);
-            if (!mat)
-                continue;
-
-            mat->ModifyObjectFlags(CK_OBJECT_NOTTOBELISTEDANDSAVED, 0);
-
-            mesh->SetFaceMaterial(a * 2, mat);
-            mesh->SetFaceMaterial(a * 2 + 1, mat);
-
-            texture = (CKTexture *)beh->GetInputParameterObject(a);
-            mat->SetTexture0(texture);
-            mat->SetTextureAddressMode(VXTEXTURE_ADDRESSCLAMP);
-        }
-
-        //--------------------------------------  Entity
-        CK3dEntity *ent = (CK3dEntity *)ctx->CreateObject(CKCID_3DENTITY, "SkyAround", beh->IsDynamic() ? CK_OBJECTCREATION_DYNAMIC : CK_OBJECTCREATION_NONAMECHECK);
-        if (!ent)
-            return CKBR_PARAMETERERROR;
-
-        ent->ModifyObjectFlags(CK_OBJECT_NOTTOBELISTEDANDSAVED, 0);
-
-        //--- This object must be rendered first
-        ent->SetMoveableFlags(ent->GetMoveableFlags() | VX_MOVEABLE_RENDERFIRST);
-
-        //----- Add Object
-        behcontext.CurrentLevel->AddObject(ent);
-
-        A_SkyShow(ent, CKHIDE);
-
-        ent->AddMesh(mesh);
-        ent->SetCurrentMesh(mesh);
-
-        Effect_ProjMat efp; // we initialize the size of the local structure
-        efp.cube = ent;     // and we put the cube in the local structure
-        efp.is_on = FALSE;  // we tell that the cube is not visible by default
-        beh->SetLocalParameterValue(0, &efp, sizeof(Effect_ProjMat));
-        Effect_ProjMat *efp_ptr = (Effect_ProjMat *)beh->GetLocalParameterReadDataPtr(0);
-
-        //--------------------------------------  Pre-Render CallBack
-        ent->AddPreRenderCallBack(prerender, efp_ptr);
-
-        //--------------------------------------  PostRender CallBack
-        ent->AddPostRenderCallBack(postrender, efp_ptr);
-
-        //--------------------------------------  Pickable or not
-        ent->SetPickable(FALSE);
-
-        //--------- set flags for read/write zbuf
-        CKDWORD flags = ent->GetMoveableFlags();
-
-        CKBOOL enable_read = FALSE;
-        CKBOOL enable_write = FALSE;
-
-        if (enable_read)
-            flags &= ~VX_MOVEABLE_NOZBUFFERTEST;
-        else
-            flags |= VX_MOVEABLE_NOZBUFFERTEST;
-
-        if (enable_write)
-            flags &= ~VX_MOVEABLE_NOZBUFFERWRITE;
-        else
-            flags |= VX_MOVEABLE_NOZBUFFERWRITE;
-
-        ent->SetMoveableFlags(flags);
+        Effect_ProjMat efp;
+        ResetSkyAroundData(&efp);
+        beh->SetLocalParameterValue(LOCAL_SKYAROUND, &efp, sizeof(Effect_ProjMat));
     }
     break;
 
+    case CKM_BEHAVIORDETACH:
     case CKM_BEHAVIORDELETE:
-    {
-        Effect_ProjMat *efp = (Effect_ProjMat *)beh->GetLocalParameterWriteDataPtr(0);
-        if (!(efp->cube))
-            return CKBR_PARAMETERERROR;
-        CKDestroyObject(efp->cube);
-    }
-    break;
-
-    case CKM_BEHAVIORPAUSE:
     case CKM_BEHAVIORRESET:
     {
-        Effect_ProjMat *efp = (Effect_ProjMat *)beh->GetLocalParameterReadDataPtr(0);
-        if (!(efp->cube))
-            return CKBR_PARAMETERERROR;
-
-        A_SkyShow(efp->cube, CKHIDE);
-    }
-    break;
-
-    case CKM_BEHAVIORRESUME:
-    {
-        int a = 0;
-    }
-    break;
-
-    case CKM_BEHAVIORNEWSCENE:
-    {
-        Effect_ProjMat *efp = (Effect_ProjMat *)beh->GetLocalParameterReadDataPtr(0);
-        if (!(efp->cube))
-            return CKBR_PARAMETERERROR;
-
-        // remove the object from all scene it was in
-        for (int i = 0; i < efp->cube->GetSceneInCount(); i++)
+        Effect_ProjMat *efp = (Effect_ProjMat *)beh->GetLocalParameterWriteDataPtr(0);
+        if (efp && efp->cube)
         {
-            CKScene *scene = efp->cube->GetSceneIn(i);
-            if (scene)
-                scene->RemoveObjectFromScene(efp->cube);
-        }
-
-        // if script actif in scene
-        // or if the owner is in the scene
-        // or if the owner is the level,    then add the object to the new scene.
-        CKBeObject *owner = beh->GetOwner();
-        CKScene *scene = behcontext.CurrentScene;
-        if (owner->IsInScene(scene) || CKIsChildClassOf(owner, CKCID_LEVEL))
-        {
-            scene->AddObjectToScene(efp->cube);
-            if (!(beh->IsParentScriptActiveInScene(scene)))
-            {
-                A_SkyShow(efp->cube, CKHIDE);
-            }
+            CKDestroyObject(efp->cube);
+            efp->cube = NULL;
+            efp->orientation = NULL;
         }
     }
     break;
 
-    case CKM_BEHAVIORACTIVATESCRIPT:
+    case CKM_BEHAVIORSETTINGSEDITED:
     {
-        Effect_ProjMat *efp = (Effect_ProjMat *)beh->GetLocalParameterReadDataPtr(0);
-        if (!(efp->cube))
-            return CKBR_PARAMETERERROR;
-        A_SkyShow(efp->cube, CKSHOW);
+        CKBOOL top = FALSE;
+        CKBOOL bottom = FALSE;
+        int sideCount = 4;
+
+        beh->GetLocalParameterValue(SETTING_TOP_MATERIAL, &top);
+        beh->GetLocalParameterValue(SETTING_BOTTOM_MATERIAL, &bottom);
+        beh->GetLocalParameterValue(SETTING_SIDE_MATERIALS, &sideCount);
+        if (sideCount < 4)
+            sideCount = 4;
+        beh->SetLocalParameterValue(SETTING_SIDE_MATERIALS, &sideCount);
+
+        for (int i = beh->GetInputParameterCount(); i > PIN_SIDE_MATERIALS; --i)
+        {
+            CKParameterIn *pin = beh->RemoveInputParameter(i - 1);
+            CKDestroyObject(pin);
+        }
+
+        char name[64];
+        for (int i = 1; i <= sideCount; ++i)
+        {
+            sprintf(name, "%d.Side-Mat", i);
+            beh->CreateInputParameter(name, CKPGUID_MATERIAL);
+        }
+
+        if (top)
+            beh->CreateInputParameter("Top Mat", CKPGUID_MATERIAL);
+        if (bottom)
+            beh->CreateInputParameter("Bottom Mat", CKPGUID_MATERIAL);
     }
     break;
 
-    case CKM_BEHAVIORDEACTIVATESCRIPT:
-    {
-        Effect_ProjMat *efp = (Effect_ProjMat *)beh->GetLocalParameterReadDataPtr(0);
-        if (!(efp->cube))
-            return CKBR_PARAMETERERROR;
-        A_SkyShow(efp->cube, CKHIDE);
-    }
-    break;
     }
 
     return CKBR_OK;
