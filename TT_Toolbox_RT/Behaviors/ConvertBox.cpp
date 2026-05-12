@@ -56,7 +56,7 @@ int ConvertBox(const CKBehaviorContext &behcontext)
     beh->GetInputParameterValue(0, &min);
 
     VxVector max;
-    beh->GetInputParameterValue(0, &max);
+    beh->GetInputParameterValue(1, &max);
 
     VxBbox bbox(min, max);
     beh->SetOutputParameterValue(0, &bbox);
