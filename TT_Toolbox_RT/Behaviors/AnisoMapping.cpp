@@ -135,7 +135,7 @@ int AnisoMapping(const CKBehaviorContext &behcontext)
         beh->GetInputParameterValue(6, &size);
 
         // Create material
-        CK_OBJECTCREATION_OPTIONS createOpts = (beh->GetObjectFlags() & CK_OBJECT_NOTTOBEDELETED) ? CK_OBJECTCREATION_NONAMECHECK : CK_OBJECTCREATION_DYNAMIC;
+        CK_OBJECTCREATION_OPTIONS createOpts = beh->IsDynamic() ? CK_OBJECTCREATION_DYNAMIC : CK_OBJECTCREATION_NONAMECHECK;
         CKMaterial *mat = (CKMaterial *)ctx->CreateObject(CKCID_MATERIAL, "Mat AnisoMap", createOpts);
         if (!mat)
             return CKBR_OK;
@@ -147,7 +147,7 @@ int AnisoMapping(const CKBehaviorContext &behcontext)
         mat->SetTwoSided(TRUE);
 
         // Create texture
-        CK_OBJECTCREATION_OPTIONS texCreateOpts = (beh->GetObjectFlags() & CK_OBJECT_NOTTOBEDELETED) ? CK_OBJECTCREATION_NONAMECHECK : CK_OBJECTCREATION_DYNAMIC;
+        CK_OBJECTCREATION_OPTIONS texCreateOpts = beh->IsDynamic() ? CK_OBJECTCREATION_DYNAMIC : CK_OBJECTCREATION_NONAMECHECK;
         CKTexture *tex = (CKTexture *)ctx->CreateObject(CKCID_TEXTURE, "Tex AnisoMap", texCreateOpts);
         if (!tex)
         {
@@ -229,8 +229,8 @@ int AnisoMapping(const CKBehaviorContext &behcontext)
             return CKBR_PARAMETERERROR;
         }
 
-        mesh->SetChannelSourceBlend(newChannel, VXBLEND_SRCCOLOR);
-        mesh->SetChannelDestBlend(newChannel, VXBLEND_SRCCOLOR);
+        mesh->SetChannelSourceBlend(newChannel, VXBLEND_ONE);
+        mesh->SetChannelDestBlend(newChannel, VXBLEND_ONE);
 
         if (scene)
         {
@@ -359,7 +359,7 @@ int AnisoMapping(const CKBehaviorContext &behcontext)
 
 CKERROR AnisoMappingCallBack(const CKBehaviorContext &behcontext)
 {
-    if (behcontext.CallbackMessage == CKM_BEHAVIORDEACTIVATESCRIPT)
+    if (behcontext.CallbackMessage == CKM_BEHAVIORRESET)
     {
         CKBehavior *beh = behcontext.Behavior;
         CK3dEntity *target = (CK3dEntity *)beh->GetTarget();
