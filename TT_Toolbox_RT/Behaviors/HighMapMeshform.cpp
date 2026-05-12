@@ -146,6 +146,7 @@ CKERROR HighMapMeshformCallBack(const CKBehaviorContext &behcontext)
 
     switch (behcontext.CallbackMessage)
     {
+    case CKM_BEHAVIORDELETE:
     case CKM_BEHAVIORDETACH:
         {
             // Restore original vertex positions
@@ -174,7 +175,7 @@ CKERROR HighMapMeshformCallBack(const CKBehaviorContext &behcontext)
                 pos->z = originalPositions[i].z;
             }
 
-            mesh->ModifyObjectFlags(CK_3DENTITY_UPDATELASTFRAME, 0);
+            mesh->ModifierVertexMove(TRUE, TRUE);
         }
         break;
 
