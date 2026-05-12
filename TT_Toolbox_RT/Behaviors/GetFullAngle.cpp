@@ -57,10 +57,10 @@ int GetFullAngle(const CKBehaviorContext &behcontext)
     beh->GetInputParameterValue(0, &a);
 
     Vx2DVector b;
-    beh->GetInputParameterValue(0, &b);
+    beh->GetInputParameterValue(1, &b);
 
     a.Normalize();
-    b.Magnitude();
+    b.Normalize();
 
     float rad = a.Dot(b);
     float cp = a.Cross().Dot(b);
