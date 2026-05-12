@@ -66,7 +66,9 @@ int SearchRow(const CKBehaviorContext &behcontext)
     beh->GetInputParameterValue(0, &column);
 
     CKParameterIn *searchParam = beh->GetInputParameter(1);
-    CKParameter *param = searchParam->GetRealSource();
+    if (!searchParam)
+        return CKBR_OK;
+    CKParameter *param = (CKParameter *)searchParam;
 
     void *searchData = NULL;
     int dataSize = 0;
