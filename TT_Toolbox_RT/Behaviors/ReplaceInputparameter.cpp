@@ -82,7 +82,7 @@ static CKParameter *FindOrLinkParameter(CKContext *ctx, CKBehavior *script, cons
                     if (strcmp(outSource->GetName(), paramName) == 0)
                     {
                         // Found matching parameter - check type compatibility
-                        if (outSource->IsCompatibleWith(sourceParam) && sourceParam->IsCompatibleWith(outSource))
+                        if (outSource->IsCompatibleWith(sourceParam))
                         {
                             // Mark old source as replaced
                             char newName[256];
