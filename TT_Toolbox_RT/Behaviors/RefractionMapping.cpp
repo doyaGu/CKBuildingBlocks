@@ -75,7 +75,7 @@ int RefractionMapping(const CKBehaviorContext &behcontext)
 
     CK3dEntity *target = (CK3dEntity *)beh->GetTarget();
     if (!target)
-        return CKBR_PARAMETERERROR;
+        return CKBR_OWNERERROR;
 
     // Get input parameters
     int matChannel = -1;
