@@ -317,6 +317,12 @@ int PlanarShadowPostRenderCallBack(CKRenderContext *rc, CKRenderObject *obj, voi
         {
             m_RenderContext = rc;
 
+            m_StencilEnable = rc->GetState(VXRENDERSTATE_STENCILENABLE);
+            m_StencilFail = rc->GetState(VXRENDERSTATE_STENCILFAIL);
+            m_StencilZFail = rc->GetState(VXRENDERSTATE_STENCILZFAIL);
+            m_StencilPass = rc->GetState(VXRENDERSTATE_STENCILPASS);
+            m_StencilFunc = rc->GetState(VXRENDERSTATE_STENCILFUNC);
+            m_StencilRef = rc->GetState(VXRENDERSTATE_STENCILREF);
             m_StencilReadMask = rc->GetState(VXRENDERSTATE_STENCILMASK);
             m_StencilWriteMask = rc->GetState(VXRENDERSTATE_STENCILWRITEMASK);
 
@@ -335,9 +341,17 @@ int PlanarShadowPostRenderCallBack(CKRenderContext *rc, CKRenderObject *obj, voi
             {
             case STENCIL:
             {
+                m_RenderContext->SetState(VXRENDERSTATE_STENCILFAIL, m_StencilFail);
+                m_RenderContext->SetState(VXRENDERSTATE_STENCILZFAIL, m_StencilZFail);
+                m_RenderContext->SetState(VXRENDERSTATE_STENCILPASS, m_StencilPass);
+                m_RenderContext->SetState(VXRENDERSTATE_STENCILFUNC, m_StencilFunc);
+                m_RenderContext->SetState(VXRENDERSTATE_STENCILREF, m_StencilRef);
                 m_RenderContext->SetState(VXRENDERSTATE_STENCILMASK, m_StencilReadMask);
+                m_RenderContext->SetState(VXRENDERSTATE_STENCILWRITEMASK, m_StencilWriteMask);
                 if (!m_StencilWasEnabled)
                     m_RenderContext->SetState(VXRENDERSTATE_STENCILENABLE, FALSE);
+                else
+                    m_RenderContext->SetState(VXRENDERSTATE_STENCILENABLE, m_StencilEnable);
             }
             break;
             case CLIPPLANES:
@@ -348,6 +362,12 @@ int PlanarShadowPostRenderCallBack(CKRenderContext *rc, CKRenderObject *obj, voi
         }
 
         CKRenderContext *m_RenderContext;
+        CKDWORD m_StencilEnable;
+        CKDWORD m_StencilFail;
+        CKDWORD m_StencilZFail;
+        CKDWORD m_StencilPass;
+        CKDWORD m_StencilFunc;
+        CKDWORD m_StencilRef;
         CKDWORD m_StencilReadMask;
         CKDWORD m_StencilWriteMask;
         int m_Mode;
