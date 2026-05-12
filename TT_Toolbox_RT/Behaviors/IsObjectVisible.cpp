@@ -50,7 +50,7 @@ int IsObjectVisible(const CKBehaviorContext &behcontext)
 {
     CKBehavior *beh = behcontext.Behavior;
 
-    CKBehavior *object = (CKBehavior *)beh->GetInputParameterObject(0);
+    CKObject *object = beh->GetInputParameterObject(0);
     if (!object)
     {
         behcontext.Context->OutputToConsole("no Object!");

@@ -50,7 +50,7 @@ int IsObjectActive(const CKBehaviorContext &behcontext)
 {
     CKBehavior *beh = behcontext.Behavior;
 
-    CKBehavior *object = (CKBehavior *)beh->GetInputParameterObject(0);
+    CKSceneObject *object = (CKSceneObject *)beh->GetInputParameterObject(0);
     if (!object)
     {
         behcontext.Context->OutputToConsole("no Object!");
