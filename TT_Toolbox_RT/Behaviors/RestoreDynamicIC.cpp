@@ -65,14 +65,14 @@ static CKBOOL Is3DEntityClass(CK3dEntity *entity)
 }
 
 // Helper to restore a single entity's IC
-static void RestoreEntityIC(CK3dEntity *entity, CKScene *scene)
+static CKBOOL RestoreEntityIC(CK3dEntity *entity, CKScene *scene)
 {
     if (!entity->IsInScene(scene))
-        return;
+        return FALSE;
 
     CKStateChunk *chunk = scene->GetObjectInitialValue(entity);
     if (!chunk)
-        return;
+        return FALSE;
 
     CKDWORD flags = entity->GetObjectFlags();
     CKBOOL wasDynamic = (flags & CK_OBJECT_DYNAMIC) && (flags & CK_OBJECT_HIERACHICALHIDE);
@@ -101,6 +101,8 @@ static void RestoreEntityIC(CK3dEntity *entity, CKScene *scene)
     {
         CKReadObjectState(entity, chunk);
     }
+
+    return wasDynamic;
 }
 
 int RestoreDynamicIC(const CKBehaviorContext &behcontext)
@@ -133,8 +135,8 @@ int RestoreDynamicIC(const CKBehaviorContext &behcontext)
             CK3dEntity *child = NULL;
             while ((child = entity->HierarchyParser(child)) != NULL)
             {
-                RestoreEntityIC(child, scene);
-                child->SetParent(entity, TRUE);
+                if (RestoreEntityIC(child, scene))
+                    child->SetParent(entity, TRUE);
             }
         }
     }
