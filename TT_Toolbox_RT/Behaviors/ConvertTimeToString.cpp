@@ -80,6 +80,7 @@ int ConvertTimeToString(const CKBehaviorContext &behcontext)
         str[6] = (char)('0' + (ms / 10));
         str[7] = (char)('0' + (ms % 10));
     }
+    str[8] = '\0';
 
     beh->SetOutputParameterValue(0, str);
     return CKBR_OK;
