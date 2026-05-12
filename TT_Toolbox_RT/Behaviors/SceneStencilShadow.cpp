@@ -777,9 +777,21 @@ CKERROR SceneStencilShadowCallBack(const CKBehaviorContext &behcontext)
 
     switch (behcontext.CallbackMessage)
     {
+    case CKM_BEHAVIORATTACH:
+    case CKM_BEHAVIORLOAD:
+    {
+        CKAttributeManager *attman = ctx->GetAttributeManager();
+        if (attman->GetAttributeTypeByName("StencilShadow") == -1)
+        {
+            int att = attman->RegisterNewAttributeType("StencilShadow", CKGUID(0x1c0138d7, 0x1a1609ef), CKCID_3DENTITY, CK_ATTRIBUT_SYSTEM);
+            attman->SetAttributeCategory(att, "Visuals FX");
+            attman->SetAttributeDefaultValue(att, "0;TRUE;100.0f");
+        }
+    }
+    break;
+
+    case CKM_BEHAVIORDELETE:
     case CKM_BEHAVIORDETACH:
-    case CKM_BEHAVIORRESET:
-    case CKM_BEHAVIORDEACTIVATESCRIPT:
     {
         // Clean up allocated resources
         StencilShadowObjectData **dataArrayPtr = (StencilShadowObjectData **)beh->GetLocalParameterReadDataPtr(0);
