@@ -269,6 +269,106 @@ int PMSMeshdeform(const CKBehaviorContext &behcontext)
 CKERROR PMSMeshdeformCallBack(const CKBehaviorContext &behcontext)
 {
     CKBehavior *beh = behcontext.Behavior;
-    // Callback not needed for this implementation
+
+    switch (behcontext.CallbackMessage)
+    {
+    case CKM_BEHAVIORDELETE:
+    case CKM_BEHAVIORDETACH:
+    case CKM_BEHAVIORRESET:
+        {
+            CK3dEntity *target = (CK3dEntity *)beh->GetTarget();
+            if (!target)
+                return CKBR_OK;
+
+            CKMesh *mesh = target->GetCurrentMesh();
+            if (!mesh)
+                return CKBR_OK;
+
+            int vertexCount = mesh->GetVertexCount();
+            CKDWORD stride = 0;
+            VxVector *positions = (VxVector *)mesh->GetPositionsPtr(&stride);
+
+            VxVector *originalPositions = (VxVector *)beh->GetLocalParameterReadDataPtr(LOCAL_VERTEX_ARRAY);
+            if (!originalPositions)
+                return CKBR_OK;
+
+            for (int i = 0; i < vertexCount; ++i)
+            {
+                VxVector *pos = (VxVector *)((CKBYTE *)positions + i * stride);
+                *pos = originalPositions[i];
+            }
+
+            mesh->ModifyObjectFlags(CK_3DENTITY_UPDATELASTFRAME, 0);
+        }
+        break;
+
+    case CKM_BEHAVIORATTACH:
+    case CKM_BEHAVIORLOAD:
+    case CKM_BEHAVIOREDITED:
+        {
+            CK3dEntity *target = (CK3dEntity *)beh->GetTarget();
+            if (!target)
+                return CKBR_OK;
+
+            CKMesh *mesh = target->GetCurrentMesh();
+            if (!mesh)
+                return CKBR_OK;
+
+            int vertexCount = mesh->GetVertexCount();
+            CKDWORD stride = 0;
+            VxVector *positions = (VxVector *)mesh->GetPositionsPtr(&stride);
+
+            int bufferSize = vertexCount * sizeof(VxVector);
+            VxVector *originalPositions = new VxVector[vertexCount];
+            for (int i = 0; i < vertexCount; ++i)
+            {
+                VxVector *pos = (VxVector *)((CKBYTE *)positions + i * stride);
+                originalPositions[i] = *pos;
+            }
+
+            beh->SetLocalParameterValue(LOCAL_VERTEX_ARRAY, originalPositions, bufferSize);
+            delete[] originalPositions;
+        }
+        break;
+
+    case CKM_BEHAVIORSETTINGSEDITED:
+        {
+            int waveCount = 1;
+            beh->GetLocalParameterValue(LOCAL_WAVE_COUNT, &waveCount);
+            if (waveCount < 1)
+            {
+                waveCount = 1;
+                beh->SetLocalParameterValue(LOCAL_WAVE_COUNT, &waveCount);
+            }
+
+            int inputCount = beh->GetInputParameterCount();
+            int currentWaveCount = (inputCount - 4) / 3;
+
+            while (currentWaveCount > waveCount)
+            {
+                CKParameterIn *pin = beh->RemoveInputParameter(--inputCount);
+                CKDestroyObject(pin);
+                pin = beh->RemoveInputParameter(--inputCount);
+                CKDestroyObject(pin);
+                pin = beh->RemoveInputParameter(--inputCount);
+                CKDestroyObject(pin);
+                --currentWaveCount;
+            }
+
+            char name[64];
+            while (currentWaveCount < waveCount)
+            {
+                ++currentWaveCount;
+                sprintf(name, "%d.Wavelength in Y", currentWaveCount);
+                beh->CreateInputParameter(name, CKPGUID_FLOAT);
+                sprintf(name, "%d.Wavelength in X", currentWaveCount);
+                beh->CreateInputParameter(name, CKPGUID_FLOAT);
+                sprintf(name, "%d.Amplitude in X", currentWaveCount);
+                beh->CreateInputParameter(name, CKPGUID_FLOAT);
+            }
+        }
+        break;
+    }
+
     return CKBR_OK;
 }
