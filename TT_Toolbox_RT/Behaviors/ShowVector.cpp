@@ -67,5 +67,5 @@ int ShowVector(const CKBehaviorContext &behcontext)
     curve->GetControlPoint(0)->SetPosition(&start);
     curve->GetControlPoint(1)->SetPosition(&end);
 
-    return CKBR_OK;
+    return CKBR_ACTIVATENEXTFRAME;
 }
