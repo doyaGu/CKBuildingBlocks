@@ -577,6 +577,7 @@ CKERROR LensFlareCallBack(const CKBehaviorContext &behcontext)
     switch (behcontext.CallbackMessage)
     {
     case CKM_BEHAVIORATTACH:
+    case CKM_BEHAVIORLOAD:
     {
         // Allocate flare data
         FlareData *data = new FlareData();
@@ -589,9 +590,8 @@ CKERROR LensFlareCallBack(const CKBehaviorContext &behcontext)
     }
     break;
 
+    case CKM_BEHAVIORDELETE:
     case CKM_BEHAVIORDETACH:
-    case CKM_BEHAVIORRESET:
-    case CKM_BEHAVIORDEACTIVATESCRIPT:
     {
         // Free flare data
         FlareData **dataPtr = (FlareData **)beh->GetLocalParameterReadDataPtr(LOCAL_FLARE_DATA);
@@ -613,6 +613,33 @@ CKERROR LensFlareCallBack(const CKBehaviorContext &behcontext)
         if (target)
         {
             target->RemovePreRenderCallBack((CK_RENDEROBJECT_CALLBACK)LensFlareRenderCallback, beh);
+        }
+    }
+    break;
+
+    case CKM_BEHAVIORPAUSE:
+    case CKM_BEHAVIORRESET:
+    case CKM_BEHAVIORDEACTIVATESCRIPT:
+    {
+        CK3dEntity *target = (CK3dEntity *)beh->GetTarget();
+        if (target)
+        {
+            target->RemovePreRenderCallBack((CK_RENDEROBJECT_CALLBACK)LensFlareRenderCallback, beh);
+        }
+    }
+    break;
+
+    case CKM_BEHAVIORRESUME:
+    case CKM_BEHAVIORNEWSCENE:
+    case CKM_BEHAVIORACTIVATESCRIPT:
+    {
+        if (beh->IsActive() && beh->IsParentScriptActiveInScene(behcontext.CurrentScene))
+        {
+            CK3dEntity *target = (CK3dEntity *)beh->GetTarget();
+            if (target)
+            {
+                target->AddPreRenderCallBack((CK_RENDEROBJECT_CALLBACK)LensFlareRenderCallback, beh, TRUE);
+            }
         }
     }
     break;
