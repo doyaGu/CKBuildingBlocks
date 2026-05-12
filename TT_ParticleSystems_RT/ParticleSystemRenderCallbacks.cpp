@@ -20,10 +20,6 @@ int RenderParticles_P(CKRenderContext *dev, CKRenderObject *obj, void *arg)
 
     // we don't let write to the ZBuffer
     dev->SetTexture(NULL);
-    dev->SetState(VXRENDERSTATE_ZENABLE, TRUE);
-    dev->SetState(VXRENDERSTATE_ZFUNC, VXCMP_LESSEQUAL);
-    dev->SetState(VXRENDERSTATE_ALPHATESTENABLE, FALSE);
-    dev->SetState(VXRENDERSTATE_STENCILENABLE, FALSE);
     dev->SetState(VXRENDERSTATE_ZWRITEENABLE, FALSE);
     dev->SetState(VXRENDERSTATE_SRCBLEND, em->m_SrcBlend);
     dev->SetState(VXRENDERSTATE_DESTBLEND, em->m_DestBlend);
@@ -85,10 +81,6 @@ int RenderParticles_L(CKRenderContext *dev, CKRenderObject *obj, void *arg)
 
     // we don't let write to the ZBuffer
     dev->SetTexture(NULL);
-    dev->SetState(VXRENDERSTATE_ZENABLE, TRUE);
-    dev->SetState(VXRENDERSTATE_ZFUNC, VXCMP_LESSEQUAL);
-    dev->SetState(VXRENDERSTATE_ALPHATESTENABLE, FALSE);
-    dev->SetState(VXRENDERSTATE_STENCILENABLE, FALSE);
     dev->SetState(VXRENDERSTATE_ZWRITEENABLE, FALSE);
     dev->SetState(VXRENDERSTATE_SRCBLEND, em->m_SrcBlend);
     dev->SetState(VXRENDERSTATE_DESTBLEND, em->m_DestBlend);

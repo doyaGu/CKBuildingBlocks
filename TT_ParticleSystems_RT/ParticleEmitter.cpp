@@ -1801,10 +1801,6 @@ void ParticleEmitter::SetState(CKRenderContext *dev, CKBOOL gouraud)
     // States
     dev->SetState(VXRENDERSTATE_WRAP0, 0);
     dev->SetState(VXRENDERSTATE_CULLMODE, VXCULL_NONE);
-    // Post-render callbacks inherit the owner's material states, so force a stable depth/stencil setup.
-    dev->SetState(VXRENDERSTATE_ZENABLE, TRUE);
-    dev->SetState(VXRENDERSTATE_ZFUNC, VXCMP_LESSEQUAL);
-    dev->SetState(VXRENDERSTATE_STENCILENABLE, FALSE);
     dev->SetState(VXRENDERSTATE_SRCBLEND, m_SrcBlend);
     dev->SetState(VXRENDERSTATE_DESTBLEND, m_DestBlend);
     if (m_DestBlend == VXBLEND_ZERO && ((m_SrcBlend == VXBLEND_SRCALPHA) || (m_SrcBlend == VXBLEND_SRCCOLOR) || (m_SrcBlend == VXBLEND_ONE)))
