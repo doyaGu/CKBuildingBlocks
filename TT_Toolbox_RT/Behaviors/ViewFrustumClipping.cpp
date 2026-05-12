@@ -103,7 +103,7 @@ CKERROR ViewFrustumClippingCallBack(const CKBehaviorContext &behcontext)
     CKBehavior *beh = behcontext.Behavior;
     CKContext *ctx = behcontext.Context;
 
-    if (behcontext.CallbackMessage == CKM_BEHAVIORPAUSE)
+    if (behcontext.CallbackMessage == CKM_BEHAVIORDEACTIVATESCRIPT)
     {
         // Show all hidden objects when pausing
         CKScene *scene = ctx->GetCurrentScene();
