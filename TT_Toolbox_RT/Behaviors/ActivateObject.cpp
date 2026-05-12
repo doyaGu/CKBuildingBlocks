@@ -50,6 +50,7 @@ CKERROR CreateTTActivateObjectProto(CKBehaviorPrototype **pproto)
 int TTActivateObject(const CKBehaviorContext &behcontext)
 {
     CKBehavior *beh = behcontext.Behavior;
+    CKScene *currentScene = behcontext.Context ? behcontext.Context->GetCurrentScene() : NULL;
 
     beh->ActivateInput(0, FALSE);
     beh->ActivateOutput(0, TRUE);
@@ -58,11 +59,11 @@ int TTActivateObject(const CKBehaviorContext &behcontext)
     if (!object)
         return CKBR_PARAMETERERROR;
 
-    if (behcontext.CurrentScene)
-        behcontext.CurrentScene->Activate(object, FALSE);
-
     CKBOOL resetScript = FALSE;
     beh->GetInputParameterValue(1, &resetScript);
+
+    if (currentScene)
+        currentScene->Activate(object, FALSE);
 
     CKBOOL activateAllScript = FALSE;
     beh->GetInputParameterValue(2, &activateAllScript);
@@ -72,8 +73,8 @@ int TTActivateObject(const CKBehaviorContext &behcontext)
         for (int i = 0; i < object->GetScriptCount(); ++i)
         {
             CKBehavior *script = object->GetScript(i);
-            if (behcontext.CurrentScene)
-                behcontext.CurrentScene->Activate(script, resetScript);
+            if (currentScene)
+                currentScene->Activate(script, resetScript);
         }
     }
 
