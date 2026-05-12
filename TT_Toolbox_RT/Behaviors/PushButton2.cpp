@@ -52,10 +52,9 @@ CKERROR CreatePushButton2Proto(CKBehaviorPrototype **pproto)
     return CK_OK;
 }
 
-#define RELEASED 0
-#define ROLLOVER 1
-#define PRESSED  2
-#define PUSHED   3
+#define OUTPUT_RELEASED  0
+#define OUTPUT_ROLLOVER  1
+#define OUTPUT_MOUSEDOWN 2
 
 int PushButton2(const CKBehaviorContext &behcontext)
 {
@@ -72,6 +71,8 @@ int PushButton2(const CKBehaviorContext &behcontext)
     {
         beh->ActivateInput(0, FALSE);
         beh->SetLocalParameterValue(0, &state);
+        CKBOOL mouseDown = FALSE;
+        beh->SetLocalParameterValue(1, &mouseDown);
     }
 
     if (beh->IsInputActive(1))
@@ -81,7 +82,10 @@ int PushButton2(const CKBehaviorContext &behcontext)
     }
 
     int oldState = 0;
+    CKBOOL oldMouseDown = FALSE;
+    CKBOOL mouseStateChanged = FALSE;
     beh->GetLocalParameterValue(0, &oldState);
+    beh->GetLocalParameterValue(1, &oldMouseDown);
 
     CKInputManager *im = (CKInputManager *)context->GetManagerByGuid(INPUT_MANAGER_GUID);
     if (!im)
@@ -100,24 +104,38 @@ int PushButton2(const CKBehaviorContext &behcontext)
 
     CK2dEntity *picked = rc->Pick2D(mousePos);
     if (target == picked && im->GetCursorVisibility())
-        state |= ROLLOVER;
+        state |= 1;
 
-    if (im->IsMouseButtonDown(CK_MOUSEBUTTON_LEFT))
-        state |= PRESSED;
+    const CKBOOL mouseDown = im->IsMouseButtonDown(CK_MOUSEBUTTON_LEFT);
+    if (mouseDown)
+    {
+        if (!oldMouseDown)
+        {
+            oldMouseDown = TRUE;
+            beh->SetLocalParameterValue(1, &oldMouseDown);
+            mouseStateChanged = TRUE;
+        }
+    }
+    else if (oldMouseDown)
+    {
+        oldMouseDown = FALSE;
+        beh->SetLocalParameterValue(1, &oldMouseDown);
+        mouseStateChanged = TRUE;
+    }
 
     if (state != oldState)
     {
         beh->SetLocalParameterValue(0, &state);
 
-        if ((oldState & ROLLOVER) && !(state & ROLLOVER))
-            beh->ActivateOutput(RELEASED);
+        if ((oldState & 1) && !(state & 1))
+            beh->ActivateOutput(OUTPUT_RELEASED);
 
-        if (!(oldState & ROLLOVER) && (state & ROLLOVER))
-            beh->ActivateOutput(ROLLOVER);
-
-        if ((oldState == PUSHED) && (state == ROLLOVER))
-            beh->ActivateOutput(PRESSED);
+        if (!(oldState & 1) && (state & 1))
+            beh->ActivateOutput(OUTPUT_ROLLOVER);
     }
+
+    if (mouseStateChanged && state == 1 && mouseDown)
+        beh->ActivateOutput(OUTPUT_MOUSEDOWN);
 
     return CKBR_ACTIVATENEXTFRAME;
 }
