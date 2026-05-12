@@ -32,6 +32,36 @@ static void FreeRippleWaveBuffer(CKBehavior *beh)
     beh->SetLocalParameterValue(0, &nullBuffer, sizeof(float *));
 }
 
+static void RestoreRippleWaveVertices(CKBehavior *beh)
+{
+    if (!beh)
+        return;
+
+    CK3dEntity *target = (CK3dEntity *)beh->GetTarget();
+    if (!target)
+        return;
+
+    CKMesh *mesh = target->GetCurrentMesh();
+    if (!mesh)
+        return;
+
+    int vertexCount = mesh->GetVertexCount();
+    CKDWORD stride = 0;
+    VxVector *positions = (VxVector *)mesh->GetPositionsPtr(&stride);
+
+    VxVector *originalPositions = (VxVector *)beh->GetLocalParameterReadDataPtr(1);
+    if (!originalPositions)
+        return;
+
+    for (int i = 0; i < vertexCount; ++i)
+    {
+        VxVector *pos = (VxVector *)((CKBYTE *)positions + i * stride);
+        *pos = originalPositions[i];
+    }
+
+    mesh->ModifyObjectFlags(CK_3DENTITY_UPDATELASTFRAME, 0);
+}
+
 CKObjectDeclaration *FillBehaviorRippleWaveDecl();
 CKERROR CreateRippleWaveProto(CKBehaviorPrototype **pproto);
 int RippleWave(const CKBehaviorContext &behcontext);
@@ -268,6 +298,7 @@ CKERROR RippleWaveCallBack(const CKBehaviorContext &behcontext)
     case CKM_BEHAVIORDETACH:
     case CKM_BEHAVIORDELETE:
     case CKM_BEHAVIORRESET:
+        RestoreRippleWaveVertices(beh);
         FreeRippleWaveBuffer(beh);
         break;
     }
