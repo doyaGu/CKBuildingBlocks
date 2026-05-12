@@ -62,22 +62,14 @@ int CelShadingOutlineCallback(CKRenderContext *rc, CKRenderObject *ro, void *arg
     if (!rc || !entity)
         return 1;
 
-    CKDWORD savedCullMode = rc->GetState(VXRENDERSTATE_CULLMODE);
-    CKDWORD savedFillMode = rc->GetState(VXRENDERSTATE_FILLMODE);
-    CKDWORD savedShadeMode = rc->GetState(VXRENDERSTATE_SHADEMODE);
-
-    // Render outline by disabling culling and using wireframe+flat shading.
-    rc->SetState(VXRENDERSTATE_CULLMODE, VXCULL_NONE);
-    rc->SetState(VXRENDERSTATE_FILLMODE, VXFILL_WIREFRAME);
-    rc->SetState(VXRENDERSTATE_SHADEMODE, VXSHADE_FLAT);
+    CKDWORD savedZFunc = rc->GetState(VXRENDERSTATE_ZFUNC);
+    rc->SetState(VXRENDERSTATE_ZFUNC, VXCMP_ALWAYS);
 
     CKMesh *mesh = entity->GetCurrentMesh();
     if (mesh)
         mesh->Render(rc, entity);
 
-    rc->SetState(VXRENDERSTATE_CULLMODE, savedCullMode);
-    rc->SetState(VXRENDERSTATE_FILLMODE, savedFillMode);
-    rc->SetState(VXRENDERSTATE_SHADEMODE, savedShadeMode);
+    rc->SetState(VXRENDERSTATE_ZFUNC, savedZFunc);
 
     return 1;
 }
@@ -122,8 +114,8 @@ int CelShading(const CKBehaviorContext &behcontext)
         beh->ActivateOutput(0, TRUE);
 
         // Create cel shading material
-        CK_OBJECTCREATION_OPTIONS createOpts = (beh->GetObjectFlags() & CK_OBJECT_NOTTOBEDELETED) ? CK_OBJECTCREATION_NONAMECHECK : CK_OBJECTCREATION_DYNAMIC;
-        CKMaterial *mat = (CKMaterial *)ctx->CreateObject(CKCID_MATERIAL, "Mat CelShading", createOpts);
+        CK_OBJECTCREATION_OPTIONS createOpts = beh->IsDynamic() ? CK_OBJECTCREATION_DYNAMIC : CK_OBJECTCREATION_NONAMECHECK;
+        CKMaterial *mat = (CKMaterial *)ctx->CreateObject(CKCID_MATERIAL, "Mat CEL-Shading", createOpts);
         mat->SetAmbient(VxColor(0.0f, 0.0f, 0.0f, 1.0f));
         mat->SetDiffuse(VxColor(1.0f, 1.0f, 1.0f, 1.0f));
         mat->SetEmissive(VxColor(0.0f, 0.0f, 0.0f, 1.0f));
@@ -132,8 +124,8 @@ int CelShading(const CKBehaviorContext &behcontext)
         mat->SetTwoSided(TRUE);
 
         // Create cel shading texture (1D lookup)
-        CK_OBJECTCREATION_OPTIONS texCreateOpts = (beh->GetObjectFlags() & CK_OBJECT_NOTTOBEDELETED) ? CK_OBJECTCREATION_NONAMECHECK : CK_OBJECTCREATION_DYNAMIC;
-        CKTexture *tex = (CKTexture *)ctx->CreateObject(CKCID_TEXTURE, "Tex CelShading", texCreateOpts);
+        CK_OBJECTCREATION_OPTIONS texCreateOpts = beh->IsDynamic() ? CK_OBJECTCREATION_DYNAMIC : CK_OBJECTCREATION_NONAMECHECK;
+        CKTexture *tex = (CKTexture *)ctx->CreateObject(CKCID_TEXTURE, "Tex CEL-Shading", texCreateOpts);
         if (tex->Create(16, 1, 32))
         {
             VxColor pixel;
