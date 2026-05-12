@@ -96,10 +96,18 @@ CKERROR FindSubStringCallBack(const CKBehaviorContext &behcontext)
     {
         int stringCount = 1;
         beh->GetLocalParameterValue(0, &stringCount);
+        if (stringCount < 1)
+            stringCount = 1;
+        else if (stringCount > 9)
+            stringCount = 9;
+        beh->SetLocalParameterValue(0, &stringCount);
 
         // Adjust input parameters
         while (beh->GetInputParameterCount() > stringCount + 1)
-            beh->RemoveInputParameter(beh->GetInputParameterCount() - 1);
+        {
+            CKParameterIn *pin = beh->RemoveInputParameter(beh->GetInputParameterCount() - 1);
+            CKDestroyObject(pin);
+        }
 
         while (beh->GetInputParameterCount() < stringCount + 1)
         {
@@ -111,7 +119,10 @@ CKERROR FindSubStringCallBack(const CKBehaviorContext &behcontext)
 
         // Adjust output parameters
         while (beh->GetOutputCount() > stringCount + 1)
-            beh->DeleteOutput(beh->GetOutputCount() - 1);
+        {
+            CKBehaviorIO *out = beh->RemoveOutput(beh->GetOutputCount() - 1);
+            CKDestroyObject(out);
+        }
 
         while (beh->GetOutputCount() < stringCount + 1)
         {
