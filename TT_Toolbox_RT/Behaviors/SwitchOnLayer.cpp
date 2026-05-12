@@ -66,9 +66,25 @@ int SwitchonLayer(const CKBehaviorContext &behcontext)
 
     CK3dEntity *target = (CK3dEntity *)beh->GetTarget();
     if (!target)
-        return CKBR_PARAMETERERROR;
+        return CKBR_OWNERERROR;
 
-    // Get input parameters
+    VxVector position;
+    target->GetPosition(&position);
+
+    if (beh->IsInputActive(1))
+    {
+        beh->ActivateInput(1, FALSE);
+        return CKBR_OK;
+    }
+
+    if (beh->IsInputActive(0))
+    {
+        beh->ActivateInput(0, FALSE);
+        beh->SetLocalParameterValue(0, &position);
+        CKBOOL wasInside = FALSE;
+        beh->SetLocalParameterValue(1, &wasInside);
+    }
+
     int checkValue = 0;
     beh->GetInputParameterValue(2, &checkValue);
 
@@ -76,112 +92,59 @@ int SwitchonLayer(const CKBehaviorContext &behcontext)
     int layer = 1;
     beh->GetInputParameterValue(1, &layer);
 
-    // Position in the referential defined by 'Ref' (NULL => world).
-    VxVector positionInRef;
-    target->GetPosition(&positionInRef, refEntity);
-
-    // Also compute world position for CKGrid APIs that expect world coordinates.
-    VxVector positionWorld = positionInRef;
-    if (refEntity)
-        refEntity->Transform(&positionWorld, &positionInRef, NULL);
-
-    // Handle Off input
-    if (beh->IsInputActive(1))
-    {
-        beh->ActivateInput(1, FALSE);
-        return CKBR_OK;
-    }
-
-    // Handle In input
-    if (beh->IsInputActive(0))
-    {
-        beh->ActivateInput(0, FALSE);
-        beh->SetLocalParameterValue(0, &positionWorld);
-        CKBOOL wasInside = FALSE;
-        beh->SetLocalParameterValue(1, &wasInside);
-    }
-
     CKGridManager *gridManager = (CKGridManager *)ctx->GetManagerByGuid(GRID_MANAGER_GUID);
-    if (!gridManager)
-        return CKBR_ACTIVATENEXTFRAME;
-
-    CKGrid *grid = gridManager->GetPreferredGrid(&positionInRef, refEntity);
-    if (!grid)
+    CKGrid *grid = gridManager ? gridManager->GetPreferredGrid(&position, refEntity) : nullptr;
+    if (grid)
     {
-        beh->SetLocalParameterValue(0, &positionWorld);
-        return CKBR_ACTIVATENEXTFRAME;
-    }
-
-    CKLayer *layerObj = grid->GetLayer(layer);
-    if (!layerObj)
-    {
-        beh->SetLocalParameterValue(0, &positionWorld);
-        return CKBR_ACTIVATENEXTFRAME;
-    }
-
-    int gridX = 0;
-    int gridZ = 0;
-    grid->Get2dCoordsFrom3dPos(&positionWorld, &gridX, &gridZ);
-
-    // Validate coordinates against grid dimensions to avoid out-of-bounds access.
-    if (gridX < 0 || gridZ < 0 || gridX >= grid->GetWidth() || gridZ >= grid->GetLength())
-    {
-        beh->SetLocalParameterValue(0, &positionWorld);
-        return CKBR_ACTIVATENEXTFRAME;
-    }
-
-    int faceValue = 0;
-    layerObj->GetValue(gridX, gridZ, &faceValue);
-
-    // Get previous state
-    CKBOOL wasInside = FALSE;
-    beh->GetLocalParameterValue(1, &wasInside);
-
-    // Check if at the target value
-    if (faceValue == checkValue)
-    {
-        if (wasInside)
+        CKLayer *layerObj = grid->GetLayer(layer);
+        if (layerObj)
         {
-            // Still inside
-            beh->ActivateOutput(0, TRUE);
-        }
-        else
-        {
-            // Just entered
-            wasInside = TRUE;
-            beh->SetLocalParameterValue(1, &wasInside);
-            beh->ActivateOutput(2, TRUE);
-        }
-    }
-    else
-    {
-        if (wasInside)
-        {
-            // Just exited
-            wasInside = FALSE;
-            beh->SetLocalParameterValue(1, &wasInside);
+            int gridX = 0;
+            int gridZ = 0;
+            grid->Get2dCoordsFrom3dPos(&position, &gridX, &gridZ);
 
-            // Calculate exit vector
-            VxVector lastPos;
-            beh->GetLocalParameterValue(0, &lastPos);
+            int faceValue = 0;
+            layerObj->GetValue(gridX, gridZ, &faceValue);
 
-            VxVector exitVector;
-            exitVector.x = positionWorld.x - lastPos.x;
-            exitVector.y = positionWorld.y - lastPos.y;
-            exitVector.z = positionWorld.z - lastPos.z;
+            CKBOOL wasInside = FALSE;
+            beh->GetLocalParameterValue(1, &wasInside);
 
-            beh->SetOutputParameterValue(0, &exitVector);
-            beh->ActivateOutput(3, TRUE);
-        }
-        else
-        {
-            // Still outside
-            beh->ActivateOutput(1, TRUE);
+            if (faceValue == checkValue)
+            {
+                if (wasInside)
+                {
+                    beh->ActivateOutput(0, TRUE);
+                }
+                else
+                {
+                    wasInside = TRUE;
+                    beh->SetLocalParameterValue(1, &wasInside);
+                    beh->ActivateOutput(2, TRUE);
+                }
+            }
+            else if (wasInside)
+            {
+                wasInside = FALSE;
+                beh->SetLocalParameterValue(1, &wasInside);
+
+                VxVector lastPos;
+                beh->GetLocalParameterValue(0, &lastPos);
+
+                VxVector exitVector;
+                exitVector.x = position.x - lastPos.x;
+                exitVector.y = position.y - lastPos.y;
+                exitVector.z = position.z - lastPos.z;
+
+                beh->SetOutputParameterValue(0, &exitVector);
+                beh->ActivateOutput(3, TRUE);
+            }
+            else
+            {
+                beh->ActivateOutput(1, TRUE);
+            }
         }
     }
 
-    // Store current position
-    beh->SetLocalParameterValue(0, &positionWorld);
-
+    beh->SetLocalParameterValue(0, &position);
     return CKBR_ACTIVATENEXTFRAME;
 }
