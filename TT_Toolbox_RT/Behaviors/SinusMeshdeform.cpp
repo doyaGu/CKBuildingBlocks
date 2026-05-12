@@ -216,7 +216,7 @@ CKERROR SinusMeshdeformCallBack(const CKBehaviorContext &behcontext)
     {
     case CKM_BEHAVIORATTACH:
     case CKM_BEHAVIORLOAD:
-    case CKM_BEHAVIORRESET:
+    case CKM_BEHAVIOREDITED:
         {
             CK3dEntity *target = (CK3dEntity *)beh->GetTarget();
             if (!target)
@@ -248,9 +248,9 @@ CKERROR SinusMeshdeformCallBack(const CKBehaviorContext &behcontext)
         }
         break;
 
+    case CKM_BEHAVIORDELETE:
     case CKM_BEHAVIORDETACH:
-    case CKM_BEHAVIORPAUSE:
-    case CKM_BEHAVIORDEACTIVATESCRIPT:
+    case CKM_BEHAVIORRESET:
         {
             CK3dEntity *target = (CK3dEntity *)beh->GetTarget();
             if (!target)
