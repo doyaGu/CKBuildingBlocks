@@ -95,6 +95,7 @@ int ReplacePath(const CKBehaviorContext &behcontext)
     }
 
     XString pathName(_MAX_PATH);
+    CKBOOL replaced = FALSE;
     for (int pathIdx = 0; pathIdx < pathCount; ++pathIdx)
     {
         pm->GetPathName(catIdx, pathIdx, pathName);
@@ -102,10 +103,11 @@ int ReplacePath(const CKBehaviorContext &behcontext)
         {
             pathName = path2.CStr();
             pm->RenamePath(catIdx, pathIdx, pathName);
+            replaced = TRUE;
             break;
         }
     }
 
-    beh->ActivateOutput(0, TRUE);
+    beh->ActivateOutput(replaced ? 0 : 1, TRUE);
     return CKBR_OK;
 }
