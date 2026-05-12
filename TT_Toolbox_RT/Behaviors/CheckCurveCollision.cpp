@@ -224,7 +224,7 @@ CKERROR CheckCurveCollisionCallBack(const CKBehaviorContext &behcontext)
 
     switch (behcontext.CallbackMessage)
     {
-    case CKM_BEHAVIORCREATE:
+    case CKM_BEHAVIORATTACH:
     case CKM_BEHAVIORLOAD:
     case CKM_BEHAVIORSETTINGSEDITED:
         if (showDistance)
