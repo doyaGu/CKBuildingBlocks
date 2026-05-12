@@ -18,8 +18,8 @@ CKERROR ShadowMappingCallBack(const CKBehaviorContext &behcontext);
 struct ShadowReceiverEntry
 {
     CK_ID objectId;        // Object ID (offset 0)
-    VxVector bboxMin;      // Bounding box min (offset 4)
-    VxVector bboxMax;      // Bounding box max (offset 16)
+    VxVector bboxMax;      // Bounding box max (offset 4)
+    VxVector bboxMin;      // Bounding box min (offset 16)
 };
 
 struct ShadowMappingData
@@ -91,26 +91,105 @@ static void RemoveShadowChannels(ShadowMappingData *data, CKMaterial *shadowMat,
     }
 }
 
-// Helper to update shadow receivers
 static void UpdateShadowReceivers(ShadowMappingData *data, CK3dEntity *target, CKBehavior *beh)
 {
     CKContext *ctx = beh->GetCKContext();
-
-    // Get light position
     CK3dEntity *light = (CK3dEntity *)beh->GetInputParameterObject(0);
+    if (!ctx || !light || !target)
+    {
+        data->receiverCount = 0;
+        return;
+    }
+
     VxVector lightPos;
     light->GetPosition(&lightPos, target);
 
-    // Get shadow size
-    Vx2DVector size(0.0f, 0.0f);
+    VxVector targetWorldPos;
+    target->GetPosition(&targetWorldPos);
+
+    Vx2DVector size(1.0f, 1.0f);
     beh->GetInputParameterValue(2, &size);
 
-    // Get shadow receiver attribute manager
-    CKAttributeManager *attrMgr = ctx->GetAttributeManager();
-    // Note: In original code this uses a floor manager attribute (GUID 0x420B0F79)
+    CKFloorManager *floorMgr = (CKFloorManager *)ctx->GetManagerByGuid(FLOOR_MANAGER_GUID);
+    if (!floorMgr)
+    {
+        data->receiverCount = 0;
+        return;
+    }
 
-    // For now, simplified - just mark that we updated
-    data->receiverCount = 0;
+    CKAttributeManager *attrMgr = ctx->GetAttributeManager();
+    if (!attrMgr)
+    {
+        data->receiverCount = 0;
+        return;
+    }
+
+    const XObjectPointerArray &floorObjects = attrMgr->GetGlobalAttributeListPtr(floorMgr->GetFloorAttribute());
+
+    const VxBbox &bbox = target->GetBoundingBox(TRUE);
+    const float minX = bbox.Min.x * size.x;
+    const float maxX = bbox.Max.x * size.x;
+    const float minZ = bbox.Min.z * size.y;
+    const float maxZ = bbox.Max.z * size.y;
+
+    VxVector localCorners[4] = {
+        VxVector(minX, 0.0f, minZ),
+        VxVector(minX, 0.0f, maxZ),
+        VxVector(maxX, 0.0f, minZ),
+        VxVector(maxX, 0.0f, maxZ),
+    };
+
+    int receiverCount = 0;
+    for (CKObject **it = floorObjects.Begin(); it != floorObjects.End(); ++it)
+    {
+        CK3dEntity *floor = (CK3dEntity *)*it;
+        if (!floor || !floor->IsVisible() || floor->IsAllOutsideFrustrum())
+            continue;
+
+        VxVector floorPos;
+        floor->GetPosition(&floorPos, target);
+
+        const VxBbox &floorBbox = floor->GetBoundingBox(TRUE);
+        if (lightPos.y <= 0.0f || floorBbox.Min.y >= targetWorldPos.y)
+            continue;
+
+        VxVector bboxMax(-1000.0f, 0.0f, -1000.0f);
+        VxVector bboxMin(1000.0f, 0.0f, 1000.0f);
+        CKBOOL under = FALSE;
+
+        for (int i = 0; i < 4; ++i)
+        {
+            const VxVector &corner = localCorners[i];
+            const float t = (lightPos.y - floorPos.y) / (lightPos.y - corner.y);
+            VxVector projected;
+            projected.x = lightPos.x + (corner.x - lightPos.x) * t;
+            projected.y = floorPos.y;
+            projected.z = lightPos.z + (corner.z - lightPos.z) * t;
+
+            VxVector floorLocalPoint;
+            floor->InverseTransform(&floorLocalPoint, &projected, target);
+
+            if (!under &&
+                floorLocalPoint.x > floorBbox.Min.x && floorLocalPoint.x < floorBbox.Max.x &&
+                floorLocalPoint.z > floorBbox.Min.z && floorLocalPoint.z < floorBbox.Max.z)
+                under = TRUE;
+
+            if (projected.x < bboxMin.x) bboxMin.x = projected.x;
+            if (projected.x > bboxMax.x) bboxMax.x = projected.x;
+            if (projected.z < bboxMin.z) bboxMin.z = projected.z;
+            if (projected.z > bboxMax.z) bboxMax.z = projected.z;
+        }
+
+        if (!under || receiverCount >= 16)
+            continue;
+
+        ShadowReceiverEntry &entry = data->entries[receiverCount++];
+        entry.objectId = floor->GetID();
+        entry.bboxMax = bboxMax;
+        entry.bboxMin = bboxMin;
+    }
+
+    data->receiverCount = receiverCount;
 }
 
 int ShadowMapping(const CKBehaviorContext &behcontext)
@@ -120,15 +199,16 @@ int ShadowMapping(const CKBehaviorContext &behcontext)
 
     CK3dEntity *target = (CK3dEntity *)beh->GetTarget();
     if (!target)
-        return CKBR_PARAMETERERROR;
+        return CKBR_OWNERERROR;
 
     ShadowMappingData *data = (ShadowMappingData *)beh->GetLocalParameterWriteDataPtr(0);
-    int oldReceiverCount = data->receiverCount;
+    const int oldReceiverCount = data->receiverCount;
+    CK_ID oldReceiverIds[16] = {};
+    for (int i = 0; i < oldReceiverCount && i < 16; ++i)
+        oldReceiverIds[i] = data->entries[i].objectId;
 
-    // Get shadow material
     CKMaterial *shadowMat = (CKMaterial *)ctx->GetObject(data->materialId);
 
-    // Handle Off input - cleanup and stop
     if (beh->IsInputActive(1))
     {
         beh->ActivateInput(1, FALSE);
@@ -139,14 +219,12 @@ int ShadowMapping(const CKBehaviorContext &behcontext)
         return CKBR_OK;
     }
 
-    // Handle On input
     if (beh->IsInputActive(0))
     {
         beh->ActivateInput(0, FALSE);
         beh->ActivateOutput(0, TRUE);
     }
 
-    // Check if texture changed
     CK_ID newTextureId = 0;
     beh->GetInputParameterValue(1, &newTextureId);
     if (newTextureId != data->textureId)
@@ -157,16 +235,42 @@ int ShadowMapping(const CKBehaviorContext &behcontext)
             shadowMat->SetTexture0(texture);
     }
 
-    // Get blend modes
     VXBLEND_MODE srcBlend = VXBLEND_ZERO;
     VXBLEND_MODE destBlend = VXBLEND_SRCCOLOR;
     beh->GetInputParameterValue(3, &srcBlend);
     beh->GetInputParameterValue(4, &destBlend);
 
-    // Update shadow receivers
     UpdateShadowReceivers(data, target, beh);
 
-    // Process each receiver
+    for (int i = 0; i < oldReceiverCount; ++i)
+    {
+        CKBOOL stillPresent = FALSE;
+        for (int j = 0; j < data->receiverCount; ++j)
+        {
+            if (oldReceiverIds[i] == data->entries[j].objectId)
+            {
+                stillPresent = FALSE;
+                stillPresent = TRUE;
+                break;
+            }
+        }
+
+        if (!stillPresent)
+        {
+            CK3dEntity *oldReceiver = (CK3dEntity *)ctx->GetObject(oldReceiverIds[i]);
+            if (!oldReceiver)
+                continue;
+
+            CKMesh *oldMesh = oldReceiver->GetCurrentMesh();
+            if (!oldMesh)
+                continue;
+
+            int oldChannel = oldMesh->GetChannelByMaterial(shadowMat);
+            if (oldChannel >= 0)
+                oldMesh->RemoveChannel(oldChannel);
+        }
+    }
+
     for (int r = 0; r < data->receiverCount; r++)
     {
         CK3dEntity *receiver = (CK3dEntity *)ctx->GetObject(data->entries[r].objectId);
@@ -178,41 +282,35 @@ int ShadowMapping(const CKBehaviorContext &behcontext)
         // Get or create shadow channel
         int channel = mesh->GetChannelByMaterial(shadowMat);
         if (channel < 0)
-        {
             channel = mesh->AddChannel(shadowMat, FALSE);
-            mesh->SetChannelSourceBlend(channel, srcBlend);
-            mesh->SetChannelDestBlend(channel, destBlend);
-        }
+        mesh->SetChannelSourceBlend(channel, srcBlend);
+        mesh->SetChannelDestBlend(channel, destBlend);
 
-        // Get vertex and UV pointers
         CKDWORD uvStride = 0;
         Vx2DVector *uvCoords = (Vx2DVector *)mesh->GetTextureCoordinatesPtr(&uvStride, channel);
 
         CKDWORD vertStride = 0;
         VxVector *vertices = (VxVector *)mesh->GetPositionsPtr(&vertStride);
 
-        int vertexCount = mesh->GetModifierVertexCount();
-
-        // Calculate shadow UVs based on projection onto shadow plane
-        VxVector *bboxMin = &data->entries[r].bboxMin;
+        const int vertexCount = mesh->GetVertexCount();
         VxVector *bboxMax = &data->entries[r].bboxMax;
-        float invSizeX = 1.0f / (bboxMin->x - bboxMax->x);
-        float invSizeZ = 1.0f / (bboxMin->z - bboxMax->z);
+        VxVector *bboxMin = &data->entries[r].bboxMin;
+        float invSizeX = 1.0f / (bboxMax->x - bboxMin->x);
+        float invSizeZ = 1.0f / (bboxMax->z - bboxMin->z);
 
         for (int v = 0; v < vertexCount; v++)
         {
-            // Transform vertex to target space
-            VxVector worldPos = *vertices;
             VxVector localPos;
-            target->InverseTransform(&localPos, &worldPos, receiver);
+            target->InverseTransform(&localPos, vertices, receiver);
 
-            // Project to UV coordinates
-            uvCoords->x = (localPos.x - bboxMax->x) * invSizeX;
-            uvCoords->y = (localPos.z - bboxMax->z) * invSizeZ;
+            uvCoords->x = (localPos.x - bboxMin->x) * invSizeX;
+            uvCoords->y = (localPos.z - bboxMin->z) * invSizeZ;
 
             uvCoords = (Vx2DVector *)((CKBYTE *)uvCoords + uvStride);
             vertices = (VxVector *)((CKBYTE *)vertices + vertStride);
         }
+
+        mesh->UVChanged();
     }
 
     return CKBR_ACTIVATENEXTFRAME;
@@ -228,14 +326,9 @@ CKERROR ShadowMappingCallBack(const CKBehaviorContext &behcontext)
     case CKM_BEHAVIORATTACH:
     case CKM_BEHAVIORLOAD:
         {
-            // Create shadow material
-            CK_OBJECTCREATION_OPTIONS options = CK_OBJECTCREATION_NONAMECHECK;
-            if (!(beh->GetFlags() & CKBEHAVIOR_BUILDINGBLOCK))
-                options = (CK_OBJECTCREATION_OPTIONS)(options | CK_OBJECTCREATION_DYNAMIC);
+            CK_OBJECTCREATION_OPTIONS options = beh->IsDynamic() ? CK_OBJECTCREATION_DYNAMIC : CK_OBJECTCREATION_NONAMECHECK;
+            CKMaterial *shadowMat = (CKMaterial *)ctx->CreateObject(CKCID_MATERIAL, "SimpleShadow Material", options);
 
-            CKMaterial *shadowMat = (CKMaterial *)ctx->CreateObject(CKCID_MATERIAL, "SimpleShadowMat", options);
-
-            // Set material colors to white
             VxColor white(1.0f, 1.0f, 1.0f, 1.0f);
             shadowMat->SetDiffuse(white);
             shadowMat->SetAmbient(white);
@@ -243,9 +336,8 @@ CKERROR ShadowMappingCallBack(const CKBehaviorContext &behcontext)
             shadowMat->SetSpecular(black);
             shadowMat->SetEmissive(black);
             shadowMat->SetTextureAddressMode(VXTEXTURE_ADDRESSCLAMP);
-            shadowMat->SetTextureBlendMode(VXTEXTUREBLEND_MODULATEALPHA);
+            shadowMat->SetTextureBlendMode(VXTEXTUREBLEND_COPY);
 
-            // Initialize data structure
             ShadowMappingData data;
             memset(&data, 0, sizeof(data));
             data.materialId = shadowMat ? shadowMat->GetID() : 0;
@@ -267,10 +359,10 @@ CKERROR ShadowMappingCallBack(const CKBehaviorContext &behcontext)
         }
         break;
 
-    case CKM_BEHAVIORRESUME:
-    case CKM_BEHAVIORRESET:
-    case CKM_BEHAVIORDEACTIVATESCRIPT:
     case CKM_BEHAVIORPAUSE:
+    case CKM_BEHAVIORRESET:
+    case CKM_BEHAVIORNEWSCENE:
+    case CKM_BEHAVIORDEACTIVATESCRIPT:
         {
             ShadowMappingData *data = (ShadowMappingData *)beh->GetLocalParameterWriteDataPtr(0);
             CKMaterial *shadowMat = (CKMaterial *)ctx->GetObject(data->materialId);
