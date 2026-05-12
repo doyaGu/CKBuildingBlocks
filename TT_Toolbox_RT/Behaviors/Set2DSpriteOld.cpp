@@ -66,7 +66,7 @@ int Set2DSpriteOld(const CKBehaviorContext &behcontext)
 
     CK2dEntity *target = (CK2dEntity *)beh->GetTarget();
     if (!target)
-        return CKBR_PARAMETERERROR;
+        return CKBR_OWNERERROR;
 
     // Get settings flags (what inputs to use)
     int flags = 0;
@@ -135,7 +135,7 @@ int Set2DSpriteOld(const CKBehaviorContext &behcontext)
     rect.bottom = position.y + size.y;
 
     target->SetHomogeneousCoordinates(TRUE);
-    target->SetRect(rect);
+    target->SetHomogeneousRect(rect);
 
     return CKBR_OK;
 }
@@ -143,6 +143,36 @@ int Set2DSpriteOld(const CKBehaviorContext &behcontext)
 CKERROR Set2DSpriteOldCallBack(const CKBehaviorContext &behcontext)
 {
     CKBehavior *beh = behcontext.Behavior;
-    // Callback not used in this implementation
+
+    if (behcontext.CallbackMessage == CKM_BEHAVIORSETTINGSEDITED)
+    {
+        int flags = 0;
+        beh->GetLocalParameterValue(0, &flags);
+
+        for (int i = beh->GetInputParameterCount() - 1; i >= 0; --i)
+        {
+            CKParameterIn *pin = beh->RemoveInputParameter(i);
+            CKDestroyObject(pin);
+        }
+
+        if (flags >= 4)
+        {
+            flags -= 4;
+            beh->CreateInputParameter("Position", CKPGUID_2DVECTOR);
+        }
+
+        if (flags >= 2)
+        {
+            flags -= 2;
+            beh->CreateInputParameter("Size", CKPGUID_2DVECTOR);
+        }
+
+        if (flags >= 1)
+        {
+            beh->CreateInputParameter("UV Left,Rigth", CKPGUID_2DVECTOR);
+            beh->CreateInputParameter("UV Top,Bottom", CKPGUID_2DVECTOR);
+        }
+    }
+
     return CKBR_OK;
 }
