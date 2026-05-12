@@ -67,7 +67,7 @@ int Set3DSprite(const CKBehaviorContext &behcontext)
 
     CKSprite3D *target = (CKSprite3D *)beh->GetTarget();
     if (!target)
-        return CKBR_PARAMETERERROR;
+        return CKBR_OWNERERROR;
 
     // Get settings flags (what inputs to use)
     int flags = 0;
@@ -133,6 +133,47 @@ int Set3DSprite(const CKBehaviorContext &behcontext)
 CKERROR Set3DSpriteCallBack(const CKBehaviorContext &behcontext)
 {
     CKBehavior *beh = behcontext.Behavior;
-    // Callback not used in this implementation
+
+    if (behcontext.CallbackMessage == CKM_BEHAVIORATTACH)
+    {
+        int flags = 15;
+        beh->SetLocalParameterValue(0, &flags);
+    }
+    else if (behcontext.CallbackMessage == CKM_BEHAVIORSETTINGSEDITED)
+    {
+        int flags = 0;
+        beh->GetLocalParameterValue(0, &flags);
+
+        for (int i = beh->GetInputParameterCount() - 1; i >= 0; --i)
+        {
+            CKParameterIn *pin = beh->RemoveInputParameter(i);
+            CKDestroyObject(pin);
+        }
+
+        if (flags >= 8)
+        {
+            flags -= 8;
+            beh->CreateInputParameter("Position", CKPGUID_VECTOR);
+        }
+
+        if (flags >= 4)
+        {
+            flags -= 4;
+            beh->CreateInputParameter("Size", CKPGUID_2DVECTOR);
+        }
+
+        if (flags >= 2)
+        {
+            flags -= 2;
+            beh->CreateInputParameter("Offset", CKPGUID_2DVECTOR);
+        }
+
+        if (flags >= 1)
+        {
+            beh->CreateInputParameter("UV Left,Top", CKPGUID_2DVECTOR);
+            beh->CreateInputParameter("UV Rigth,Bottom", CKPGUID_2DVECTOR);
+        }
+    }
+
     return CKBR_OK;
 }
