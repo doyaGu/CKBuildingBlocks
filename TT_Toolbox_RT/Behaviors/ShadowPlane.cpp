@@ -68,16 +68,12 @@ int ShadowPlaneRenderCallback(CKRenderContext *dev, CKRenderObject *obj, void *a
     CKBehavior *beh = (CKBehavior *)argument;
     CKContext *ctx = beh->GetCKContext();
 
-    // Get texture
-    CKTexture *texture = NULL;
-    CKParameterIn *texParam = beh->GetInputParameter(1);
-    if (texParam && texParam->GetDirectSource())
-        texture = (CKTexture *)beh->GetInputParameterObject(1);
+    CKTexture *texture = (CKTexture *)beh->GetInputParameterObject(1);
 
     ShadowPlaneData **dataPtr = (ShadowPlaneData **)beh->GetLocalParameterReadDataPtr(0);
     if (!dataPtr || !*dataPtr)
     {
-        ctx->OutputToConsole("Keine Geometrie Daten!", FALSE);
+        ctx->OutputToConsole("keine Geometriedaten", FALSE);
         return CKBR_GENERICERROR;
     }
 
@@ -91,28 +87,32 @@ int ShadowPlaneRenderCallback(CKRenderContext *dev, CKRenderObject *obj, void *a
 
     CK3dEntity *target = (CK3dEntity *)obj;
 
-    // Save current world matrix
-    VxMatrix savedMatrix;
-    savedMatrix = dev->GetWorldTransformationMatrix();
+    const VxMatrix savedMatrix = dev->GetWorldTransformationMatrix();
+    const CKDWORD savedZEnable = dev->GetState(VXRENDERSTATE_ZENABLE);
+    const CKDWORD savedZWriteEnable = dev->GetState(VXRENDERSTATE_ZWRITEENABLE);
+    const CKDWORD savedCullMode = dev->GetState(VXRENDERSTATE_CULLMODE);
+    const CKDWORD savedSrcBlend = dev->GetState(VXRENDERSTATE_SRCBLEND);
+    const CKDWORD savedDestBlend = dev->GetState(VXRENDERSTATE_DESTBLEND);
+    const CKDWORD savedAlphaBlendEnable = dev->GetState(VXRENDERSTATE_ALPHABLENDENABLE);
+    const CKDWORD savedFogEnable = dev->GetState(VXRENDERSTATE_FOGENABLE);
+    const CKDWORD savedWrap0 = dev->GetState(VXRENDERSTATE_WRAP0);
+    const CKDWORD savedLighting = dev->GetState(VXRENDERSTATE_LIGHTING);
+    const CKDWORD savedColorVertex = dev->GetState(VXRENDERSTATE_COLORVERTEX);
 
-    // Set target's world matrix
-    VxMatrix worldMatrix;
-    worldMatrix = target->GetWorldMatrix();
-    dev->SetWorldTransformationMatrix(worldMatrix);
+    dev->SetWorldTransformationMatrix(target->GetWorldMatrix());
 
-    // Set texture
     dev->SetTexture(texture, FALSE, 0);
 
-    // Set render states
     dev->SetState(VXRENDERSTATE_ZENABLE, FALSE);
     dev->SetState(VXRENDERSTATE_ZWRITEENABLE, FALSE);
-    dev->SetState(VXRENDERSTATE_CULLMODE, VXCULL_NONE);
+    dev->SetState(VXRENDERSTATE_CULLMODE, VXCULL_CW);
     dev->SetState(VXRENDERSTATE_SRCBLEND, srcBlend);
     dev->SetState(VXRENDERSTATE_DESTBLEND, destBlend);
     dev->SetState(VXRENDERSTATE_ALPHABLENDENABLE, TRUE);
-    dev->SetState(VXRENDERSTATE_LIGHTING, FALSE);
     dev->SetState(VXRENDERSTATE_FOGENABLE, FALSE);
-    dev->SetState(VXRENDERSTATE_WRAP0, TRUE);
+    dev->SetState(VXRENDERSTATE_WRAP0, FALSE);
+    dev->SetState(VXRENDERSTATE_LIGHTING, FALSE);
+    dev->SetState(VXRENDERSTATE_COLORVERTEX, TRUE);
 
     dev->SetTextureStageState(CKRST_TSS_TEXTUREMAPBLEND, VXTEXTUREBLEND_DECAL, 0);
     dev->SetTextureStageState(CKRST_TSS_MINFILTER, VXTEXTUREFILTER_LINEAR, 0);
@@ -165,9 +165,16 @@ int ShadowPlaneRenderCallback(CKRenderContext *dev, CKRenderObject *obj, void *a
         dev->DrawPrimitive(VX_TRIANGLEFAN, indices, 4, dpData);
     }
 
-    // Restore render states
-    dev->SetState(VXRENDERSTATE_FOGENABLE, TRUE);
-    dev->SetState(VXRENDERSTATE_LIGHTING, TRUE);
+    dev->SetState(VXRENDERSTATE_ZENABLE, savedZEnable);
+    dev->SetState(VXRENDERSTATE_ZWRITEENABLE, savedZWriteEnable);
+    dev->SetState(VXRENDERSTATE_CULLMODE, savedCullMode);
+    dev->SetState(VXRENDERSTATE_SRCBLEND, savedSrcBlend);
+    dev->SetState(VXRENDERSTATE_DESTBLEND, savedDestBlend);
+    dev->SetState(VXRENDERSTATE_ALPHABLENDENABLE, savedAlphaBlendEnable);
+    dev->SetState(VXRENDERSTATE_FOGENABLE, savedFogEnable);
+    dev->SetState(VXRENDERSTATE_WRAP0, savedWrap0);
+    dev->SetState(VXRENDERSTATE_LIGHTING, savedLighting);
+    dev->SetState(VXRENDERSTATE_COLORVERTEX, savedColorVertex);
     dev->SetWorldTransformationMatrix(savedMatrix);
 
     return 1;
