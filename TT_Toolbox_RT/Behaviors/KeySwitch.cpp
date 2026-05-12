@@ -95,7 +95,7 @@ CKERROR KeySwitchCallBack(const CKBehaviorContext &behcontext)
             {
                 for (int i = inputParamCount; i > outputCount; --i)
                 {
-                    CKParameterIn *pin = beh->RemoveInputParameter(i);
+                    CKParameterIn *pin = beh->RemoveInputParameter(i - 1);
                     behcontext.Context->DestroyObject(pin);
                 }
             }
