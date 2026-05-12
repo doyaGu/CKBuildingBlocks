@@ -109,7 +109,15 @@ int PlanarReflectionPreRenderCallBack(CKRenderContext *rc, CKRenderObject *obj, 
     if (!beh)
         return TRUE;
 
-    CKBOOL stencilWasEnabled = rc->GetState(VXRENDERSTATE_STENCILENABLE);
+    const CKDWORD savedStencilEnable = rc->GetState(VXRENDERSTATE_STENCILENABLE);
+    const CKDWORD savedStencilFail = rc->GetState(VXRENDERSTATE_STENCILFAIL);
+    const CKDWORD savedStencilZFail = rc->GetState(VXRENDERSTATE_STENCILZFAIL);
+    const CKDWORD savedStencilPass = rc->GetState(VXRENDERSTATE_STENCILPASS);
+    const CKDWORD savedStencilFunc = rc->GetState(VXRENDERSTATE_STENCILFUNC);
+    const CKDWORD savedStencilRef = rc->GetState(VXRENDERSTATE_STENCILREF);
+    const CKDWORD savedStencilMask = rc->GetState(VXRENDERSTATE_STENCILMASK);
+    const CKDWORD savedStencilWriteMask = rc->GetState(VXRENDERSTATE_STENCILWRITEMASK);
+    CKBOOL stencilWasEnabled = savedStencilEnable;
     CKBOOL clipPlanesWasEnabled = rc->GetState(VXRENDERSTATE_CLIPPLANEENABLE);
 
     const VxMatrix &invplane = plane->GetInverseWorldMatrix();
@@ -346,8 +354,17 @@ int PlanarReflectionPreRenderCallBack(CKRenderContext *rc, CKRenderObject *obj, 
         }
     }
 
-    if (mode == STENCIL && !stencilWasEnabled)
-        rc->SetState(VXRENDERSTATE_STENCILENABLE, FALSE);
+    if (mode == STENCIL)
+    {
+        rc->SetState(VXRENDERSTATE_STENCILFAIL, savedStencilFail);
+        rc->SetState(VXRENDERSTATE_STENCILZFAIL, savedStencilZFail);
+        rc->SetState(VXRENDERSTATE_STENCILPASS, savedStencilPass);
+        rc->SetState(VXRENDERSTATE_STENCILFUNC, savedStencilFunc);
+        rc->SetState(VXRENDERSTATE_STENCILREF, savedStencilRef);
+        rc->SetState(VXRENDERSTATE_STENCILMASK, savedStencilMask);
+        rc->SetState(VXRENDERSTATE_STENCILWRITEMASK, savedStencilWriteMask);
+        rc->SetState(VXRENDERSTATE_STENCILENABLE, savedStencilEnable);
+    }
     else if (mode == CLIPPLANES && !clipPlanesWasEnabled)
         rc->SetState(VXRENDERSTATE_CLIPPLANEENABLE, 0);
 
