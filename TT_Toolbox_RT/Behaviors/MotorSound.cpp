@@ -212,17 +212,13 @@ CKERROR MotorSoundCallBack(const CKBehaviorContext &behcontext)
 
     switch (behcontext.CallbackMessage)
     {
-    case CKM_BEHAVIORRESUME:
-    case CKM_BEHAVIORATTACH:
-    case CKM_BEHAVIORRESET:
+    case CKM_BEHAVIORACTIVATESCRIPT:
         {
             int firstTime = 1;
             beh->SetLocalParameterValue(0, &firstTime);
         }
         break;
 
-    case CKM_BEHAVIORDETACH:
-    case CKM_BEHAVIORPAUSE:
     case CKM_BEHAVIORDEACTIVATESCRIPT:
         {
             CKWaveSound *sound1 = (CKWaveSound *)beh->GetInputParameterObject(1);
