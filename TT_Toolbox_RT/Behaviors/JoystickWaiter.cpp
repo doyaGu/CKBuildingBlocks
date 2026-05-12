@@ -478,7 +478,7 @@ CKERROR TTJoystickWaiterCallBack(const CKBehaviorContext &behcontext)
             if (beh->GetVersion() < 0x00020000)
                 beh->SetFunction(TTJoystickWaiter);
             break;
-        case CKM_BEHAVIORCREATE:
+        case CKM_BEHAVIORATTACH:
         case CKM_BEHAVIORSETTINGSEDITED:
         {
             if (beh->GetVersion() < 0x00020000)
