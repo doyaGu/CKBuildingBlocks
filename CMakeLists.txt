@@ -228,7 +228,23 @@ function(ckbb_add_module TARGET_NAME)
     cmake_parse_arguments(MODULE "" "OUTPUT_NAME" "SOURCES;LINKS" ${ARGN})
 
     if (CKBB_BUILD_SHARED)
-        add_library(${TARGET_NAME} SHARED ${MODULE_SOURCES})
+        set(_module_sources ${MODULE_SOURCES})
+        set(_module_output_name "${TARGET_NAME}")
+        if (MODULE_OUTPUT_NAME)
+            set(_module_output_name "${MODULE_OUTPUT_NAME}")
+        endif ()
+        if (COMMAND ballance_configure_version_resource AND DEFINED BALLANCE_MODULE_VERSION_OVERRIDE)
+            list(FILTER _module_sources EXCLUDE REGEX "\\.rc$")
+            ballance_configure_version_resource(
+                    _module_version_resource
+                    ${_module_output_name}
+                    "${_module_output_name} Building Block"
+                    "${_module_output_name}.dll"
+            )
+            list(APPEND _module_sources "${_module_version_resource}")
+        endif ()
+
+        add_library(${TARGET_NAME} SHARED ${_module_sources})
         target_include_directories(${TARGET_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
         target_compile_features(${TARGET_NAME} PRIVATE cxx_std_17)
         target_link_libraries(${TARGET_NAME} PRIVATE CK2 VxMath ${MODULE_LINKS})
