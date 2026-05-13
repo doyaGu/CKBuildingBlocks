@@ -224,6 +224,32 @@ endif ()
 # =============================================================================
 # Helper function for creating building block modules
 # =============================================================================
+function(ckbb_configure_version_resource OUT_VAR TARGET_NAME FILE_DESCRIPTION ORIGINAL_FILENAME)
+    if (NOT CKBB_VERSION_OVERRIDE MATCHES "^[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+$")
+        message(FATAL_ERROR "CKBB_VERSION_OVERRIDE must be a numeric four-part version")
+    endif ()
+
+    string(REPLACE "." ";" _ckbb_version_parts "${CKBB_VERSION_OVERRIDE}")
+    list(GET _ckbb_version_parts 0 CKBB_RC_VERSION_MAJOR)
+    list(GET _ckbb_version_parts 1 CKBB_RC_VERSION_MINOR)
+    list(GET _ckbb_version_parts 2 CKBB_RC_VERSION_PATCH)
+    list(GET _ckbb_version_parts 3 CKBB_RC_VERSION_TWEAK)
+
+    set(CKBB_RC_VERSION_STRING "${CKBB_VERSION_OVERRIDE}")
+    set(CKBB_RC_TARGET "${TARGET_NAME}")
+    set(CKBB_RC_DESCRIPTION "${FILE_DESCRIPTION}")
+    set(CKBB_RC_ORIGINAL_FILENAME "${ORIGINAL_FILENAME}")
+    set(_ckbb_version_resource "${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}Version.generated.rc")
+
+    configure_file(
+            "${PROJECT_SOURCE_DIR}/Version.rc.in"
+            "${_ckbb_version_resource}"
+            @ONLY
+    )
+
+    set(${OUT_VAR} "${_ckbb_version_resource}" PARENT_SCOPE)
+endfunction()
+
 function(ckbb_add_module TARGET_NAME)
     cmake_parse_arguments(MODULE "" "OUTPUT_NAME" "SOURCES;LINKS" ${ARGN})
 
@@ -233,9 +259,9 @@ function(ckbb_add_module TARGET_NAME)
         if (MODULE_OUTPUT_NAME)
             set(_module_output_name "${MODULE_OUTPUT_NAME}")
         endif ()
-        if (COMMAND ballance_configure_version_resource AND DEFINED BALLANCE_MODULE_VERSION_OVERRIDE)
+        if (DEFINED CKBB_VERSION_OVERRIDE)
             list(FILTER _module_sources EXCLUDE REGEX "\\.rc$")
-            ballance_configure_version_resource(
+            ckbb_configure_version_resource(
                     _module_version_resource
                     ${_module_output_name}
                     "${_module_output_name} Building Block"
