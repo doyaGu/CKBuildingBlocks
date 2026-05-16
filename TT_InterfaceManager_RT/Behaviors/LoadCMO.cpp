@@ -8,11 +8,6 @@
 #include "CKAll.h"
 #include "InterfaceManager.h"
 
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <Windows.h>
-
 CKObjectDeclaration *FillBehaviorLoadCMODecl();
 CKERROR CreateLoadCMOProto(CKBehaviorPrototype **pproto);
 int LoadCMO(const CKBehaviorContext &behcontext);
@@ -73,7 +68,7 @@ int LoadCMO(const CKBehaviorContext &behcontext)
     }
 
     man->SetCmoName(name);
-    ::PostMessageA((HWND)context->GetMainWindow(), TT_MSG_CMO_LOAD, (WPARAM)man->GetCmoName(), 0);
+    man->PostPlayerCommand(TT_PLAYER_COMMAND_CMO_LOAD, 0, 0, man->GetCmoName());
     beh->ActivateOutput(0);
 
     return CKBR_OK;

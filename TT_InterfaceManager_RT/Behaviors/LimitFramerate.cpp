@@ -8,11 +8,6 @@
 #include "CKAll.h"
 #include "InterfaceManager.h"
 
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <Windows.h>
-
 CKObjectDeclaration *FillBehaviorLimitFramerateDecl();
 CKERROR CreateLimitFramerateProto(CKBehaviorPrototype **pproto);
 int LimitFramerate(const CKBehaviorContext &behcontext);
@@ -58,7 +53,7 @@ int LimitFramerate(const CKBehaviorContext &behcontext)
     int framerate = 60;
     beh->GetInputParameterValue(0, &framerate);
 
-    ::PostMessageA((HWND)context->GetRenderManager()->GetRenderContext(0)->GetWindowHandle(), TT_MSG_LIMIT_FPS, framerate, 0);
+    InterfaceManager::PostPlayerCommand(context, TT_PLAYER_COMMAND_LIMIT_FPS, framerate, 0);
 
     beh->ActivateInput(0, FALSE);
     beh->ActivateOutput(0, TRUE);

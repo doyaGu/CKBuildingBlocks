@@ -8,11 +8,6 @@
 #include "CKAll.h"
 #include "InterfaceManager.h"
 
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <Windows.h>
-
 CKObjectDeclaration *FillBehaviorChangeScreenModeDecl();
 CKERROR CreateChangeScreenModeProto(CKBehaviorPrototype **pproto);
 int ChangeScreenMode(const CKBehaviorContext &behcontext);
@@ -90,7 +85,7 @@ int ChangeScreenMode(const CKBehaviorContext &behcontext)
         return CKBR_OK;
     }
 
-    if (!::SendMessageA((HWND)context->GetMainWindow(), TT_MSG_SCREEN_MODE_CHG, screenMode, driver))
+    if (!man->SendPlayerCommand(TT_PLAYER_COMMAND_SCREEN_MODE_CHANGE, screenMode, driver))
     {
         beh->ActivateOutput(1);
         return CKBR_OK;

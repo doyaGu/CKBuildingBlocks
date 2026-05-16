@@ -8,11 +8,6 @@
 #include "CKAll.h"
 #include "InterfaceManager.h"
 
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <Windows.h>
-
 CKObjectDeclaration *FillBehaviorSetLevelNameDecl();
 CKERROR CreateSetLevelNameProto(CKBehaviorPrototype **pproto);
 int SetLevelName(const CKBehaviorContext &behcontext);
@@ -65,7 +60,7 @@ int SetLevelName(const CKBehaviorContext &behcontext)
     CGameInfo *gameInfo = man->GetGameInfo();
     if (!gameInfo)
     {
-        ::PostMessageA((HWND)context->GetMainWindow(), TT_MSG_NO_GAMEINFO, 0x13, 0);
+        man->PostPlayerCommand(TT_PLAYER_COMMAND_NO_GAMEINFO, 0x13, 0);
         context->OutputToConsoleExBeep("SetLevelName: gameInfo not exists");
         return CKBR_OK;
     }

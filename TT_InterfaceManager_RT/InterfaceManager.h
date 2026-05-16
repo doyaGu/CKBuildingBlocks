@@ -7,6 +7,8 @@
 #include "GameInfo.h"
 #include "NemoArray.h"
 
+#include <stddef.h>
+
 #define TERRATOOLS_GUID CKGUID(0x56495254, 0x4f4f4c53)
 #define TT_INTERFACE_MANAGER_GUID CKGUID(0x30833801, 0x6DEE620D)
 
@@ -22,6 +24,30 @@ enum TT_MSG
     TT_MSG_GO_FULLSCREEN = 0x678,
     TT_MSG_STOP_FULLSCREEN = 0x679,
 };
+
+enum TTPlayerCommandType
+{
+    TT_PLAYER_COMMAND_NO_GAMEINFO = TT_MSG_NO_GAMEINFO,
+    TT_PLAYER_COMMAND_CMO_RESTART = TT_MSG_CMO_RESTART,
+    TT_PLAYER_COMMAND_CMO_LOAD = TT_MSG_CMO_LOAD,
+    TT_PLAYER_COMMAND_EXIT_TO_SYSTEM = TT_MSG_EXIT_TO_SYS,
+    TT_PLAYER_COMMAND_EXIT_TO_TITLE = TT_MSG_EXIT_TO_TITLE,
+    TT_PLAYER_COMMAND_LIMIT_FPS = TT_MSG_LIMIT_FPS,
+    TT_PLAYER_COMMAND_SCREEN_MODE_CHANGE = TT_MSG_SCREEN_MODE_CHG,
+    TT_PLAYER_COMMAND_GO_FULLSCREEN = TT_MSG_GO_FULLSCREEN,
+    TT_PLAYER_COMMAND_STOP_FULLSCREEN = TT_MSG_STOP_FULLSCREEN,
+};
+
+struct TTPlayerCommand
+{
+    int type;
+    int param0;
+    int param1;
+    const char *text;
+};
+
+class InterfaceManager;
+typedef int (*TTPlayerCommandHandler)(InterfaceManager *manager, const TTPlayerCommand &command, void *userData);
 
 class InterfaceManager : public CKBaseManager
 {
@@ -129,12 +155,74 @@ public:
         return &m_ArrayList;
     }
 
+    void SetPlayerCommandHandler(TTPlayerCommandHandler handler, void *userData)
+    {
+        m_CommandHandler = handler;
+        m_CommandUserData = userData;
+    }
+
+    int SendPlayerCommand(const TTPlayerCommand &command)
+    {
+        if (!m_CommandHandler)
+            return 0;
+        return m_CommandHandler(this, command, m_CommandUserData);
+    }
+
+    int SendPlayerCommand(int type, int param0 = 0, int param1 = 0, const char *text = NULL)
+    {
+        TTPlayerCommand command = {type, param0, param1, text};
+        return SendPlayerCommand(command);
+    }
+
+    int PostPlayerCommand(const TTPlayerCommand &command)
+    {
+        const int nextTail = (m_CommandTail + 1) % TT_PLAYER_COMMAND_QUEUE_SIZE;
+        if (nextTail == m_CommandHead)
+            return 0;
+        m_CommandQueue[m_CommandTail] = command;
+        m_CommandTail = nextTail;
+        return 1;
+    }
+
+    int PostPlayerCommand(int type, int param0 = 0, int param1 = 0, const char *text = NULL)
+    {
+        TTPlayerCommand command = {type, param0, param1, text};
+        return PostPlayerCommand(command);
+    }
+
+    bool PollPlayerCommand(TTPlayerCommand &command)
+    {
+        if (m_CommandHead == m_CommandTail)
+            return false;
+        command = m_CommandQueue[m_CommandHead];
+        m_CommandHead = (m_CommandHead + 1) % TT_PLAYER_COMMAND_QUEUE_SIZE;
+        return true;
+    }
+
+    static int SendPlayerCommand(CKContext *context, int type, int param0 = 0, int param1 = 0, const char *text = NULL)
+    {
+        InterfaceManager *manager = GetManager(context);
+        if (!manager)
+            return 0;
+        return manager->SendPlayerCommand(type, param0, param1, text);
+    }
+
+    static int PostPlayerCommand(CKContext *context, int type, int param0 = 0, int param1 = 0, const char *text = NULL)
+    {
+        InterfaceManager *manager = GetManager(context);
+        if (!manager)
+            return 0;
+        return manager->PostPlayerCommand(type, param0, param1, text);
+    }
+
     static InterfaceManager *GetManager(CKContext *context)
     {
         return (InterfaceManager *)context->GetManagerByGuid(TT_INTERFACE_MANAGER_GUID);
     }
 
 protected:
+    enum { TT_PLAYER_COMMAND_QUEUE_SIZE = 32 };
+
     int m_ScreenMode;
     int m_Driver;
     bool m_TaskSwitchEnabled;
@@ -144,6 +232,11 @@ protected:
     char m_Name[128];
     bool m_WindowActivated;
     CNemoArrayList m_ArrayList;
+    TTPlayerCommandHandler m_CommandHandler;
+    void *m_CommandUserData;
+    TTPlayerCommand m_CommandQueue[TT_PLAYER_COMMAND_QUEUE_SIZE];
+    int m_CommandHead;
+    int m_CommandTail;
 };
 
 #endif // TT_INTERFACEMANAGER_H

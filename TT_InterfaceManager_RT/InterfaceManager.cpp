@@ -2,11 +2,6 @@
 
 #include <string.h>
 
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <Windows.h>
-
 InterfaceManager::InterfaceManager(CKContext *context)
     : CKBaseManager(context, TT_INTERFACE_MANAGER_GUID, "TT Interface Manager"),
       m_ScreenMode(0),
@@ -15,17 +10,15 @@ InterfaceManager::InterfaceManager(CKContext *context)
       m_Rookie(false),
       m_GameInfo(NULL),
       m_WindowActivated(false),
-      m_ArrayList()
+      m_ArrayList(),
+      m_CommandHandler(NULL),
+      m_CommandUserData(NULL),
+      m_CommandHead(0),
+      m_CommandTail(0)
 {
     context->RegisterNewManager(this);
     memset(m_CmoName, 0, sizeof(m_CmoName));
-
-    char path[MAX_PATH];
-    char drive[4];
-    char dir[MAX_PATH];
-    char filename[MAX_PATH];
-    ::GetModuleFileNameA(NULL, path, MAX_PATH);
-    _splitpath(path, drive, dir, filename, NULL);
+    memset(m_CommandQueue, 0, sizeof(m_CommandQueue));
 }
 
 InterfaceManager::~InterfaceManager() {}

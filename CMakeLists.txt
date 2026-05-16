@@ -33,10 +33,6 @@ if (CKBB_IS_TOP_LEVEL AND CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
     message(FATAL_ERROR "In-source builds not allowed. Run CMake from a separate directory: cmake -B build")
 endif ()
 
-if (NOT WIN32)
-    message(FATAL_ERROR "CKBuildingBlocks only supports Windows.")
-endif ()
-
 # =============================================================================
 # C++ standard
 # =============================================================================
@@ -57,6 +53,11 @@ option(CKBB_BUILD_ALL_MODULES "Build all available building block modules" ON)
 option(CKBB_BUILD_SHARED "Build building blocks as DLLs (SHARED)" ON)
 option(CKBB_BUILD_STATIC "Build building blocks as static libraries (STATIC)" OFF)
 option(CKBB_INSTALL "Generate install target" ${CKBB_IS_TOP_LEVEL})
+option(CKBB_ENABLE_SDL3 "Build portable SDL3-compatible building blocks" OFF)
+
+if (NOT WIN32 AND NOT CKBB_ENABLE_SDL3)
+    message(FATAL_ERROR "CKBuildingBlocks only supports non-Windows builds with CKBB_ENABLE_SDL3=ON.")
+endif ()
 
 # =============================================================================
 # CMake modules
@@ -214,6 +215,16 @@ set(CKBB_ALL_MODULES
         TT_Toolbox_RT
 )
 
+if (CKBB_ENABLE_SDL3 AND NOT WIN32)
+    list(REMOVE_ITEM CKBB_ALL_MODULES
+            BuildingBlocksAddons1
+            MidiManager
+            Narratives
+            physics_RT
+            TT_Toolbox_RT
+    )
+endif ()
+
 # Create individual options for each module
 if (NOT CKBB_BUILD_ALL_MODULES)
     foreach (MODULE IN LISTS CKBB_ALL_MODULES)
@@ -261,13 +272,15 @@ function(ckbb_add_module TARGET_NAME)
         endif ()
         if (DEFINED CKBB_VERSION_OVERRIDE)
             list(FILTER _module_sources EXCLUDE REGEX "\\.rc$")
-            ckbb_configure_version_resource(
-                    _module_version_resource
-                    ${_module_output_name}
-                    "${_module_output_name} Building Block"
-                    "${_module_output_name}.dll"
-            )
-            list(APPEND _module_sources "${_module_version_resource}")
+            if (WIN32)
+                ckbb_configure_version_resource(
+                        _module_version_resource
+                        ${_module_output_name}
+                        "${_module_output_name} Building Block"
+                        "${_module_output_name}.dll"
+                )
+                list(APPEND _module_sources "${_module_version_resource}")
+            endif ()
         endif ()
 
         add_library(${TARGET_NAME} SHARED ${_module_sources})

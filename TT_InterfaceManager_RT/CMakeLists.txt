@@ -1,6 +1,11 @@
 # TT_InterfaceManager_RT
 
 aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/Behaviors BEHAVIORS_SRCS)
+
+if(CKBB_ENABLE_SDL3 AND NOT WIN32)
+    list(FILTER BEHAVIORS_SRCS EXCLUDE REGEX ".*/[^/]*Registry[^/]*\\.cpp$")
+endif()
+
 ckbb_add_module(TT_InterfaceManager_RT
         SOURCES TT_InterfaceManager_RT.cpp
                 GameInfo.h

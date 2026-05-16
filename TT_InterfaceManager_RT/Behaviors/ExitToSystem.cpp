@@ -8,11 +8,6 @@
 #include "CKAll.h"
 #include "InterfaceManager.h"
 
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <Windows.h>
-
 CKObjectDeclaration *FillBehaviorExitToSystemDecl();
 CKERROR CreateExitToSystemProto(CKBehaviorPrototype **pproto);
 int ExitToSystem(const CKBehaviorContext &behcontext);
@@ -53,7 +48,7 @@ int ExitToSystem(const CKBehaviorContext &behcontext)
     CKBehavior *beh = behcontext.Behavior;
     CKContext *context = behcontext.Context;
 
-    ::PostMessageA((HWND)context->GetMainWindow(), TT_MSG_EXIT_TO_SYS, 0, 0);
+    InterfaceManager::PostPlayerCommand(context, TT_PLAYER_COMMAND_EXIT_TO_SYSTEM);
 
     beh->ActivateOutput(0);
     return CKBR_OK;
