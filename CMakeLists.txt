@@ -53,11 +53,6 @@ option(CKBB_BUILD_ALL_MODULES "Build all available building block modules" ON)
 option(CKBB_BUILD_SHARED "Build building blocks as DLLs (SHARED)" ON)
 option(CKBB_BUILD_STATIC "Build building blocks as static libraries (STATIC)" OFF)
 option(CKBB_INSTALL "Generate install target" ${CKBB_IS_TOP_LEVEL})
-option(CKBB_ENABLE_SDL3 "Build portable SDL3-compatible building blocks" OFF)
-
-if (NOT WIN32 AND NOT CKBB_ENABLE_SDL3)
-    message(FATAL_ERROR "CKBuildingBlocks only supports non-Windows builds with CKBB_ENABLE_SDL3=ON.")
-endif ()
 
 # =============================================================================
 # CMake modules
@@ -215,7 +210,7 @@ set(CKBB_ALL_MODULES
         TT_Toolbox_RT
 )
 
-if (CKBB_ENABLE_SDL3 AND NOT WIN32)
+if (NOT WIN32)
     list(REMOVE_ITEM CKBB_ALL_MODULES
             BuildingBlocksAddons1
             MidiManager

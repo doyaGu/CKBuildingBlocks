@@ -2,7 +2,7 @@
 
 aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/Behaviors BEHAVIORS_SRCS)
 
-if(CKBB_ENABLE_SDL3 AND NOT WIN32)
+if(NOT WIN32)
     list(FILTER BEHAVIORS_SRCS EXCLUDE REGEX ".*/[^/]*Registry[^/]*\\.cpp$")
 endif()
 
