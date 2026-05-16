@@ -7,11 +7,7 @@
 /////////////////////////////////////////////////////
 #include "CKAll.h"
 #include "InterfaceManager.h"
-
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <Windows.h>
+#include "RegistryUtils.h"
 
 CKObjectDeclaration *FillBehaviorSetStringValueToRegistryDecl();
 CKERROR CreateSetStringValueToRegistryProto(CKBehaviorPrototype **pproto);
@@ -91,22 +87,12 @@ int SetStringValueToRegistry(const CKBehaviorContext &behcontext)
     strcpy(buffer, gameInfo->regSubkey);
     strcat(buffer, regKey);
 
-    HKEY hkResult = NULL;
-    DWORD dwDisposition;
-    if (::RegCreateKeyExA(gameInfo->hkRoot, buffer, 0, 0, 0, KEY_ALL_ACCESS, 0, &hkResult, &dwDisposition) != ERROR_SUCCESS)
+    if (!TTWriteRegistryString(gameInfo->registryRoot, buffer, valueName, str))
     {
         beh->ActivateOutput(1);
         return CKBR_OK;
     }
 
-    if (::RegSetValueExA(hkResult, valueName, 0, REG_SZ, (LPBYTE)str, (DWORD)strlen(str) + 1) != ERROR_SUCCESS)
-    {
-        ::RegCloseKey(hkResult);
-        beh->ActivateOutput(1);
-        return CKBR_OK;
-    }
-
-    ::RegCloseKey(hkResult);
     beh->ActivateOutput(0);
     return CKBR_OK;
 }

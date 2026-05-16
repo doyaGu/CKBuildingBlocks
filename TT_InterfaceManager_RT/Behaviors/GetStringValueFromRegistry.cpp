@@ -7,11 +7,7 @@
 /////////////////////////////////////////////////////
 #include "CKAll.h"
 #include "InterfaceManager.h"
-
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <Windows.h>
+#include "RegistryUtils.h"
 
 CKObjectDeclaration *FillBehaviorGetStringValueFromRegistryDecl();
 CKERROR CreateGetStringValueFromRegistryProto(CKBehaviorPrototype **pproto);
@@ -93,27 +89,14 @@ int GetStringValueFromRegistry(const CKBehaviorContext &behcontext)
     strcpy(buffer, gameInfo->regSubkey);
     strcat(buffer, regKey);
 
-    HKEY hkResult = NULL;
-    DWORD dwDisposition;
-    if (::RegCreateKeyExA(gameInfo->hkRoot, buffer, 0, 0, 0, KEY_ALL_ACCESS, 0, &hkResult, &dwDisposition) != ERROR_SUCCESS)
+    if (!TTReadRegistryString(gameInfo->registryRoot, buffer, valueName, str, sizeof(str)))
     {
         beh->SetOutputParameterValue(0, " ");
         beh->ActivateOutput(1);
         return CKBR_OK;
     }
 
-    DWORD dwType = REG_SZ;
-    DWORD cbData = sizeof(str);
-    if (::RegQueryValueExA(hkResult, valueName, NULL, &dwType, (LPBYTE)str, &cbData) != ERROR_SUCCESS)
-    {
-        ::RegCloseKey(hkResult);
-        beh->SetOutputParameterValue(0, " ");
-        beh->ActivateOutput(1);
-        return CKBR_OK;
-    }
-
-    ::RegCloseKey(hkResult);
-    beh->SetOutputParameterValue(0, str, cbData);
+    beh->SetOutputParameterValue(0, str, (int)strlen(str) + 1);
     beh->ActivateOutput(0);
     return CKBR_OK;
 }

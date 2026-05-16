@@ -2,10 +2,6 @@
 
 aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/Behaviors BEHAVIORS_SRCS)
 
-if(NOT WIN32)
-    list(FILTER BEHAVIORS_SRCS EXCLUDE REGEX ".*/[^/]*Registry[^/]*\\.cpp$")
-endif()
-
 ckbb_add_module(TT_InterfaceManager_RT
         SOURCES TT_InterfaceManager_RT.cpp
                 GameInfo.h
@@ -13,5 +9,7 @@ ckbb_add_module(TT_InterfaceManager_RT
                 NemoArray.cpp
                 InterfaceManager.h
                 InterfaceManager.cpp
+                RegistryUtils.h
+                RegistryUtils.cpp
                 ${BEHAVIORS_SRCS}
 )

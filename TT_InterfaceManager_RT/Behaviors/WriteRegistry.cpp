@@ -11,11 +11,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include "RegistryUtils.h"
 
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
+#ifndef _MSC_VER
+#define _snprintf snprintf
 #endif
-#include <Windows.h>
 
 CKObjectDeclaration *FillBehaviorWriteRegistryDecl();
 CKERROR CreateWriteRegistryProto(CKBehaviorPrototype **pproto);
@@ -72,7 +72,7 @@ int WriteRegistry(const CKBehaviorContext &behcontext)
     CKBehavior *beh = behcontext.Behavior;
     CKContext *context = behcontext.Context;
 
-    BOOL saveArrayMode = false;
+    CKBOOL saveArrayMode = FALSE;
     beh->GetLocalParameterValue(0, &saveArrayMode);
 
     char regSection[200] = {0};
@@ -283,7 +283,7 @@ CKERROR WriteRegistryCallBack(const CKBehaviorContext &behcontext)
         break;
     }
 
-    BOOL saveArrayMode = false;
+    CKBOOL saveArrayMode = FALSE;
     beh->GetLocalParameterValue(0, &saveArrayMode);
     if (saveArrayMode)
     {
@@ -303,43 +303,21 @@ CKERROR WriteRegistryCallBack(const CKBehaviorContext &behcontext)
 
 static CKBOOL WriteIntegerToRegistry(const char *subKey, CKContext *context, int value, const char *valueName)
 {
-    HKEY hkResult = NULL;
-    DWORD dwDisposition;
-    if (::RegCreateKeyExA(HKEY_CURRENT_USER, subKey, 0, 0, 0, KEY_ALL_ACCESS, 0, &hkResult, &dwDisposition) != ERROR_SUCCESS)
+    if (!TTWriteRegistryInteger(VXCONFIG_ROOT_CURRENT_USER, subKey, valueName, value))
     {
-        context->OutputToConsoleExBeep("TT_WriteRegistry: failed to create : HKEY_CURRENT_USER\\%s", subKey);
-        return FALSE;
-    }
-
-    if (::RegSetValueExA(hkResult, valueName, 0, REG_DWORD, (LPBYTE)&value, sizeof(value)) != ERROR_SUCCESS)
-    {
-        ::RegCloseKey(hkResult);
         context->OutputToConsoleExBeep("TT_WriteRegistry: failed to set : %s.", valueName);
         return FALSE;
     }
-
-    ::RegCloseKey(hkResult);
     return TRUE;
 }
 
 static CKBOOL WriteFloatToRegistry(const char *subKey, CKContext *context, float value, const char *valueName)
 {
-    HKEY hkResult = NULL;
-    DWORD dwDisposition;
-    if (::RegCreateKeyExA(HKEY_CURRENT_USER, subKey, 0, 0, 0, KEY_ALL_ACCESS, 0, &hkResult, &dwDisposition) != ERROR_SUCCESS)
+    if (!TTWriteRegistryFloat(VXCONFIG_ROOT_CURRENT_USER, subKey, valueName, value))
     {
-        context->OutputToConsoleExBeep("TT_WriteRegistry: failed to create : HKEY_CURRENT_USER\\%s", subKey);
-        return FALSE;
-    }
-
-    if (::RegSetValueExA(hkResult, valueName, 0, REG_DWORD, (LPBYTE)&value, sizeof(value)) != ERROR_SUCCESS)
-    {
-        ::RegCloseKey(hkResult);
         context->OutputToConsoleExBeep("TT_WriteRegistry: failed to set : %s.", valueName);
         return FALSE;
     }
-
-    ::RegCloseKey(hkResult);
     return TRUE;
 }
 
@@ -348,21 +326,10 @@ static CKBOOL WriteStringToRegistry(const char *subKey, CKContext *context, cons
     if (!str)
         str = "";
 
-    HKEY hkResult = NULL;
-    DWORD dwDisposition;
-    if (::RegCreateKeyExA(HKEY_CURRENT_USER, subKey, 0, 0, 0, KEY_ALL_ACCESS, 0, &hkResult, &dwDisposition) != ERROR_SUCCESS)
+    if (!TTWriteRegistryString(VXCONFIG_ROOT_CURRENT_USER, subKey, valueName, str))
     {
-        context->OutputToConsoleExBeep("TT_WriteRegistry: failed to create : HKEY_CURRENT_USER\\%s", subKey);
-        return FALSE;
-    }
-
-    if (::RegSetValueExA(hkResult, valueName, 0, REG_SZ, (LPBYTE)str, (DWORD)strlen(str) + 1) != ERROR_SUCCESS)
-    {
-        ::RegCloseKey(hkResult);
         context->OutputToConsoleExBeep("TT_WriteRegistry: failed to set : %s.", valueName);
         return FALSE;
     }
-
-    ::RegCloseKey(hkResult);
     return TRUE;
 }
