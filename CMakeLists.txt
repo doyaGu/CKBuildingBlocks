@@ -212,11 +212,7 @@ set(CKBB_ALL_MODULES
 
 if (NOT WIN32)
     list(REMOVE_ITEM CKBB_ALL_MODULES
-            BuildingBlocksAddons1
             MidiManager
-            Narratives
-            physics_RT
-            TT_Toolbox_RT
     )
 endif ()
 
