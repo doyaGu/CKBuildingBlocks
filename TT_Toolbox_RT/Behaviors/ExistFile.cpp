@@ -7,11 +7,7 @@
 ////////////////////////////////
 #include "CKAll.h"
 #include "ToolboxGuids.h"
-
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <Windows.h>
+#include "VxWindowFunctions.h"
 
 CKObjectDeclaration *FillBehaviorExistFileDecl();
 CKERROR CreateExistFileProto(CKBehaviorPrototype **pproto);
@@ -56,7 +52,7 @@ int ExistFile(const CKBehaviorContext &behcontext)
     CKBehavior *beh = behcontext.Behavior;
     
     CKSTRING file = (CKSTRING)beh->GetInputParameterReadDataPtr(0);
-    if (::GetFileAttributesA(file) != -1)
+    if (VxFileExists(file) || VxDirectoryExists(file))
     {
         beh->ActivateOutput(0, TRUE);
     }

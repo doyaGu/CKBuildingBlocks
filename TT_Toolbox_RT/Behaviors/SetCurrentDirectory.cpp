@@ -7,11 +7,7 @@
 //////////////////////////////////////////
 #include "CKAll.h"
 #include "ToolboxGuids.h"
-
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <Windows.h>
+#include "VxWindowFunctions.h"
 
 CKObjectDeclaration *FillBehaviorSetCurrentDirectoryDecl();
 CKERROR CreateSetCurrentDirectoryProto(CKBehaviorPrototype **pproto);
@@ -56,7 +52,7 @@ int SetCurrentDirectory(const CKBehaviorContext &behcontext)
     CKBehavior *beh = behcontext.Behavior;
 
     CKSTRING dir = (CKSTRING)beh->GetInputParameterReadDataPtr(0);
-    if (::SetCurrentDirectoryA(dir) == TRUE)
+    if (VxSetCurrentDirectory(dir))
     {
         beh->ActivateOutput(0, TRUE);
     }

@@ -7,11 +7,7 @@
 //////////////////////////////////////
 #include "CKAll.h"
 #include "ToolboxGuids.h"
-
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <Windows.h>
+#include "VxWindowFunctions.h"
 
 CKObjectDeclaration *FillBehaviorRemoveDirectoryDecl();
 CKERROR CreateRemoveDirectoryProto(CKBehaviorPrototype **pproto);
@@ -56,7 +52,7 @@ int RemoveDirectory(const CKBehaviorContext &behcontext)
     CKBehavior *beh = behcontext.Behavior;
 
     CKSTRING dir = (CKSTRING)beh->GetInputParameterReadDataPtr(0);
-    if (::RemoveDirectoryA(dir) == TRUE)
+    if (VxRemoveDirectory(dir))
     {
         beh->ActivateOutput(0, TRUE);
     }

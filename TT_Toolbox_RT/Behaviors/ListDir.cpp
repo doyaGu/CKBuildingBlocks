@@ -7,15 +7,23 @@
 //////////////////////////////////////////
 #include "CKAll.h"
 #include "ToolboxGuids.h"
-
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <windows.h>
+#include "VxWindowFunctions.h"
 
 CKObjectDeclaration *FillBehaviorListDirDecl();
 CKERROR CreateListDirProto(CKBehaviorPrototype **pproto);
 int ListDir(const CKBehaviorContext &behcontext);
+
+static XBOOL AddListDirEntry(const VxDirectoryEntry *entry, void *userData)
+{
+    CKDataArray *array = (CKDataArray *)userData;
+    if (!array || !entry)
+        return FALSE;
+    array->InsertRow(-1);
+    int row = array->GetRowCount() - 1;
+    if (!array->SetElementStringValue(row, 0, entry->Name))
+        array->RemoveRow(row);
+    return TRUE;
+}
 
 CKObjectDeclaration *FillBehaviorListDirDecl()
 {
@@ -59,48 +67,31 @@ int ListDir(const CKBehaviorContext &behcontext)
     CKSTRING searchPath = (CKSTRING)beh->GetInputParameterReadDataPtr(0);
     CKDataArray *array = (CKDataArray *)beh->GetInputParameterObject(1);
 
-    WIN32_FIND_DATAA findData;
-    HANDLE hFind = FindFirstFileA(searchPath, &findData);
-
-    if (hFind == INVALID_HANDLE_VALUE)
+    if (!searchPath || !array)
     {
         ctx->OutputToConsole("Invalid file handle", TRUE);
         return CKBR_GENERICERROR;
     }
 
-    // Skip "." and ".." entries
-    if (strcmp(findData.cFileName, ".") != 0 && strcmp(findData.cFileName, "..") != 0)
-    {
-        array->InsertRow(-1);
-        int row = array->GetRowCount() - 1;
-        if (!array->SetElementStringValue(row, 0, findData.cFileName))
-            array->RemoveRow(row);
+    char dir[_MAX_PATH] = {0};
+    char mask[_MAX_PATH] = {0};
+    const char *slash = strrchr(searchPath, '/');
+    const char *backslash = strrchr(searchPath, '\\');
+    const char *separator = slash > backslash ? slash : backslash;
+    if (separator) {
+        size_t dirLen = (size_t)(separator - searchPath);
+        if (dirLen >= sizeof(dir))
+            return CKBR_GENERICERROR;
+        strncpy(dir, searchPath, dirLen);
+        dir[dirLen] = '\0';
+        strncpy(mask, separator + 1, sizeof(mask) - 1);
+    } else {
+        strcpy(dir, ".");
+        strncpy(mask, searchPath, sizeof(mask) - 1);
     }
 
-    while (FindNextFileA(hFind, &findData))
-    {
-        if (strcmp(findData.cFileName, ".") != 0 && strcmp(findData.cFileName, "..") != 0)
-        {
-            array->InsertRow(-1);
-            int row = array->GetRowCount() - 1;
-            if (!array->SetElementStringValue(row, 0, findData.cFileName))
-                array->RemoveRow(row);
-        }
-    }
-
-    DWORD err = GetLastError();
-    if (err != ERROR_NO_MORE_FILES)
-    {
-        ctx->OutputToConsole("Invalid file handle", TRUE);
-        FindClose(hFind);
+    if (!VxListDirectory(dir, mask, TRUE, AddListDirEntry, array))
         return CKBR_GENERICERROR;
-    }
-
-    if (!FindClose(hFind))
-    {
-        ctx->OutputToConsole("Can't close find handle", TRUE);
-        return CKBR_GENERICERROR;
-    }
 
     return CKBR_OK;
 }

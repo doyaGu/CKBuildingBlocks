@@ -7,11 +7,7 @@
 //////////////////////////////////////
 #include "CKAll.h"
 #include "ToolboxGuids.h"
-
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <Windows.h>
+#include "VxWindowFunctions.h"
 
 CKObjectDeclaration *FillBehaviorOperationSystemDecl();
 CKERROR CreateOperationSystemProto(CKBehaviorPrototype **pproto);
@@ -56,31 +52,23 @@ int OperationSystem(const CKBehaviorContext &behcontext)
 {
     CKBehavior *beh = behcontext.Behavior;
 
-    OSVERSIONINFO osvi;
-    ::ZeroMemory(&osvi, sizeof(OSVERSIONINFO));
-    osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
-    ::GetVersionEx(&osvi);
+    VX_OSINFO os = VxGetOs();
 
-    if (osvi.dwPlatformId == 1)
-    {
-        int id = 1;
-        beh->SetOutputParameterValue(0, &id, sizeof(DWORD));
-        beh->SetOutputParameterValue(1, &osvi.dwMinorVersion, sizeof(DWORD));
-        beh->SetOutputParameterValue(2, &osvi.dwMajorVersion, sizeof(DWORD));
-    }
-    else if (osvi.dwPlatformId == 2)
+    if (os >= VXOS_WIN31 && os <= VXOS_WINSEVEN)
     {
         int id = 2;
-        beh->SetOutputParameterValue(0, &id, sizeof(DWORD));
-        beh->SetOutputParameterValue(1, &osvi.dwMinorVersion, sizeof(DWORD));
-        beh->SetOutputParameterValue(2, &osvi.dwMajorVersion, sizeof(DWORD));
+        int minor = 0;
+        int major = 6;
+        beh->SetOutputParameterValue(0, &id, sizeof(int));
+        beh->SetOutputParameterValue(1, &minor, sizeof(int));
+        beh->SetOutputParameterValue(2, &major, sizeof(int));
     }
     else
     {
         int id = 0;
-        beh->SetOutputParameterValue(0, &id, sizeof(DWORD));
-        beh->SetOutputParameterValue(1, &id, sizeof(DWORD));
-        beh->SetOutputParameterValue(2, &id, sizeof(DWORD));
+        beh->SetOutputParameterValue(0, &id, sizeof(int));
+        beh->SetOutputParameterValue(1, &id, sizeof(int));
+        beh->SetOutputParameterValue(2, &id, sizeof(int));
     }
 
     beh->ActivateOutput(0, TRUE);
