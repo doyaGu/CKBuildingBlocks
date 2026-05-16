@@ -8,11 +8,6 @@
 #include "CKAll.h"
 #include "InterfaceManager.h"
 
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <Windows.h>
-
 CKObjectDeclaration *FillBehaviorSetGameDataDecl();
 CKERROR CreateSetGameDataProto(CKBehaviorPrototype **pproto);
 int SetGameData(const CKBehaviorContext &behcontext);
@@ -66,7 +61,7 @@ int SetGameData(const CKBehaviorContext &behcontext)
     CGameInfo *gameInfo = man->GetGameInfo();
     if (!gameInfo)
     {
-        ::PostMessageA((HWND)context->GetMainWindow(), TT_MSG_NO_GAMEINFO, 0x06, 0);
+        man->PostPlayerCommand(TT_PLAYER_COMMAND_NO_GAMEINFO, 0x06, 0);
         context->OutputToConsoleExBeep("SetGameData: gameInfo not exists");
         return CKBR_OK;
     }

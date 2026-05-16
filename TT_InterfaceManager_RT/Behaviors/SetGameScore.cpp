@@ -8,11 +8,6 @@
 #include "CKAll.h"
 #include "InterfaceManager.h"
 
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <Windows.h>
-
 CKObjectDeclaration *FillBehaviorSetGameScoreDecl();
 CKERROR CreateSetGameScoreProto(CKBehaviorPrototype **pproto);
 int SetGameScore(const CKBehaviorContext &behcontext);
@@ -65,7 +60,7 @@ int SetGameScore(const CKBehaviorContext &behcontext)
     CGameInfo *gameInfo = man->GetGameInfo();
     if (!gameInfo)
     {
-        ::PostMessageA((HWND)context->GetMainWindow(), TT_MSG_NO_GAMEINFO, 0x09, 0);
+        man->PostPlayerCommand(TT_PLAYER_COMMAND_NO_GAMEINFO, 0x09, 0);
         context->OutputToConsoleExBeep("SetGameScore: gameInfo not exists");
         return CKBR_OK;
     }

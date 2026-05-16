@@ -10,11 +10,6 @@
 
 #include <stdio.h>
 
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <Windows.h>
-
 CKObjectDeclaration *FillBehaviorReadArrayDecl();
 CKERROR CreateReadArrayProto(CKBehaviorPrototype **pproto);
 int ReadArray(const CKBehaviorContext &behcontext);
@@ -64,7 +59,7 @@ int ReadArray(const CKBehaviorContext &behcontext)
     InterfaceManager *man = InterfaceManager::GetManager(context);
     if (!man)
     {
-        ::PostMessageA((HWND)context->GetRenderManager()->GetRenderContext(0)->GetWindowHandle(), TT_MSG_NO_GAMEINFO, 0x19, 1);
+        InterfaceManager::PostPlayerCommand(context, TT_PLAYER_COMMAND_NO_GAMEINFO, 0x19, 1);
         context->OutputToConsoleExBeep("ReadArray: gameInfo not exists");
         beh->ActivateOutput(0);
         return CKBR_OK;
@@ -85,13 +80,13 @@ int ReadArray(const CKBehaviorContext &behcontext)
     {
         nemoArray->Read(array);
 
-        BOOL bShowMessage = FALSE;
+        CKBOOL bShowMessage = FALSE;
         beh->GetInputParameterValue(2, &bShowMessage);
         if (bShowMessage)
         {
             char *msg = new char[128];
             sprintf(msg, " '%s'  from file '%s' read from manager", array->GetName(), cmo);
-            ::MessageBoxA((HWND)context->GetMainWindow(), msg, "message...", MB_OK);
+            context->OutputToConsole(msg, FALSE);
             delete[] msg;
         }
     }

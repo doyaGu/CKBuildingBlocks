@@ -10,11 +10,6 @@
 
 #include <stdio.h>
 
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <Windows.h>
-
 CKObjectDeclaration *FillBehaviorWriteArrayDecl();
 CKERROR CreateWriteArrayProto(CKBehaviorPrototype **pproto);
 int WriteArray(const CKBehaviorContext &behcontext);
@@ -64,7 +59,7 @@ int WriteArray(const CKBehaviorContext &behcontext)
     InterfaceManager *man = InterfaceManager::GetManager(context);
     if (!man)
     {
-        ::PostMessageA((HWND)context->GetRenderManager()->GetRenderContext(0)->GetWindowHandle(), TT_MSG_NO_GAMEINFO, 0x1E, 1);
+        InterfaceManager::PostPlayerCommand(context, TT_PLAYER_COMMAND_NO_GAMEINFO, 0x1E, 1);
         context->OutputToConsoleExBeep("WriteArray: gameInfo not exists");
         beh->ActivateOutput(0);
         return CKBR_OK;
@@ -85,13 +80,13 @@ int WriteArray(const CKBehaviorContext &behcontext)
     {
         nemoArray->Write(array);
 
-        BOOL bShowMessage = FALSE;
+        CKBOOL bShowMessage = FALSE;
         beh->GetInputParameterValue(2, &bShowMessage);
         if (bShowMessage)
         {
             char *msg = new char[256];
             sprintf(msg, " '%s'  from file '%s' written to manager", array->GetName(), cmo);
-            ::MessageBoxA((HWND)context->GetMainWindow(), msg, "message...", MB_OK);
+            context->OutputToConsole(msg, FALSE);
             delete[] msg;
         }
     }

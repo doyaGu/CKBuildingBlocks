@@ -8,11 +8,6 @@
 #include "CKAll.h"
 #include "InterfaceManager.h"
 
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <Windows.h>
-
 CKObjectDeclaration *FillBehaviorRestartCMODecl();
 CKERROR CreateRestartCMOProto(CKBehaviorPrototype **pproto);
 int RestartCMO(const CKBehaviorContext &behcontext);
@@ -57,7 +52,7 @@ int RestartCMO(const CKBehaviorContext &behcontext)
     if (!man || !man->GetGameInfo())
         context->OutputToConsoleExBeep("RestartCMO: gameInfo == NULL, exit CMO");
 
-    ::PostMessageA((HWND)context->GetMainWindow(), TT_MSG_CMO_RESTART, 0, 0);
+    InterfaceManager::PostPlayerCommand(context, TT_PLAYER_COMMAND_CMO_RESTART);
     beh->ActivateOutput(0);
 
     return CKBR_OK;

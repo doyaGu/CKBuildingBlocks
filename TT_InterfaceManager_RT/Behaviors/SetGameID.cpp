@@ -8,11 +8,6 @@
 #include "CKAll.h"
 #include "InterfaceManager.h"
 
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <Windows.h>
-
 CKObjectDeclaration *FillBehaviorSetGameIDDecl();
 CKERROR CreateSetGameIDProto(CKBehaviorPrototype **pproto);
 int SetGameID(const CKBehaviorContext &behcontext);
@@ -65,7 +60,7 @@ int SetGameID(const CKBehaviorContext &behcontext)
     CGameInfo *gameInfo = man->GetGameInfo();
     if (!gameInfo)
     {
-        ::PostMessageA((HWND)context->GetMainWindow(), TT_MSG_NO_GAMEINFO, 0x07, 0);
+        man->PostPlayerCommand(TT_PLAYER_COMMAND_NO_GAMEINFO, 0x07, 0);
         context->OutputToConsoleExBeep("SetGameID: gameInfo not exists");
         return CKBR_OK;
     }
