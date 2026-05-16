@@ -3,18 +3,7 @@
 
 #include <string.h>
 
-#ifdef _WIN32
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <Windows.h>
-#ifdef WIN32_LEAN_AND_MEAN
-#undef WIN32_LEAN_AND_MEAN
-#endif
-#else
-typedef void *HKEY;
-#define HKEY_CURRENT_USER ((HKEY)0)
-#endif
+#include "VxConfiguration.h"
 
 class CGameInfo
 {
@@ -25,7 +14,7 @@ public:
     char fileName[128];
     char path[128];
     char regSubkey[512];
-    HKEY hkRoot;
+    VxConfigRoot registryRoot;
     int gameScore;
     int levelScore;
     int type;
@@ -37,7 +26,7 @@ public:
 
     CGameInfo()
         : next(NULL),
-          hkRoot(HKEY_CURRENT_USER),
+          registryRoot(VXCONFIG_ROOT_CURRENT_USER),
           gameScore(0),
           levelScore(0),
           type(0),

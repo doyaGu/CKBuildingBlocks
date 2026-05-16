@@ -7,11 +7,7 @@
 /////////////////////////////////////////////////////
 #include "CKAll.h"
 #include "InterfaceManager.h"
-
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <Windows.h>
+#include "RegistryUtils.h"
 
 CKObjectDeclaration *FillBehaviorSetFloatValueToRegistryDecl();
 CKERROR CreateSetFloatValueToRegistryProto(CKBehaviorPrototype **pproto);
@@ -91,24 +87,13 @@ int SetFloatValueToRegistry(const CKBehaviorContext &behcontext)
     strcpy(buffer, gameInfo->regSubkey);
     strcat(buffer, regKey);
 
-    HKEY hkResult = NULL;
-    DWORD dwDisposition;
-    if (::RegCreateKeyExA(gameInfo->hkRoot, buffer, 0, 0, 0, KEY_ALL_ACCESS, 0, &hkResult, &dwDisposition) != ERROR_SUCCESS)
+    if (!TTWriteRegistryFloat(gameInfo->registryRoot, buffer, valueName, value))
     {
-        context->OutputToConsoleExBeep("TT_SetFloatValueToRegistry: Failed to create %s", buffer);
-        beh->ActivateOutput(1);
-        return CKBR_OK;
-    }
-
-    if (::RegSetValueExA(hkResult, valueName, 0, REG_DWORD, (LPBYTE)&value, sizeof(value)) != ERROR_SUCCESS)
-    {
-        ::RegCloseKey(hkResult);
         context->OutputToConsoleExBeep("TT_SetFloatValueToRegistry: Failed to set %s %f", valueName, value);
         beh->ActivateOutput(1);
         return CKBR_OK;
     }
 
-    ::RegCloseKey(hkResult);
     beh->ActivateOutput(0);
     return CKBR_OK;
 }

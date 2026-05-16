@@ -11,11 +11,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include "RegistryUtils.h"
 
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
+#ifndef _MSC_VER
+#define _snprintf snprintf
 #endif
-#include <Windows.h>
 
 CKObjectDeclaration *FillBehaviorReadRegistryDecl();
 CKERROR CreateReadRegistryProto(CKBehaviorPrototype **pproto);
@@ -24,7 +24,7 @@ CKERROR ReadRegistryCallBack(const CKBehaviorContext &behcontext);
 
 static CKBOOL ReadIntegerFromRegistry(const char *subKey, CKContext *context, const char *valueName, int *value);
 static CKBOOL ReadFloatFromRegistry(const char *subKey, CKContext *context, const char *valueName, float *value);
-static CKBOOL ReadStringFromRegistry(const char *subKey, CKContext *context, const char *valueName, char *buffer, DWORD bufferSize);
+static CKBOOL ReadStringFromRegistry(const char *subKey, CKContext *context, const char *valueName, char *buffer, size_t bufferSize);
 
 CKObjectDeclaration *FillBehaviorReadRegistryDecl()
 {
@@ -75,7 +75,7 @@ int ReadRegistry(const CKBehaviorContext &behcontext)
     CKBehavior *beh = behcontext.Behavior;
     CKContext *context = behcontext.Context;
 
-    BOOL saveArrayMode = false;
+    CKBOOL saveArrayMode = FALSE;
     beh->GetLocalParameterValue(0, &saveArrayMode);
 
     char regSection[200] = {0};
@@ -305,7 +305,7 @@ CKERROR ReadRegistryCallBack(const CKBehaviorContext &behcontext)
         break;
     }
 
-    BOOL saveArrayMode = false;
+    CKBOOL saveArrayMode = FALSE;
     beh->GetLocalParameterValue(0, &saveArrayMode);
     if (saveArrayMode)
     {
@@ -330,23 +330,11 @@ static CKBOOL ReadIntegerFromRegistry(const char *subKey, CKContext *context, co
     if (!value)
         return FALSE;
 
-    HKEY hkResult = NULL;
-    if (::RegOpenKeyExA(HKEY_CURRENT_USER, subKey, 0, KEY_READ, &hkResult) != ERROR_SUCCESS)
+    if (!TTReadRegistryInteger(VXCONFIG_ROOT_CURRENT_USER, subKey, valueName, value))
     {
-        context->OutputToConsoleExBeep("TT_ReadRegistry: failed to open : HKEY_CURRENT_USER\\%s", subKey);
-        return FALSE;
-    }
-
-    DWORD dwType = REG_DWORD;
-    DWORD cbData = sizeof(*value);
-    if (::RegQueryValueExA(hkResult, valueName, NULL, &dwType, (LPBYTE)value, &cbData) != ERROR_SUCCESS)
-    {
-        ::RegCloseKey(hkResult);
         context->OutputToConsoleExBeep("TT_ReadRegistry:  ReadError: %s.", valueName);
         return FALSE;
     }
-
-    ::RegCloseKey(hkResult);
     return TRUE;
 }
 
@@ -355,50 +343,27 @@ static CKBOOL ReadFloatFromRegistry(const char *subKey, CKContext *context, cons
     if (!value)
         return FALSE;
 
-    HKEY hkResult = NULL;
-    if (::RegOpenKeyExA(HKEY_CURRENT_USER, subKey, 0, KEY_READ, &hkResult) != ERROR_SUCCESS)
+    if (!TTReadRegistryFloat(VXCONFIG_ROOT_CURRENT_USER, subKey, valueName, value))
     {
-        context->OutputToConsoleExBeep("TT_ReadRegistry: failed to open : HKEY_CURRENT_USER\\%s", subKey);
-        return FALSE;
-    }
-
-    DWORD dwType = REG_DWORD;
-    DWORD cbData = sizeof(*value);
-    if (::RegQueryValueExA(hkResult, valueName, NULL, &dwType, (LPBYTE)value, &cbData) != ERROR_SUCCESS)
-    {
-        ::RegCloseKey(hkResult);
         context->OutputToConsoleExBeep("TT_ReadRegistry:  ReadError: %s.", valueName);
         return FALSE;
     }
-
-    ::RegCloseKey(hkResult);
     return TRUE;
 }
 
-static CKBOOL ReadStringFromRegistry(const char *subKey, CKContext *context, const char *valueName, char *buffer, DWORD bufferSize)
+static CKBOOL ReadStringFromRegistry(const char *subKey, CKContext *context, const char *valueName, char *buffer, size_t bufferSize)
 {
     if (!buffer || bufferSize == 0)
         return FALSE;
 
     buffer[0] = '\0';
 
-    HKEY hkResult = NULL;
-    if (::RegOpenKeyExA(HKEY_CURRENT_USER, subKey, 0, KEY_READ, &hkResult) != ERROR_SUCCESS)
+    if (!TTReadRegistryString(VXCONFIG_ROOT_CURRENT_USER, subKey, valueName, buffer, bufferSize))
     {
-        context->OutputToConsoleExBeep("TT_ReadRegistry: failed to open : HKEY_CURRENT_USER\\%s", subKey);
-        return FALSE;
-    }
-
-    DWORD dwType = REG_SZ;
-    DWORD cbData = bufferSize;
-    if (::RegQueryValueExA(hkResult, valueName, NULL, &dwType, (LPBYTE)buffer, &cbData) != ERROR_SUCCESS)
-    {
-        ::RegCloseKey(hkResult);
         context->OutputToConsoleExBeep("TT_ReadRegistry:  ReadError: %s.", valueName);
         return FALSE;
     }
 
-    ::RegCloseKey(hkResult);
     buffer[bufferSize - 1] = '\0';
     return TRUE;
 }
