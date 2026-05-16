@@ -7,11 +7,7 @@
 ///////////////////////////////
 #include "CKAll.h"
 #include "ToolboxGuids.h"
-
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <Windows.h>
+#include "VxWindowFunctions.h"
 
 CKObjectDeclaration *FillBehaviorCopyFileDecl();
 CKERROR CreateCopyFileProto(CKBehaviorPrototype **pproto);
@@ -68,7 +64,7 @@ int CopyFile(const CKBehaviorContext &behcontext)
         return CKBR_OK;
     }
 
-    if (::CopyFileA(src, dest, !overwrite) == TRUE)
+    if (VxCopyFile(src, dest, !overwrite))
     {
         beh->ActivateOutput(0, TRUE);
     }

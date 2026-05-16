@@ -7,11 +7,7 @@
 //////////////////////////////////////////
 #include "CKAll.h"
 #include "ToolboxGuids.h"
-
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <Windows.h>
+#include "VxWindowFunctions.h"
 
 CKObjectDeclaration *FillBehaviorGetCurrentDirectoryDecl();
 CKERROR CreateGetCurrentDirectoryProto(CKBehaviorPrototype **pproto);
@@ -54,8 +50,8 @@ CKERROR CreateGetCurrentDirectoryProto(CKBehaviorPrototype **pproto)
 int GetCurrentDirectory(const CKBehaviorContext &behcontext)
 {
     CKBehavior *beh = behcontext.Behavior;
-    CHAR buffer[MAX_PATH];
-    BOOL success = ::GetCurrentDirectoryA(MAX_PATH, buffer);
+    char buffer[_MAX_PATH] = {0};
+    XBOOL success = VxGetCurrentDirectory(buffer);
     beh->SetOutputParameterValue(0, buffer, (int)strlen(buffer) + 1);
     if (success)
     {

@@ -7,11 +7,7 @@
 /////////////////////////////////
 #include "CKAll.h"
 #include "ToolboxGuids.h"
-
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <Windows.h>
+#include "VxWindowFunctions.h"
 
 CKObjectDeclaration *FillBehaviorDeleteFileDecl();
 CKERROR CreateDeleteFileProto(CKBehaviorPrototype **pproto);
@@ -56,7 +52,7 @@ int DeleteFile(const CKBehaviorContext &behcontext)
     CKBehavior *beh = behcontext.Behavior;
 
     CKSTRING file = (CKSTRING)beh->GetInputParameterReadDataPtr(0);
-    if (::DeleteFileA(file) == TRUE)
+    if (VxDeleteFile(file))
     {
         beh->ActivateOutput(0, TRUE);
     }
