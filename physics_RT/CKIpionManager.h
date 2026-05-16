@@ -1,15 +1,11 @@
 #ifndef PHYSICS_RT_IPIONMANAGER_H
 #define PHYSICS_RT_IPIONMANAGER_H
 
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <Windows.h>
-
 #include "CKBaseManager.h"
 #include "CKAttributeManager.h"
 #include "CKContext.h"
 #include "XNHashTable.h"
+#include "VxTimeProfiler.h"
 
 #include "ivu_types.hxx"
 #include "ivu_string_hash.hxx"
@@ -195,11 +191,10 @@ public:
     int m_HasPhysicsCalls;
     int m_PhysicalizeCalls;
     int m_DePhysicalizeCalls;
-    LARGE_INTEGER m_HasPhysicsTime;
-    LARGE_INTEGER m_DePhysicalizeTime;
-    LARGE_INTEGER field_FC;
-    LARGE_INTEGER field_104;
-    LARGE_INTEGER m_ProfilerCounter;
+    float m_HasPhysicsTime;
+    float m_DePhysicalizeTime;
+    float field_FC;
+    float field_104;
     PhysicsObjectTable m_PhysicsObjects;
 };
 

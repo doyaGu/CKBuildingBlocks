@@ -145,6 +145,10 @@ CKIpionManager::CKIpionManager(CKContext *context)
     m_HasPhysicsCalls = 0;
     m_PhysicalizeCalls = 0;
     m_DePhysicalizeCalls = 0;
+    m_HasPhysicsTime = 0.0f;
+    m_DePhysicalizeTime = 0.0f;
+    field_FC = 0.0f;
+    field_104 = 0.0f;
 
     m_CollisionFilterExclusivePair = NULL;
     m_PreSimulateCallbacks = NULL;
@@ -158,7 +162,7 @@ CKIpionManager::CKIpionManager(CKContext *context)
     m_PhysicsDeltaTime = 0.0f;
 
     if (context->RegisterNewManager(this) == CKERR_MANAGERALREADYEXISTS)
-        ::OutputDebugStringA("Manager already exists");
+        context->OutputToConsole("Manager already exists", TRUE);
 
     m_CollisionSurfaces = NULL;
     m_CollDetectionIDAttribType = -1;
@@ -278,8 +282,7 @@ PhysicsObject *CKIpionManager::GetPhysicsObject(CK3dEntity *entity, CKBOOL loggi
     if (!entity)
         return NULL;
 
-    LARGE_INTEGER begin;
-    ::QueryPerformanceCounter(&begin);
+    VxTimeProfiler profiler;
 
     ++m_HasPhysicsCalls;
 
@@ -295,12 +298,9 @@ PhysicsObject *CKIpionManager::GetPhysicsObject(CK3dEntity *entity, CKBOOL loggi
         obj = &*it;
     }
 
-    LARGE_INTEGER end;
-    ::QueryPerformanceCounter(&end);
-
-    m_DePhysicalizeTime.QuadPart = end.QuadPart - begin.QuadPart;
-    if (m_DePhysicalizeTime.QuadPart > m_HasPhysicsTime.QuadPart)
-        m_HasPhysicsTime.QuadPart = m_DePhysicalizeTime.QuadPart;
+    m_DePhysicalizeTime = profiler.Current();
+    if (m_DePhysicalizeTime > m_HasPhysicsTime)
+        m_HasPhysicsTime = m_DePhysicalizeTime;
 
     return obj;
 }
@@ -697,11 +697,10 @@ int CKIpionManager::GetCollisionDetectID(CK3dEntity *entity) const
 
 void CKIpionManager::ResetProfiler()
 {
-    QueryPerformanceFrequency(&m_ProfilerCounter);
-    memset(&m_HasPhysicsTime, 0, sizeof(LARGE_INTEGER));
-    memset(&m_DePhysicalizeTime, 0, sizeof(LARGE_INTEGER));
-    memset(&field_FC, 0, sizeof(LARGE_INTEGER));
-    memset(&field_104, 0, sizeof(LARGE_INTEGER));
+    m_HasPhysicsTime = 0.0f;
+    m_DePhysicalizeTime = 0.0f;
+    field_FC = 0.0f;
+    field_104 = 0.0f;
     m_HasPhysicsCalls = 0;
     m_PhysicalizeCalls = 0;
     m_DePhysicalizeCalls = 0;

@@ -75,16 +75,8 @@ int GetProfilerValues(const CKBehaviorContext &behcontext)
         int physicalizeCalls = man->m_PhysicalizeCalls;
         int dePhysicalizeCalls = man->m_DePhysicalizeCalls;
 
-        if (man->m_ProfilerCounter.QuadPart == 0)
-            QueryPerformanceFrequency(&man->m_ProfilerCounter);
-
-        float hasPhysicsTime = 0.0f;
-        float dePhysicalizeTime = 0.0f;
-        if (man->m_ProfilerCounter.QuadPart > 0)
-        {
-            hasPhysicsTime = (float)(1000.0 * (double)man->m_HasPhysicsTime.QuadPart / (double)man->m_ProfilerCounter.QuadPart);
-            dePhysicalizeTime = (float)(1000.0 * (double)man->m_DePhysicalizeTime.QuadPart / (double)man->m_ProfilerCounter.QuadPart);
-        }
+        float hasPhysicsTime = man->m_HasPhysicsTime;
+        float dePhysicalizeTime = man->m_DePhysicalizeTime;
 
         beh->SetOutputParameterValue(0, &hasPhysicsCalls);
         beh->SetOutputParameterValue(1, &physicalizeCalls);
