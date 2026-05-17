@@ -1,9 +1,12 @@
 #include "DatabaseManager.h"
 
+#if defined(_WIN32)
 #include <io.h>
+#endif
 #include <limits.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <stdio.h>
 
 #include "CKAll.h"
 
@@ -56,6 +59,50 @@ static bool FindNullTerminatedSize(const char *buffer, int bufferSize, int offse
     *outSize = (int)((const char *)nullPos - (buffer + offset)) + 1;
     return true;
 }
+
+#if defined(_WIN32)
+typedef struct _stat DatabaseFileStat;
+
+static int GetDatabaseFileStat(const char *filename, DatabaseFileStat *buf)
+{
+    return _stat(filename, buf);
+}
+
+static void MakeDatabaseFileWritable(const char *filename, const DatabaseFileStat *)
+{
+    _chmod(filename, _S_IREAD | _S_IWRITE);
+}
+
+static void RestoreDatabaseFilePermissions(const char *filename, const DatabaseFileStat *buf)
+{
+    bool readable = (buf->st_mode & _S_IREAD) != 0;
+    bool writable = (buf->st_mode & _S_IWRITE) != 0;
+
+    if (readable && writable)
+        _chmod(filename, _S_IREAD | _S_IWRITE);
+    else if (readable)
+        _chmod(filename, _S_IREAD);
+    else if (writable)
+        _chmod(filename, _S_IWRITE);
+}
+#else
+typedef struct stat DatabaseFileStat;
+
+static int GetDatabaseFileStat(const char *filename, DatabaseFileStat *buf)
+{
+    return stat(filename, buf);
+}
+
+static void MakeDatabaseFileWritable(const char *filename, const DatabaseFileStat *buf)
+{
+    chmod(filename, buf->st_mode | S_IRUSR | S_IWUSR);
+}
+
+static void RestoreDatabaseFilePermissions(const char *filename, const DatabaseFileStat *buf)
+{
+    chmod(filename, buf->st_mode);
+}
+#endif
 
 DatabaseManager::DatabaseManager(CKContext *context)
     : CKBaseManager(context, TT_DATABASE_MANAGER_GUID, "TT Database Manager"),
@@ -540,30 +587,16 @@ int DatabaseManager::Save(CKContext *context)
             fileData[i] = rotr8(-fileData[i] ^ 0xAF, 3);
     }
 
-    struct _stat buf;
-    int statRes = _stat(m_Filename, &buf);
-
-    bool readable = false;
-    bool writable = false;
+    DatabaseFileStat buf;
+    int statRes = GetDatabaseFileStat(m_Filename, &buf);
     if (statRes == 0)
-    {
-        readable = (buf.st_mode & _S_IREAD) != 0;
-        writable = (buf.st_mode & _S_IWRITE) != 0;
-        _chmod(m_Filename, _S_IREAD | _S_IWRITE);
-    }
+        MakeDatabaseFileWritable(m_Filename, &buf);
 
     FILE *fp = fopen(m_Filename, "wb");
     if (!fp)
     {
         if (statRes == 0)
-        {
-            if (readable && writable)
-                _chmod(m_Filename, _S_IREAD | _S_IWRITE);
-            else if (readable)
-                _chmod(m_Filename, _S_IREAD);
-            else if (writable)
-                _chmod(m_Filename, _S_IWRITE);
-        }
+            RestoreDatabaseFilePermissions(m_Filename, &buf);
         delete[] fileData;
         return 41;
     }
@@ -572,14 +605,7 @@ int DatabaseManager::Save(CKContext *context)
     fclose(fp);
 
     if (statRes == 0)
-    {
-        if (readable && writable)
-            _chmod(m_Filename, _S_IREAD | _S_IWRITE);
-        else if (readable)
-            _chmod(m_Filename, _S_IREAD);
-        else if (writable)
-            _chmod(m_Filename, _S_IWRITE);
-    }
+        RestoreDatabaseFilePermissions(m_Filename, &buf);
 
     delete[] fileData;
     return 1;
