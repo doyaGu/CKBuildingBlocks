@@ -88,6 +88,8 @@ CKERROR ExitInstance(CKContext *context)
 #ifndef FONTMANAGER_NOSYSFONT
     // System fonts
     pm->UnRegisterParameterType(CKPGUID_FONTWEIGHT);
+    pm->UnRegisterParameterType(CKPGUID_FONTRESOLUTION);
+    pm->UnRegisterParameterType(CKPGUID_FONTNAME);
 #endif
 
     pm->UnRegisterParameterType(CKPGUID_MOUSEPOINTERS);
@@ -170,9 +172,9 @@ void RegisterBehaviorDeclarations(XObjectDeclarationArray *reg)
 #ifndef FONTMANAGER_NOSYSFONT
     // System font blocks
     RegisterBehavior(reg, FillBehaviorCreateSystemFontDecl);
+#endif
     // Mouse Cursor System
     RegisterBehavior(reg, FillBehaviorMouseCursorSystemDecl);
-#endif
 
     // Primitives
     RegisterBehavior(reg, FillBehaviorDrawRectangleDecl);

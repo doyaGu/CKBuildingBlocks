@@ -5,8 +5,14 @@
 #include "CKAll.h"
 #include <float.h>
 #include <limits.h>
+#include <stdio.h>
 
 #include "CKFontManager.h"
+
+#if !(defined(_WIN32) || defined(WIN32)) && !defined(FONTMANAGER_NOSYSFONT)
+#include "CKStbFontBackend.h"
+#include "stb_truetype.h"
+#endif
 
 void DrawFillRectangle(CKRenderContext *dev, CKMaterial *mat, VxRect &rect, CKBOOL lighted, CKBOOL transform);
 
@@ -21,6 +27,244 @@ const char *CKFontManager::Name = "Font Manager";
 
 namespace
 {
+#if !(defined(_WIN32) || defined(WIN32)) && !defined(FONTMANAGER_NOSYSFONT)
+struct StbFontHandle
+{
+    XArray<CKBYTE> data;
+    stbtt_fontinfo font;
+    CKStbSystemFontFace face;
+    int pixelHeight;
+    int ascent;
+    int descent;
+    int lineGap;
+    int weight;
+    CKBOOL italic;
+    CKBOOL underline;
+    FONT_METRIC metrics;
+    FONT_ABC abc[256];
+    int widths[256];
+};
+
+static CKBOOL ReadStbFontFile(const XString &path, XArray<CKBYTE> &data)
+{
+    data.Clear();
+
+    FILE *file = fopen(path.CStr(), "rb");
+    if (!file)
+        return FALSE;
+
+    if (fseek(file, 0, SEEK_END) != 0)
+    {
+        fclose(file);
+        return FALSE;
+    }
+
+    long size = ftell(file);
+    if (size <= 0)
+    {
+        fclose(file);
+        return FALSE;
+    }
+    rewind(file);
+
+    data.Resize((int)size);
+    size_t read = fread(data.Begin(), 1, (size_t)size, file);
+    fclose(file);
+
+    if (read != (size_t)size)
+    {
+        data.Clear();
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+static int RoundToInt(float value)
+{
+    return (int)(value + (value >= 0.0f ? 0.5f : -0.5f));
+}
+
+static int MaxInt(int a, int b)
+{
+    return a > b ? a : b;
+}
+
+static int MinInt(int a, int b)
+{
+    return a < b ? a : b;
+}
+
+static int AbsInt(int value)
+{
+    return value < 0 ? -value : value;
+}
+
+static void FillStbFontMetrics(StbFontHandle *handle)
+{
+    float scale = stbtt_ScaleForPixelHeight(&handle->font, static_cast<float>(handle->pixelHeight));
+    int ascent = 0, descent = 0, lineGap = 0;
+    stbtt_GetFontVMetrics(&handle->font, &ascent, &descent, &lineGap);
+
+    handle->ascent = RoundToInt(ascent * scale);
+    handle->descent = RoundToInt(descent * scale);
+    handle->lineGap = RoundToInt(lineGap * scale);
+
+    handle->metrics.tmHeight = MaxInt(1, RoundToInt((ascent - descent + lineGap) * scale));
+    handle->metrics.tmAscent = handle->ascent;
+    handle->metrics.tmDescent = -handle->descent;
+    handle->metrics.tmWeight = handle->weight;
+    handle->metrics.tmAveCharWidth = 0;
+    handle->metrics.tmMaxCharWidth = 0;
+
+    int widthSum = 0;
+    int widthCount = 0;
+    for (int c = 0; c < 256; ++c)
+    {
+        int advance = 0, lsb = 0;
+        stbtt_GetCodepointHMetrics(&handle->font, c, &advance, &lsb);
+
+        int x0 = 0, y0 = 0, x1 = 0, y1 = 0;
+        stbtt_GetCodepointBitmapBox(&handle->font, c, scale, scale, &x0, &y0, &x1, &y1);
+
+        int a = RoundToInt(lsb * scale);
+        int b = MaxInt(0, x1 - x0);
+        int width = MaxInt(0, RoundToInt(advance * scale));
+        int cWidth = width - a - b;
+
+        handle->abc[c].abcA = a;
+        handle->abc[c].abcB = static_cast<CKDWORD>(b);
+        handle->abc[c].abcC = cWidth;
+        handle->widths[c] = width;
+
+        if (c >= 32)
+        {
+            widthSum += width;
+            ++widthCount;
+            if (width > handle->metrics.tmMaxCharWidth)
+                handle->metrics.tmMaxCharWidth = width;
+        }
+    }
+
+    handle->metrics.tmAveCharWidth = widthCount > 0 ? widthSum / widthCount : handle->pixelHeight / 2;
+}
+
+static StbFontHandle *CreateStbFontHandle(const CKStbSystemFontFace &face, int pixelHeight, int weight, CKBOOL italic, CKBOOL underline)
+{
+    StbFontHandle *handle = new StbFontHandle;
+    if (!ReadStbFontFile(face.path, handle->data))
+    {
+        delete handle;
+        return NULL;
+    }
+
+    int offset = stbtt_GetFontOffsetForIndex(handle->data.Begin(), face.fontIndex);
+    if (offset < 0 || !stbtt_InitFont(&handle->font, handle->data.Begin(), offset))
+    {
+        delete handle;
+        return NULL;
+    }
+
+    handle->face = face;
+    handle->pixelHeight = MaxInt(1, pixelHeight);
+    handle->weight = weight;
+    handle->italic = italic;
+    handle->underline = underline;
+    FillStbFontMetrics(handle);
+    return handle;
+}
+
+static CKBYTE *FontTexturePixel(VxImageDescEx &desc, int x, int y)
+{
+    int pitch = desc.BytesPerLine > 0 ? desc.BytesPerLine : desc.Width * 4;
+    return desc.Image + y * pitch + x * 4;
+}
+
+static void PutFontAlphaPixel(VxImageDescEx &desc, int x, int y, CKBYTE alpha)
+{
+    if (x < 0 || y < 0 || x >= desc.Width || y >= desc.Height || alpha == 0)
+        return;
+
+    CKBYTE *pixel = FontTexturePixel(desc, x, y);
+    pixel[0] = 0xff;
+    pixel[1] = 0xff;
+    pixel[2] = 0xff;
+    if (alpha > pixel[3])
+        pixel[3] = alpha;
+}
+
+static void RenderStbFontAtlas(StbFontHandle *handle,
+                               VxImageDescEx &desc,
+                               int nbLine,
+                               int nbCol,
+                               int charCellSize,
+                               CKBOOL renderControls)
+{
+    if (!handle || !desc.Image)
+        return;
+
+    float scale = stbtt_ScaleForPixelHeight(&handle->font, static_cast<float>(handle->pixelHeight));
+    const bool embolden = handle->weight >= 600;
+
+    for (int row = 0; row < nbLine; ++row)
+    {
+        for (int col = 0; col < nbCol; ++col)
+        {
+            int codepoint = row * nbCol + col;
+            if (!renderControls && codepoint < 32)
+                continue;
+            if (stbtt_FindGlyphIndex(&handle->font, codepoint) == 0 && codepoint != 0)
+                continue;
+
+            int x0 = 0, y0 = 0, x1 = 0, y1 = 0;
+            stbtt_GetCodepointBitmapBox(&handle->font, codepoint, scale, scale, &x0, &y0, &x1, &y1);
+            int glyphWidth = x1 - x0;
+            int glyphHeight = y1 - y0;
+            if (glyphWidth <= 0 || glyphHeight <= 0)
+                continue;
+
+            XArray<CKBYTE> glyph;
+            glyph.Resize(glyphWidth * glyphHeight);
+            stbtt_MakeCodepointBitmap(&handle->font, glyph.Begin(), glyphWidth, glyphHeight, glyphWidth, scale, scale, codepoint);
+
+            int cellLeft = col * charCellSize;
+            int cellTop = row * charCellSize;
+            int baseline = cellTop + 1 + handle->ascent;
+            int drawX = cellLeft + 1 + x0;
+            int drawY = baseline + y0;
+
+            if (drawX < cellLeft)
+                drawX = cellLeft;
+
+            for (int gy = 0; gy < glyphHeight; ++gy)
+            {
+                int italicOffset = handle->italic ? (glyphHeight - gy) / 4 : 0;
+                for (int gx = 0; gx < glyphWidth; ++gx)
+                {
+                    CKBYTE alpha = glyph[gy * glyphWidth + gx];
+                    int px = drawX + gx + italicOffset;
+                    int py = drawY + gy;
+                    if (px >= cellLeft && px < cellLeft + charCellSize && py >= cellTop && py < cellTop + charCellSize)
+                    {
+                        PutFontAlphaPixel(desc, px, py, alpha);
+                        if (embolden)
+                            PutFontAlphaPixel(desc, px + 1, py, alpha);
+                    }
+                }
+            }
+
+            if (handle->underline && codepoint >= 32)
+            {
+                int underlineY = MinInt(cellTop + charCellSize - 2, baseline + MaxInt(1, -handle->descent / 2));
+                int advance = MaxInt(1, handle->widths[codepoint]);
+                for (int x = 0; x < advance && x < charCellSize - 2; ++x)
+                    PutFontAlphaPixel(desc, cellLeft + 1 + x, underlineY, 0xff);
+            }
+        }
+    }
+}
+#endif
+
 struct TextDrawCmd
 {
     enum Type
@@ -201,11 +445,13 @@ CKFontManager::CKFontManager(CKContext *ctx) : CKBaseManager(ctx, FONT_MANAGER_G
 	m_TextBatchRectCmds2D = 0;
 	m_TextBatchIndices2D = 0;
 
-#ifndef FONTMANAGER_NOSYSFONT
+#if (defined(_WIN32) || defined(WIN32)) && !defined(FONTMANAGER_NOSYSFONT)
 	// System font device context initialisation
 	m_DC = ::CreateCompatibleDC(NULL);
 	if (m_DC == NULL)
 		throw "Font Manager -- Unable to create a screen compatible DC";
+#elif !defined(FONTMANAGER_NOSYSFONT)
+	m_SelectedFont = NULL;
 #endif
 }
 
@@ -224,7 +470,7 @@ CKFontManager::~CKFontManager()
 	delete m_TextDrawBatch2D;
 	m_TextDrawBatch2D = NULL;
 
-#ifndef FONTMANAGER_NOSYSFONT
+#if (defined(_WIN32) || defined(WIN32)) && !defined(FONTMANAGER_NOSYSFONT)
 	// Release memory device context
 	::DeleteDC(m_DC);
 #endif
@@ -305,7 +551,13 @@ CKERROR CKFontManager::PostClearAll()
 	// And we release the handle
 	while (it != fend)
 	{
+#if defined(_WIN32) || defined(WIN32)
 		::DeleteObject(*it);
+#else
+		if (m_SelectedFont == *it)
+			m_SelectedFont = NULL;
+		delete static_cast<StbFontHandle *>(*it);
+#endif
 		++it;
 	}
 	m_Fonts.Clear();
@@ -2087,7 +2339,13 @@ void CKFontManager::DeleteFontHandle(CKSTRING fontName)
 	// And we release the handle
 	if (it != m_Fonts.End())
 	{
+#if defined(_WIN32) || defined(WIN32)
 		::DeleteObject(*it);
+#else
+		if (m_SelectedFont == *it)
+			m_SelectedFont = NULL;
+		delete static_cast<StbFontHandle *>(*it);
+#endif
 		// Remove entry
 		m_Fonts.Remove(it);
 	}
@@ -2166,7 +2424,16 @@ CKBOOL CKFontManager::CreateFont(CKSTRING fontName, int sysFontIndex, int weight
 		}
 
 		// We create the logical font and retrieves a font handle
+#if defined(_WIN32) || defined(WIN32)
 		FONTHANDLE fontHandle = (FONTHANDLE)VxCreateFont(data->Desc[sysFontIndex], fontSize, weight, italic, underline);
+#else
+		CKStbSystemFontFace face;
+		XClassArray<CKStbSystemFontFace> faces;
+		CKStbEnumerateSystemFonts(faces);
+		if (!CKStbFindBestFontFace(faces, data->Desc[sysFontIndex], weight, italic, face))
+			return FALSE;
+		FONTHANDLE fontHandle = CreateStbFontHandle(face, AbsInt(fontSize), weight, italic, underline);
+#endif
 
 		// If the font can't be created
 		if (fontHandle == NULL)
@@ -2201,7 +2468,12 @@ See also:
 CKBOOL CKFontManager::GetOutlineFontMetric(FONT_OUTLINEMETRIC &metric)
 {
 #ifndef FONTMANAGER_NOSYSFONT
+#if defined(_WIN32) || defined(WIN32)
 	return ::GetOutlineTextMetrics(m_DC, sizeof(FONT_OUTLINEMETRIC), &metric) != 0;
+#else
+	(void)metric;
+	return m_SelectedFont != NULL;
+#endif
 #else
 	return FALSE;
 #endif
@@ -2210,7 +2482,14 @@ CKBOOL CKFontManager::GetOutlineFontMetric(FONT_OUTLINEMETRIC &metric)
 CKBOOL CKFontManager::GetFontMetrics(FONT_METRIC &metric)
 {
 #ifndef FONTMANAGER_NOSYSFONT
+#if defined(_WIN32) || defined(WIN32)
 	return ::GetTextMetrics(m_DC, &metric);
+#else
+	if (!m_SelectedFont)
+		return FALSE;
+	metric = static_cast<StbFontHandle *>(m_SelectedFont)->metrics;
+	return TRUE;
+#endif
 #else
 	return FALSE;
 #endif
@@ -2233,10 +2512,14 @@ See also:
 CKBOOL CKFontManager::IsTrueTypeFont()
 {
 #ifndef FONTMANAGER_NOSYSFONT
+#if defined(_WIN32) || defined(WIN32)
 	TEXTMETRIC metric;
 	if (::GetTextMetrics(m_DC, &metric))
 		return (metric.tmPitchAndFamily & TMPF_TRUETYPE);
 	return FALSE;
+#else
+	return m_SelectedFont != NULL;
+#endif
 #else
 	return FALSE;
 #endif
@@ -2265,7 +2548,12 @@ CKBOOL CKFontManager::SelectFont(CKSTRING fontName)
 		return FALSE;
 
 	// If it is present, we select it in the DC and retrieves the information
+#if defined(_WIN32) || defined(WIN32)
 	return (::SelectObject(m_DC, *it) != NULL);
+#else
+	m_SelectedFont = *it;
+	return TRUE;
+#endif
 #else
 	return FALSE;
 #endif
@@ -2289,7 +2577,16 @@ See also:
 CKBOOL CKFontManager::GetCharABCWidths(CKBYTE startChar, CKBYTE endChar, FONT_ABC *ABCWidths)
 {
 #ifndef FONTMANAGER_NOSYSFONT
+#if defined(_WIN32) || defined(WIN32)
 	return ::GetCharABCWidths(m_DC, startChar, endChar, ABCWidths);
+#else
+	if (!m_SelectedFont || !ABCWidths || endChar < startChar)
+		return FALSE;
+	StbFontHandle *handle = static_cast<StbFontHandle *>(m_SelectedFont);
+	for (int i = startChar; i <= endChar; ++i)
+		ABCWidths[i - startChar] = handle->abc[i];
+	return TRUE;
+#endif
 #else
 	return FALSE;
 #endif
@@ -2313,7 +2610,16 @@ See also:
 CKBOOL CKFontManager::GetCharWidths(CKBYTE startChar, CKBYTE endChar, int *widths)
 {
 #ifndef FONTMANAGER_NOSYSFONT
+#if defined(_WIN32) || defined(WIN32)
 	return ::GetCharWidth32(m_DC, startChar, endChar, widths);
+#else
+	if (!m_SelectedFont || !widths || endChar < startChar)
+		return FALSE;
+	StbFontHandle *handle = static_cast<StbFontHandle *>(m_SelectedFont);
+	for (int i = startChar; i <= endChar; ++i)
+		widths[i - startChar] = handle->widths[i];
+	return TRUE;
+#endif
 #else
 	return FALSE;
 #endif
@@ -2479,6 +2785,7 @@ CKTexture *CKFontManager::CreateTextureFromFont(int sysFontIndex, int resolution
 
 			VxFillStructure(nbPixels, (CKBYTE *)vxTexDesc.Image, 4, 4, &colorDef);
 
+#if defined(_WIN32) || defined(WIN32)
 			// We create a system memory bitmap for font rendering
 			BITMAP_HANDLE hBitmap = VxCreateBitmap(vxTexDesc);
 			// If it exists we get the handle
@@ -2584,6 +2891,9 @@ CKTexture *CKFontManager::CreateTextureFromFont(int sysFontIndex, int resolution
 			::SelectObject(m_DC, oldBitmap);
 			::SelectObject(m_DC, oldFont);
 			VxDeleteBitmap(hBitmap);
+#else
+			RenderStbFontAtlas(static_cast<StbFontHandle *>(*it), vxTexDesc, nbLine, nbCol, charCellSize, renderControls);
+#endif
 
 			texture->ReleaseSurfacePtr();
 		}
@@ -2615,7 +2925,7 @@ Remarks: Called automatically by the system
 See also: RegenerateFontEnumeration
 
 *************************************************/
-#ifndef FONTMANAGER_NOSYSFONT
+#if (defined(_WIN32) || defined(WIN32)) && !defined(FONTMANAGER_NOSYSFONT)
 CKBOOL CALLBACK FontEnumeratorCallBack(LPLOGFONT lplf, LPNEWTEXTMETRIC lpntm, DWORD FontType, LPVOID param)
 {
 	// Retrieves the parameters
@@ -2645,6 +2955,7 @@ CKBOOL CKFontManager::RegenerateFontEnumeration()
 	if (!pm)
 		return FALSE;
 
+#if defined(_WIN32) || defined(WIN32)
     LOGFONT lf;
     memset(&lf, 0, sizeof(LOGFONT));
     lf.lfFaceName[0] = '\0';
@@ -2671,12 +2982,52 @@ CKBOOL CKFontManager::RegenerateFontEnumeration()
 		if (i++ != 0)
 			newEnum << ",";
 		newEnum << (*it);
-		sprintf(buffer, "=%d", i - 1);
+		snprintf(buffer, sizeof(buffer), "=%d", i - 1);
 		newEnum << buffer;
 	}
 	pm->ChangeEnumDeclaration(CKPGUID_FONTNAME, newEnum.Str());
 
 	return TRUE;
+#else
+	XClassArray<CKStbSystemFontFace> faces;
+	CKStbEnumerateSystemFonts(faces);
+	if (faces.Size() == 0)
+	{
+		pm->ChangeEnumDeclaration(CKPGUID_FONTNAME, "");
+		return FALSE;
+	}
+
+	XClassArray<XString> seen;
+	XClassArray<XString> array;
+	array.Reserve(faces.Size());
+	for (int faceIndex = 0; faceIndex < faces.Size(); ++faceIndex)
+	{
+		XString normalized = faces[faceIndex].family;
+		normalized.ToLower();
+		if (seen.Find(normalized) == seen.End())
+		{
+			seen.PushBack(normalized);
+			array.PushBack(faces[faceIndex].family);
+		}
+	}
+
+	array.Sort();
+
+	XString newEnum;
+	char buffer[64];
+	int i = 0;
+	for (XString *it = array.Begin(); it != array.End(); it++)
+	{
+		if (i++ != 0)
+			newEnum << ",";
+		newEnum << (*it);
+		snprintf(buffer, sizeof(buffer), "=%d", i - 1);
+		newEnum << buffer;
+	}
+	pm->ChangeEnumDeclaration(CKPGUID_FONTNAME, newEnum.Str());
+
+	return TRUE;
+#endif
 #else
 	return FALSE;
 #endif
