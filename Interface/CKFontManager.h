@@ -377,12 +377,17 @@ private:
     int m_TextBatchRectCmds2D;
     int m_TextBatchIndices2D;
 
+#ifndef FONTMANAGER_NOSYSFONT
+    // Associative table 'font name' -> 'font handle'
+    FontsTable m_Fonts;
+#endif
+
     // Win32 Specific (System TT fonts information)
 #if (defined(_WIN32) || defined(WIN32)) && !defined(FONTMANAGER_NOSYSFONT)
     // Memory device context for font rendering
     HDC m_DC;
-    // Associative table 'font name' -> 'font handle'
-    FontsTable m_Fonts;
+#elif !defined(FONTMANAGER_NOSYSFONT)
+    FONTHANDLE m_SelectedFont;
 #endif
 };
 
