@@ -55,7 +55,9 @@ typedef struct UnlimitedParam {
 					int Priority;
 				};
 				char  Desc[DESC_MAX_LENGTH];
-				CKAnimation* AnimationPtr;
+                // Runtime cache. A fixed-width ID keeps the historical 152-byte
+                // parameter layout on both 32- and 64-bit hosts. Rebuilt on load.
+                CK_ID AnimationId;
 				CKWORD  Align;
 				CKWORD  ParameterMask;	 
 				char  ParameterIndexes[16];	// Index of linked input parameter
@@ -66,5 +68,7 @@ typedef struct UnlimitedParam {
 				unsigned short flags;
 				unsigned short LoopCount;
 				} UnlimitedParam;
+
+static_assert(sizeof(UnlimitedParam) == 152, "Unlimited Controller file layout");
 
 #endif

@@ -114,11 +114,23 @@ CKERROR CreateUnlimitedControllerBehaviorProto(CKBehaviorPrototype **pproto)
     return CK_OK;
 }
 
+static bool ValidUnlimitedData(CKBehavior *beh, int dataIndex, int countIndex)
+{
+    int count = 0;
+    CKParameterLocal *data = beh->GetLocalParameter(dataIndex);
+    return beh->GetLocalParameterValue(countIndex, &count) == CK_OK && count >= 0 &&
+           data && count <= data->GetDataSize() / static_cast<int>(sizeof(UnlimitedParam));
+}
+
 CKERROR DaUCharacterCB(const CKBehaviorContext &behcontext)
 {
     CKBehavior *beh = behcontext.Behavior;
     CKMessageManager *mm = behcontext.MessageManager;
     CKContext *ctx = behcontext.Context;
+
+    if (!ValidUnlimitedData(beh, UC_PRIMARYDATA, UC_NBPRIMARYDATA) ||
+        !ValidUnlimitedData(beh, UC_SECONDARYDATA, UC_NBSECONDARYDATA))
+        return CKERR_INVALIDPARAMETER;
 
     switch (behcontext.CallbackMessage)
     {
@@ -145,7 +157,7 @@ CKERROR DaUCharacterCB(const CKBehaviorContext &behcontext)
             {
                 Params[i].IndexAnimation = -1;
                 Params[i].Priority = i;
-                Params[i].AnimationPtr = NULL;
+                Params[i].AnimationId = 0;
                 Params[i].flags = PARAM_WARP | PARAM_USERIGHTLEFT | PARAM_TIMEBASE | PARAM_LOOP | PARAM_STOPABLE;
                 Params[i].fps = 30.0f;
                 Params[i].warplength = 5.0f;
@@ -181,7 +193,7 @@ CKERROR DaUCharacterCB(const CKBehaviorContext &behcontext)
             {
                 if (!(params[i].ParameterMask & PARAM_ANIMATION_MASK) || (params[i].ParameterIndexes[PARAM_ANIMATION_INDEX] < 0))
                 { // use Animation index
-                    params[i].AnimationPtr = NULL;
+                    params[i].AnimationId = 0;
                 }
             }
 
@@ -191,7 +203,7 @@ CKERROR DaUCharacterCB(const CKBehaviorContext &behcontext)
             {
                 if (!(params[i].ParameterMask & PARAM_ANIMATION_MASK) || (params[i].ParameterIndexes[PARAM_ANIMATION_INDEX] < 0))
                 { // use Animation index
-                    params[i].AnimationPtr = NULL;
+                    params[i].AnimationId = 0;
                 }
             }
         }
@@ -235,11 +247,10 @@ CKERROR DaUCharacterCB(const CKBehaviorContext &behcontext)
 
                 if (CKM_BEHAVIORLOAD == behcontext.CallbackMessage)
                 {
-                    // Do Swap For Mac
-#if !defined(WIN32) && !defined(_WIN32)
+                    // Serialized numeric fields are little endian.
+#if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
                     ENDIANSWAP32(params[i].IndexAnimation);
                     ENDIANSWAP32(params[i].StartFrame);
-                    ENDIANSWAP32(params[i].Priority);
 
                     ENDIANSWAP16(params[i].Align);
                     ENDIANSWAP16(params[i].ParameterMask);
@@ -253,7 +264,7 @@ CKERROR DaUCharacterCB(const CKBehaviorContext &behcontext)
 #endif
                 }
 
-                params[i].AnimationPtr = NULL;
+                params[i].AnimationId = 0;
                 params[i].Msg = mm->AddMessageType(params[i].Message);
                 if (beh->GetVersion() <= NOPARAM_VERSION)
                 { // Old version invalidate parameter indexes
@@ -262,13 +273,13 @@ CKERROR DaUCharacterCB(const CKBehaviorContext &behcontext)
                     params[i].ParameterMask = 0;
                 }
                 if (!(params[i].ParameterMask & PARAM_ANIMATION_MASK)) {
-                    if (params[i].IndexAnimation >= 0)
+                    if (array && params[i].IndexAnimation >= 0)
                     {
-                        params[i].AnimationPtr = (CKAnimation *)array->GetObject(ctx, params[i].IndexAnimation);
+                        params[i].AnimationId = CKOBJID(array->GetObject(ctx, params[i].IndexAnimation));
                     }
                     else
                     {
-                        params[i].AnimationPtr = NULL;
+                        params[i].AnimationId = 0;
                     }
                 }
             }
@@ -285,11 +296,10 @@ CKERROR DaUCharacterCB(const CKBehaviorContext &behcontext)
 
                 if (CKM_BEHAVIORLOAD == behcontext.CallbackMessage)
                 {
-                    // Do Swap For Mac
-#if !defined(WIN32) && !defined(_WIN32)
+                    // Serialized numeric fields are little endian.
+#if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
                     ENDIANSWAP32(params[i].IndexAnimation);
                     ENDIANSWAP32(params[i].StartFrame);
-                    ENDIANSWAP32(params[i].Priority);
 
                     ENDIANSWAP16(params[i].Align);
                     ENDIANSWAP16(params[i].ParameterMask);
@@ -303,7 +313,7 @@ CKERROR DaUCharacterCB(const CKBehaviorContext &behcontext)
 #endif
                 }
 
-                params[i].AnimationPtr = NULL;
+                params[i].AnimationId = 0;
                 params[i].Msg = mm->AddMessageType(params[i].Message);
                 if (beh->GetVersion() <= NOPARAM_VERSION)
                 { // Old version invalidate parameter indexes
@@ -312,13 +322,13 @@ CKERROR DaUCharacterCB(const CKBehaviorContext &behcontext)
                     params[i].ParameterMask = 0;
                 }
                 if (!(params[i].ParameterMask & PARAM_ANIMATION_MASK)) {
-                    if (params[i].IndexAnimation >= 0)
+                    if (array && params[i].IndexAnimation >= 0)
                     {
-                        params[i].AnimationPtr = (CKAnimation *)array->GetObject(ctx, params[i].IndexAnimation);
+                        params[i].AnimationId = CKOBJID(array->GetObject(ctx, params[i].IndexAnimation));
                     }
                     else
                     {
-                        params[i].AnimationPtr = NULL;
+                        params[i].AnimationId = 0;
                     }
                 }
             }
@@ -370,6 +380,10 @@ CKERROR DaUCharacterCB(const CKBehaviorContext &behcontext)
 int DoUnlimitedController(const CKBehaviorContext &behcontext)
 {
     CKBehavior *beh = behcontext.Behavior;
+    if (!ValidUnlimitedData(beh, UC_PRIMARYDATA, UC_NBPRIMARYDATA) ||
+        !ValidUnlimitedData(beh, UC_SECONDARYDATA, UC_NBSECONDARYDATA))
+        return CKBR_GENERICERROR;
+
 
     if (beh->IsInputActive(1))
     {
@@ -690,7 +704,7 @@ int DoUnlimitedController(const CKBehaviorContext &behcontext)
     return CKBR_ACTIVATENEXTFRAME;
 }
 
-// Reconstruct indexes in UnlimitedParams so they match the stored animation pointer
+// Reconstruct indexes in UnlimitedParams so they match the cached animation ID
 // This function should only be called upon deletion of animations on this character
 void ReconstructIndexes(CKContext *ctx, int count, UnlimitedParam *Params, const XObjectArray &array)
 {
@@ -698,20 +712,20 @@ void ReconstructIndexes(CKContext *ctx, int count, UnlimitedParam *Params, const
     {
         if (!(Params[i].ParameterMask & PARAM_ANIMATION_MASK) || (Params[i].ParameterIndexes[PARAM_ANIMATION_INDEX] < 0))
         { // use Animation index
-            // The store ptr may be invalid => Iter on Array
+            // The cached ID may no longer resolve => Iterate on Array
             int Pos = -1;
             CKAnimation *Found = NULL;
             for (CK_ID *ids = array.Begin(); ids != array.End(); ++ids)
             {
-                CKAnimation *anim = (CKAnimation *)ctx->GetObject(*ids);
-                if (anim == Params[i].AnimationPtr)
+                CKAnimation *anim = CKAnimation::Cast(ctx->GetObject(*ids));
+                if (anim && anim->GetID() == Params[i].AnimationId)
                 {
                     Found = anim;
                     Pos = (int)(ids - array.Begin());
                     break;
                 }
             }
-            Params[i].AnimationPtr = Found;
+            Params[i].AnimationId = CKOBJID(Found);
             Params[i].IndexAnimation = Pos;
         }
     }
@@ -727,26 +741,23 @@ void CheckAnimations(CKContext *ctx, int count, UnlimitedParam *Params, const XO
     {
         if (!(Params[i].ParameterMask & PARAM_ANIMATION_MASK) || (Params[i].ParameterIndexes[PARAM_ANIMATION_INDEX] < 0))
         { // use Animation index
-            if (Params[i].AnimationPtr != (CKAnimation *)array.GetObject(ctx, Params[i].IndexAnimation))
+            CKAnimation *animation = CKAnimation::Cast(ctx->GetObject(Params[i].AnimationId));
+            CKAnimation *indexed = CKAnimation::Cast(array.GetObject(ctx, Params[i].IndexAnimation));
+            if (animation != indexed || (Params[i].AnimationId && !animation))
             {
-
-                if (!Params[i].AnimationPtr)
-                {
-                    Params[i].AnimationPtr = (CKAnimation *)array.GetObject(ctx, Params[i].IndexAnimation);
-                }
+                if (!Params[i].AnimationId)
+                    Params[i].AnimationId = CKOBJID(indexed);
                 else
-                {
                     ReconstructIndexes(ctx, count, Params, array);
-                }
             }
-            else if (owner && Params[i].AnimationPtr && Params[i].AnimationPtr->GetCharacter() != owner)
+            else if (owner && animation && animation->GetCharacter() != owner)
             {
-                if (Params[i].AnimationPtr->GetCharacter())
-                    ctx->OutputToConsoleEx("Character %s : invalid animation in Unlimited Controller (%s belongs to a different character %s)", owner->GetName(), Params[i].AnimationPtr->GetName(), Params[i].AnimationPtr->GetCharacter()->GetName());
+                if (animation->GetCharacter())
+                    ctx->OutputToConsoleEx("Character %s : invalid animation in Unlimited Controller (%s belongs to a different character %s)", owner->GetName(), animation->GetName(), animation->GetCharacter()->GetName());
                 else
-                    ctx->OutputToConsoleEx("Character %s : invalid animation in Unlimited Controller (%s does not belong to this character)", owner->GetName(), Params[i].AnimationPtr->GetName());
+                    ctx->OutputToConsoleEx("Character %s : invalid animation in Unlimited Controller (%s does not belong to this character)", owner->GetName(), animation->GetName());
                 Params[i].IndexAnimation = -1;
-                Params[i].AnimationPtr = 0;
+                Params[i].AnimationId = 0;
             }
         }
     }
