@@ -56,4 +56,23 @@ if (CKBB_BUILD_TESTS AND BUILD_TESTING AND NOT WIN32)
                 COMMAND_EXPAND_LISTS VERBATIM)
         add_test(NAME test_interface_font_manager COMMAND test_interface_font_manager)
     endif ()
+    if (TARGET CK2_3DStatic AND TARGET InterfaceStatic)
+        vx_prepare_font_assets(_font_directory _font_files)
+        add_executable(test_interface_font_atlas tests/test_font_atlas.cpp)
+        vx_add_font_search(test_interface_font_atlas)
+        target_include_directories(test_interface_font_atlas PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+        target_link_libraries(test_interface_font_atlas PRIVATE InterfaceStatic CK2_3DStatic)
+        target_compile_features(test_interface_font_atlas PRIVATE cxx_std_17)
+        target_compile_definitions(test_interface_font_atlas PRIVATE
+                TEST_FONT_FILE="${_font_directory}/NotoSans-Bold.ttf"
+                TEST_REGULAR_FONT_FILE="${_font_directory}/NotoSans-Regular.ttf")
+        set_target_properties(test_interface_font_atlas PROPERTIES
+                RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/font-atlas")
+        add_test(NAME test_interface_font_atlas COMMAND test_interface_font_atlas)
+        add_test(NAME test_interface_font_atlas_italic COMMAND test_interface_font_atlas --italic)
+        add_test(NAME test_interface_font_atlas_clip COMMAND test_interface_font_atlas --clip)
+        add_test(NAME test_interface_font_atlas_native COMMAND test_interface_font_atlas --native)
+        set_tests_properties(test_interface_font_atlas test_interface_font_atlas_italic test_interface_font_atlas_clip test_interface_font_atlas_native PROPERTIES
+                RESOURCE_LOCK InterfaceFontAtlas)
+    endif ()
 endif ()
