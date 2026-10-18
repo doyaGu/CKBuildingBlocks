@@ -41,9 +41,7 @@ int CMDecalTR[3][3] = {0, 0, 0, 0, 0, 0, 1, 0, 0};
 CKDWORD *g_Buffer = NULL;
 int g_Size = 0;
 
-namespace
-{
-inline int ClampToByte(int value)
+static inline int ClampToByte(int value)
 {
     if (value < 0)
         return 0;
@@ -52,14 +50,14 @@ inline int ClampToByte(int value)
     return value;
 }
 
-inline int ShiftRightSigned8(int value)
+static inline int ShiftRightSigned8(int value)
 {
     if (value >= 0)
         return value >> 8;
     return -(((-value) + 255) >> 8);
 }
 
-inline void DecodeColor(CKDWORD color, int &r, int &g, int &b, int &a)
+static inline void DecodeColor(CKDWORD color, int &r, int &g, int &b, int &a)
 {
     r = ColorGetRed(color);
     g = ColorGetGreen(color);
@@ -67,19 +65,19 @@ inline void DecodeColor(CKDWORD color, int &r, int &g, int &b, int &a)
     a = ColorGetAlpha(color);
 }
 
-inline CKDWORD EncodeColor(int r, int g, int b, int a)
+static inline CKDWORD EncodeColor(int r, int g, int b, int a)
 {
     return RGBAITOCOLOR(ClampToByte(r), ClampToByte(g), ClampToByte(b), ClampToByte(a));
 }
 
-inline CKDWORD SampleWithBorder(const CKDWORD *data, int width, int height, int x, int y, CKDWORD borderColor)
+static inline CKDWORD SampleWithBorder(const CKDWORD *data, int width, int height, int x, int y, CKDWORD borderColor)
 {
     if (x < 0 || y < 0 || x >= width || y >= height)
         return borderColor;
     return data[y * width + x];
 }
 
-inline void DecodeKernel(const short *matrixData, int kernel[3][3])
+static inline void DecodeKernel(const short *matrixData, int kernel[3][3])
 {
     if (!matrixData)
     {
@@ -106,7 +104,6 @@ inline void DecodeKernel(const short *matrixData, int kernel[3][3])
     kernel[2][1] = matrixData[16];
     kernel[2][2] = matrixData[20];
 }
-} // namespace
 
 void ConvolveTexture3x3(CKTexture *texture, int kernel[3][3], int scale)
 {
