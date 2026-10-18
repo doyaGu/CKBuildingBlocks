@@ -12,27 +12,25 @@
 #include "VxQuaternion.h"
 #include "ivp_material.hxx"
 
-namespace {
-
-void Check(bool condition, const char *message)
+static void Check(bool condition, const char *message)
 {
     if (!condition)
         throw std::runtime_error(message);
 }
 
-bool NearlyEqual(float lhs, float rhs, float epsilon = 0.0001f)
+static bool NearlyEqual(float lhs, float rhs, float epsilon = 0.0001f)
 {
     return std::fabs(lhs - rhs) <= epsilon;
 }
 
-bool NearlyEqual(const VxVector &lhs, const VxVector &rhs, float epsilon = 0.0001f)
+static bool NearlyEqual(const VxVector &lhs, const VxVector &rhs, float epsilon = 0.0001f)
 {
     return NearlyEqual(lhs.x, rhs.x, epsilon) &&
            NearlyEqual(lhs.y, rhs.y, epsilon) &&
            NearlyEqual(lhs.z, rhs.z, epsilon);
 }
 
-std::string ReadSource(const char *relativePath)
+static std::string ReadSource(const char *relativePath)
 {
     std::ifstream file(std::string(CKBB_SOURCE_DIR) + "/" + relativePath, std::ios::binary);
     Check(static_cast<bool>(file), "Unable to read physics source file");
@@ -41,7 +39,7 @@ std::string ReadSource(const char *relativePath)
     return contents.str();
 }
 
-void FillTriangle(RCKMesh &mesh)
+static void FillTriangle(RCKMesh &mesh)
 {
     Check(mesh.SetVertexCount(3) == TRUE, "Unable to allocate collision mesh vertices");
 
@@ -54,7 +52,7 @@ void FillTriangle(RCKMesh &mesh)
         mesh.SetVertexPosition(i, &positions[i]);
 }
 
-CK3dEntity *AsEntity(RCK3dObject &object)
+static CK3dEntity *AsEntity(RCK3dObject &object)
 {
     return reinterpret_cast<CK3dEntity *>(&object);
 }
@@ -71,7 +69,7 @@ struct PhysicsFixture
     CKIpionManager *manager;
 };
 
-PhysicsFixture &GetPhysicsFixture()
+static PhysicsFixture &GetPhysicsFixture()
 {
     // CKContext owns registered managers. Keep this integration fixture alive
     // for the process so its manager and IVP environment share one lifetime.
@@ -79,14 +77,14 @@ PhysicsFixture &GetPhysicsFixture()
     return *fixture;
 }
 
-void DeletePhysicsObject(CKIpionManager &manager, CK3dEntity &entity)
+static void DeletePhysicsObject(CKIpionManager &manager, CK3dEntity &entity)
 {
     PhysicsObject *object = manager.GetPhysicsObject(&entity);
     if (object && object->m_RealObject)
         object->m_RealObject->delete_silently();
 }
 
-int CreateNamedPolygon(CKIpionManager &manager, CK3dEntity &entity,
+static int CreateNamedPolygon(CKIpionManager &manager, CK3dEntity &entity,
                        CKMesh **convexes, int convexCount,
                        const char *surfaceName, IVP_Material *material)
 {
@@ -113,7 +111,7 @@ int CreateNamedPolygon(CKIpionManager &manager, CK3dEntity &entity,
         0.1f);
 }
 
-void NamedSurfaceReuseDoesNotNeedGeometry()
+static void NamedSurfaceReuseDoesNotNeedGeometry()
 {
     PhysicsFixture &fixture = GetPhysicsFixture();
     CKIpionManager *manager = fixture.manager;
@@ -142,7 +140,7 @@ void NamedSurfaceReuseDoesNotNeedGeometry()
     DeletePhysicsObject(*manager, *AsEntity(entity));
 }
 
-void UnknownNamedSurfaceDoesNotGuessCurrentMesh()
+static void UnknownNamedSurfaceDoesNotGuessCurrentMesh()
 {
     PhysicsFixture &fixture = GetPhysicsFixture();
     CKIpionManager *manager = fixture.manager;
@@ -158,7 +156,7 @@ void UnknownNamedSurfaceDoesNotGuessCurrentMesh()
           "A cache miss without explicit geometry must fail instead of guessing the current mesh");
 }
 
-void PhysicsWorldMatrixUpdatesKeepWorldScaleStable()
+static void PhysicsWorldMatrixUpdatesKeepWorldScaleStable()
 {
     PhysicsFixture &fixture = GetPhysicsFixture();
     CKIpionManager *manager = fixture.manager;
@@ -203,7 +201,7 @@ void PhysicsWorldMatrixUpdatesKeepWorldScaleStable()
     DeletePhysicsObject(*manager, *AsEntity(entity));
 }
 
-void CollisionCachePolicyIsExplicitAndDeterministic()
+static void CollisionCachePolicyIsExplicitAndDeterministic()
 {
     const std::string managerSource = ReadSource("physics_RT/CKIpionManager.cpp");
     const std::string behaviorSource = ReadSource("physics_RT/Behaviors/Physicalize.cpp");
@@ -217,17 +215,15 @@ void CollisionCachePolicyIsExplicitAndDeterministic()
           "Physicalize's runtime path must not infer collision geometry from the current render mesh");
 }
 
-struct TestCase
+struct PhysicsTestCase
 {
     const char *name;
     void (*run)();
 };
 
-} // namespace
-
 int main()
 {
-    const TestCase tests[] = {
+    const PhysicsTestCase tests[] = {
         {"Collision cache policy is explicit and deterministic", &CollisionCachePolicyIsExplicitAndDeterministic},
         {"Named surface reuse does not need geometry", &NamedSurfaceReuseDoesNotNeedGeometry},
         {"Unknown named surface does not guess current mesh", &UnknownNamedSurfaceDoesNotGuessCurrentMesh},
