@@ -118,7 +118,7 @@ public:
     }
 
     virtual void Reset();
-    void ResetPhysicsBehaviorHandles();
+    void ResetPhysicsBehaviorHandles(CK3dEntity *entity = NULL, CKBOOL deleting = FALSE);
     void ClearBehaviorCallbacks(CK_ID behaviorID);
     CKBOOL ProcessPendingReset();
 

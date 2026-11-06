@@ -1,7 +1,7 @@
 #ifndef PHYSICS_RT_PHYSICSCALLBACK_H
 #define PHYSICS_RT_PHYSICSCALLBACK_H
 
-#include "CKBehavior.h"
+#include "PhysicsSDK.h"
 
 #include "ivu_types.hxx"
 #include "ivu_vector.hxx"
@@ -27,7 +27,8 @@ public:
 class PhysicsCallbackContainer
 {
 public:
-    explicit PhysicsCallbackContainer(CKIpionManager *manager) : m_IpionManager(manager), m_HasCallbacks(FALSE) {}
+    explicit PhysicsCallbackContainer(CKIpionManager *manager)
+        : m_IpionManager(manager), m_HasCallbacks(FALSE), m_Active(NULL), m_Batches(NULL) {}
     ~PhysicsCallbackContainer();
 
     void Clear();
@@ -38,6 +39,23 @@ public:
     CKIpionManager *m_IpionManager;
     CKBOOL m_HasCallbacks;
     IVP_U_Vector<PhysicsCallback> m_Callbacks[3];
+
+private:
+    struct ActiveCall
+    {
+        PhysicsCallback *callback;
+        bool cancelled;
+        ActiveCall *previous;
+    };
+    struct Batch
+    {
+        IVP_U_Vector<PhysicsCallback> callbacks;
+        Batch *previous;
+    };
+    bool Execute(PhysicsCallback *callback);
+    void UpdateHasCallbacks();
+    ActiveCall *m_Active;
+    Batch *m_Batches;
 };
 
 #endif // PHYSICS_RT_PHYSICSCALLBACK_H

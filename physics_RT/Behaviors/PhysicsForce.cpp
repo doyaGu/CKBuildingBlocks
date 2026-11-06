@@ -192,6 +192,10 @@ int PhysicsForce(const CKBehaviorContext &behcontext)
     CKBehavior *beh = behcontext.Behavior;
     CKContext *context = behcontext.Context;
 
+    CKIpionManager *callbackManager = CKIpionManager::GetManager(context);
+    if (callbackManager && (beh->IsInputActive(0) || beh->IsInputActive(1)))
+        callbackManager->ClearBehaviorCallbacks(beh->GetID());
+
     PhysicsControllerForce *controller = NULL;
     beh->GetLocalParameterValue(0, &controller);
 

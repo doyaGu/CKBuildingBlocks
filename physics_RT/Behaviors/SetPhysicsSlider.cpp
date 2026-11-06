@@ -145,6 +145,10 @@ int SetPhysicsSlider(const CKBehaviorContext &behcontext)
     CKBehavior *beh = behcontext.Behavior;
     CKContext *context = behcontext.Context;
 
+    CKIpionManager *callbackManager = CKIpionManager::GetManager(context);
+    if (callbackManager && (beh->IsInputActive(0) || beh->IsInputActive(1)))
+        callbackManager->ClearBehaviorCallbacks(beh->GetID());
+
     IVP_Constraint *constraint = NULL;
     beh->GetLocalParameterValue(0, &constraint);
 

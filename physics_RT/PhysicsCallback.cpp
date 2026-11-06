@@ -38,102 +38,112 @@ PhysicsCallbackContainer::~PhysicsCallbackContainer()
     Clear();
 }
 
+// An executing callback is removed from its queue before calling user code.
+// Clear/ClearBehavior may cancel it, but only its caller destroys it.
 void PhysicsCallbackContainer::Clear()
 {
+    for (ActiveCall *call = m_Active; call; call = call->previous)
+        call->cancelled = true;
     for (int i = 0; i < 3; ++i)
-    {
-        IVP_U_Vector<PhysicsCallback> &cbs = m_Callbacks[i];
-        for (int j = cbs.len() - 1; j >= 0; --j)
+        while (m_Callbacks[i].len())
         {
-            PhysicsCallback *pc = cbs.element_at(j);
-            cbs.remove_at(j);
-            delete pc;
+            PhysicsCallback *callback = m_Callbacks[i].element_at(m_Callbacks[i].len() - 1);
+            m_Callbacks[i].remove_at(m_Callbacks[i].len() - 1);
+            delete callback;
         }
-    }
-
+    for (Batch *batch = m_Batches; batch; batch = batch->previous)
+        while (batch->callbacks.len())
+        {
+            PhysicsCallback *callback = batch->callbacks.element_at(batch->callbacks.len() - 1);
+            batch->callbacks.remove_at(batch->callbacks.len() - 1);
+            delete callback;
+        }
     m_HasCallbacks = FALSE;
 }
 
 void PhysicsCallbackContainer::ClearBehavior(CK_ID behaviorID)
 {
-    if (behaviorID == 0)
+    if (!behaviorID)
         return;
-
+    for (ActiveCall *call = m_Active; call; call = call->previous)
+        if (call->callback->m_BehaviorID == behaviorID)
+            call->cancelled = true;
     for (int i = 0; i < 3; ++i)
-    {
-        IVP_U_Vector<PhysicsCallback> &cbs = m_Callbacks[i];
-        for (int j = cbs.len() - 1; j >= 0; --j)
-        {
-            PhysicsCallback *pc = cbs.element_at(j);
-            if (pc && pc->m_BehaviorID == behaviorID)
+        for (int j = m_Callbacks[i].len() - 1; j >= 0; --j)
+            if (m_Callbacks[i].element_at(j)->m_BehaviorID == behaviorID)
             {
-                cbs.remove_at(j);
-                delete pc;
+                PhysicsCallback *callback = m_Callbacks[i].element_at(j);
+                m_Callbacks[i].remove_at(j);
+                delete callback;
             }
-        }
-    }
+    for (Batch *batch = m_Batches; batch; batch = batch->previous)
+        for (int j = batch->callbacks.len() - 1; j >= 0; --j)
+            if (batch->callbacks.element_at(j)->m_BehaviorID == behaviorID)
+            {
+                PhysicsCallback *callback = batch->callbacks.element_at(j);
+                batch->callbacks.remove_at(j);
+                delete callback;
+            }
+    UpdateHasCallbacks();
+}
 
+bool PhysicsCallbackContainer::Execute(PhysicsCallback *callback)
+{
+    if (!callback || !callback->GetBehavior())
+        return false;
+    ActiveCall call = {callback, false, m_Active};
+    m_Active = &call;
+    const int result = callback->Execute();
+    m_Active = call.previous;
+    return !call.cancelled && result == 0 && callback->GetBehavior();
+}
+
+void PhysicsCallbackContainer::UpdateHasCallbacks()
+{
     m_HasCallbacks = FALSE;
-    for (int k = 0; k < 3; ++k)
-    {
-        if (m_Callbacks[k].len() != 0)
-        {
+    for (int i = 0; i < 3; ++i)
+        if (m_Callbacks[i].len())
             m_HasCallbacks = TRUE;
-            break;
-        }
-    }
 }
 
 void PhysicsCallbackContainer::Process()
 {
     PhysicsCallbackProcessingScope processing(m_IpionManager);
-
-    m_HasCallbacks = FALSE;
     for (int i = 0; i < 3; ++i)
     {
-        IVP_U_Vector<PhysicsCallback> &cbs = m_Callbacks[i];
-        for (int j = cbs.len() - 1; j >= 0; --j)
+        Batch batch;
+        batch.previous = m_Batches;
+        m_Batches = &batch;
+        for (int j = 0; j < m_Callbacks[i].len(); ++j)
+            batch.callbacks.add(m_Callbacks[i].element_at(j));
+        m_Callbacks[i].clear();
+        while (batch.callbacks.len())
         {
-            PhysicsCallback *pc = cbs.element_at(j);
-            if (!pc || !pc->GetBehavior() || pc->Execute() != 0)
+            PhysicsCallback *callback = batch.callbacks.element_at(batch.callbacks.len() - 1);
+            batch.callbacks.remove_at(batch.callbacks.len() - 1);
+            if (Execute(callback))
             {
-                cbs.remove_at(j);
-                delete pc;
+                m_Callbacks[i].add(callback);
+                // Retain the original reverse execution order on every frame.
+                for (int j = m_Callbacks[i].len() - 1; j > 0; --j)
+                    m_Callbacks[i].swap_elems(j, j - 1);
             }
+            else
+                delete callback;
         }
-
-        if (cbs.len() != 0)
-            m_HasCallbacks = TRUE;
+        m_Batches = batch.previous;
     }
+    UpdateHasCallbacks();
 }
 
-void PhysicsCallbackContainer::Process(PhysicsCallback *pc)
+void PhysicsCallbackContainer::Process(PhysicsCallback *callback)
 {
-    if (!pc)
+    if (!callback)
         return;
-
     PhysicsCallbackProcessingScope processing(m_IpionManager);
-
-    if (!pc->GetBehavior())
-    {
-        delete pc;
-        return;
-    }
-
-    if (pc->GetBehavior())
-    {
-        if (pc->Execute() != 0)
-        {
-            delete pc;
-        }
-        else if (0 <= pc->m_Type && pc->m_Type < 3)
-        {
-            m_Callbacks[pc->m_Type].add(pc);
-            m_HasCallbacks = TRUE;
-        }
-        else
-        {
-            delete pc;
-        }
-    }
+    if (Execute(callback) && callback->m_Type >= 0 && callback->m_Type < 3)
+        m_Callbacks[callback->m_Type].add(callback);
+    else
+        delete callback;
+    UpdateHasCallbacks();
 }

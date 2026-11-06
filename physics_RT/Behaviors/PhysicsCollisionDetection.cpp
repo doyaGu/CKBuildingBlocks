@@ -142,7 +142,7 @@ public:
         if (useCollisionID && m_CollisionID != collisionID)
             return;
 
-        PhysicsObject *po = m_IpionManager->GetPhysicsObject(ent);
+        PhysicsObject *po = m_IpionManager->GetPhysicsObject(ent, FALSE);
         if (!po)
             return;
 
@@ -256,6 +256,9 @@ int PhysicsCollDetection(const CKBehaviorContext &behcontext)
 {
     CKBehavior *beh = behcontext.Behavior;
     CKContext *context = behcontext.Context;
+    CKIpionManager *manager = CKIpionManager::GetManager(context);
+    if (manager && (beh->IsInputActive(0) || beh->IsInputActive(1)))
+        manager->ClearBehaviorCallbacks(beh->GetID());
 
     if (beh->IsInputActive(0))
     {

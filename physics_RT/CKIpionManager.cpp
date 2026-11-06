@@ -23,7 +23,8 @@ static bool IsPhysicsHandleBehavior(CKGUID guid)
            guid == CKGUID(0x41cd3653, 0x0de60c1d) || // Set Physics Hinge
            guid == CKGUID(0x2973360e, 0x23d31aa7) || // Set Physics Slider
            guid == CKGUID(0x24a06a3a, 0x07100fce) || // Set Physics Spring
-           guid == CKGUID(0x199e4cf1, 0x545a78fe);   // PhysicsContinuousContact
+           guid == CKGUID(0x199e4cf1, 0x545a78fe) || // PhysicsContinuousContact
+           guid == CKGUID(0x2c015f2b, 0x5b147512);   // PhysicsBuoyancy
 }
 
 static bool IsZeroVector(const VxVector &v)
@@ -62,6 +63,7 @@ public:
         if (!entity)
             return;
 
+        m_IpionManager->ResetPhysicsBehaviorHandles(entity, TRUE);
         PhysicsObject *po = m_IpionManager->GetPhysicsObject(entity);
         if (po && po->m_ContactData)
         {
@@ -343,7 +345,7 @@ CKBOOL CKIpionManager::ProcessPendingReset()
     return TRUE;
 }
 
-void CKIpionManager::ResetPhysicsBehaviorHandles()
+void CKIpionManager::ResetPhysicsBehaviorHandles(CK3dEntity *entity, CKBOOL deleting)
 {
     if (!m_Context)
         return;
@@ -357,7 +359,26 @@ void CKIpionManager::ResetPhysicsBehaviorHandles()
         if (!beh)
             continue;
 
-        if (IsPhysicsHandleBehavior(beh->GetPrototypeGuid()))
+        const CKGUID guid = beh->GetPrototypeGuid();
+        if (!IsPhysicsHandleBehavior(guid))
+            continue;
+        if (entity && beh->GetTarget() != entity)
+        {
+            const bool joint = guid == CKGUID(0x5e624f0a, 0x35160450) ||
+                               guid == CKGUID(0x41cd3653, 0x0de60c1d) ||
+                               guid == CKGUID(0x2973360e, 0x23d31aa7) ||
+                               guid == CKGUID(0x24a06a3a, 0x07100fce);
+            if (!joint || beh->GetInputParameterObject(0) != entity)
+                continue;
+        }
+        ClearBehaviorCallbacks(beh->GetID());
+        if (deleting && guid == CKGUID(0x24a06a3a, 0x07100fce))
+        {
+            // IVP destroys anchored springs before its global object event.
+            void *handle = NULL;
+            beh->SetLocalParameterValue(0, &handle);
+        }
+        else
             beh->CallCallbackFunction(CKM_BEHAVIORRESET);
     }
 }
@@ -672,7 +693,7 @@ void CKIpionManager::CreateEnvironment()
 
 void CKIpionManager::DestroyEnvironment(CKBOOL resetBehaviorHandles)
 {
-    if (resetBehaviorHandles)
+    if (resetBehaviorHandles && m_Environment)
         ResetPhysicsBehaviorHandles();
 
     m_CollisionFilterExclusivePair = NULL;

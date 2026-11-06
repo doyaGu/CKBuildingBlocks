@@ -75,6 +75,7 @@ int DeleteCollisionSurfaces(const CKBehaviorContext &behcontext)
         return CKBR_GENERICERROR;
 
     DeleteCollisionSurfacesCallback *cb = new DeleteCollisionSurfacesCallback(man, beh);
+    man->ClearBehaviorCallbacks(beh->GetID());
     man->m_PreSimulateCallbacks->Process(cb);
 
     beh->ActivateInput(0, FALSE);

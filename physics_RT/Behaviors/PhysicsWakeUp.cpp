@@ -63,7 +63,7 @@ public:
         if (!ent)
             return 1;
 
-        PhysicsObject *po = m_IpionManager->GetPhysicsObject(ent);
+        PhysicsObject *po = m_IpionManager->GetPhysicsObject(ent, FALSE);
         if (!po)
             return 0;
 
@@ -87,6 +87,7 @@ int PhysicsWakeUp(const CKBehaviorContext &behcontext)
         return CKBR_GENERICERROR;
 
     PhysicsWakeUpCallback *cb = new PhysicsWakeUpCallback(man, beh);
+    man->ClearBehaviorCallbacks(beh->GetID());
     man->m_PreSimulateCallbacks->Process(cb);
 
     beh->ActivateInput(0, FALSE);

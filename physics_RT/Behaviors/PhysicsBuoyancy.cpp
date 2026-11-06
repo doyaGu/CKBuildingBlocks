@@ -236,6 +236,7 @@ int PhysicsBuoyancy(const CKBehaviorContext &behcontext)
     beh->GetLocalParameterValue(INSTALLED, &installed);
     if (!installed)
     {
+        man->ClearBehaviorCallbacks(beh->GetID());
         PhysicsBuoyancyCallback *cb = new PhysicsBuoyancyCallback(man, beh);
         man->m_PreSimulateCallbacks->Process(cb);
     }
@@ -248,9 +249,6 @@ int PhysicsBuoyancy(const CKBehaviorContext &behcontext)
 CKERROR PhysicsBuoyancyCallBack(const CKBehaviorContext &behcontext)
 {
     CKBehavior *beh = behcontext.Behavior;
-
-    if (!beh->GetOwner())
-        return CKBR_OWNERERROR;
 
     if (behcontext.CallbackMessage == CKM_BEHAVIORRESET ||
         behcontext.CallbackMessage == CKM_BEHAVIORDELETE ||
