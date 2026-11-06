@@ -16,7 +16,7 @@ CKERROR PhysicsForceCallBack(const CKBehaviorContext &behcontext);
 
 CKObjectDeclaration *FillBehaviorPhysicsForceDecl()
 {
-    CKObjectDeclaration *od = CreateCKObjectDeclaration("SetPhysicsForce");
+    CKObjectDeclaration *od = CreateCKObjectDeclaration("Physics Force");
     od->SetDescription("Physics Force");
     od->SetCategory("Physics");
     od->SetType(CKDLL_BEHAVIORPROTOTYPE);
@@ -66,6 +66,7 @@ CKERROR CreatePhysicsForceProto(CKBehaviorPrototype **pproto)
 #define DIRECTION_REF 3
 #define FORCE_VALUE 4
 
+
 class PhysicsControllerForce : public IVP_Controller_Independent
 {
 public:
@@ -73,7 +74,7 @@ public:
     {
         m_Core = obj->get_core();
         m_Position = pos;
-        m_Force = force;
+        m_Force.set(&force);
 
         if (m_Core)
             IVP_Controller_Manager::add_controller_to_core(this, m_Core);
@@ -102,12 +103,12 @@ public:
             m_Core->calc_at_matrix(m_Core->get_environment()->get_current_time(), &mat);
 
             IVP_U_Point out;
-            mat.vimult3(&m_Force, &out);
+            const IVP_U_Point force_ws(m_Force.k[0], m_Force.k[1], m_Force.k[2]);
+            mat.vimult3(&force_ws, &out);
 
             IVP_U_Float_Point pos(m_Position.k[0], m_Position.k[1], m_Position.k[2]);
             IVP_U_Float_Point fcs(out.k[0], out.k[1], out.k[2]);
-            IVP_U_Float_Point fws(m_Force.k[0], m_Force.k[1], m_Force.k[2]);
-            m_Core->async_push_core(&pos, &fcs, &fws);
+            m_Core->async_push_core(&pos, &fcs, &m_Force);
         }
     }
 
@@ -115,8 +116,20 @@ public:
 
     IVP_Core *m_Core;
     IVP_U_Point m_Position;
-    IVP_U_Point m_Force;
+    IVP_U_Float_Point m_Force;
 };
+
+#if PHYSICS_RT_ENABLE_DIAGNOSTICS
+extern "C" __declspec(dllexport) void __cdecl PhysicsRT_DebugForceLayout(unsigned int *layout)
+{
+    static_assert(sizeof(((PhysicsControllerForce *)NULL)->m_Force) == 16, "Unexpected force storage");
+    layout[0] = sizeof(PhysicsControllerForce);
+    layout[1] = offsetof(PhysicsControllerForce, m_Core);
+    layout[2] = offsetof(PhysicsControllerForce, m_Position);
+    layout[3] = offsetof(PhysicsControllerForce, m_Force);
+    layout[4] = sizeof(((PhysicsControllerForce *)NULL)->m_Force);
+}
+#endif
 
 class PhysicsForceCallback : public PhysicsCallback
 {
@@ -146,7 +159,7 @@ public:
         float forceValue = 10.0f;
         beh->GetInputParameterValue(FORCE_VALUE, &forceValue);
 
-        PhysicsObject *po = m_IpionManager->GetPhysicsObject(ent);
+        PhysicsObject *po = m_IpionManager->GetPhysicsObject(ent, FALSE);
         if (!po)
             return 0;
 
@@ -157,6 +170,7 @@ public:
             directionRef->TransformVector(&vec, &direction);
         else
             vec = direction;
+
 
         IVP_U_Point force(vec.x, vec.y, vec.z);
         if (force.quad_length() <= 0.0001)
