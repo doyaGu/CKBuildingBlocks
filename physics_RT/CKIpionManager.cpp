@@ -563,6 +563,14 @@ int CKIpionManager::CreatePhysicsObjectOnParameters(CK3dEntity *target, int conv
 
     PhysicsObject po;
     po.m_RealObject = obj;
+    // The visual scale belongs to this physicalization. Re-extracting it from
+    // each rounded pose feeds matrix error back into subsequent updates.
+    target->GetScale(&po.m_WorldScale, FALSE);
+    // Unit rotation matrices have float axis-length error. Do not turn those
+    // few rounding bits into a persistent visual scale on an unscaled body.
+    for (int axis = 0; axis < 3; ++axis)
+        if (fabsf(po.m_WorldScale[axis] - 1.0f) <= 2.0f * FLT_EPSILON)
+            po.m_WorldScale[axis] = 1.0f;
     m_PhysicsObjects.Insert(target->GetID(), po);
 
     return CK_OK;
@@ -1113,8 +1121,9 @@ int CKIpionManager::AddConvexSurface(IVP_SurfaceBuilder_Ledge_Soup *builder, CKM
     IVP_U_Point *pts = new IVP_U_Point[count];
     for (int p = 0; p < count; ++p)
     {
-        VxVector t = *vertices[p] * s;
-        pts[p].set(t.x, t.y, t.z);
+        const VxVector *vertex = vertices[p];
+        pts[p].set(IVP_DOUBLE(vertex->x) * s.x, IVP_DOUBLE(vertex->y) * s.y,
+                   IVP_DOUBLE(vertex->z) * s.z);
 
         points.add(&pts[p]);
     }
@@ -1223,7 +1232,12 @@ void CKIpionManager::UpdateObjectWorldMatrix(IVP_Real_Object *obj)
         return;
 
     VxVector scale(1.0f, 1.0f, 1.0f);
-    ent->GetScale(&scale, FALSE);
+    CKIpionManager *manager = GetManager(ent->GetCKContext());
+    PhysicsObject *physicsObject = manager ? manager->GetPhysicsObject(ent) : NULL;
+    if (physicsObject && physicsObject->m_RealObject == obj)
+        scale = physicsObject->m_WorldScale;
+    else
+        ent->GetScale(&scale, FALSE);
 
     IVP_U_Matrix mat;
     obj->get_m_world_f_object_AT(&mat);

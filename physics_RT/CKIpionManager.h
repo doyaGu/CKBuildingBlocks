@@ -70,7 +70,7 @@ public:
 class PhysicsObject
 {
 public:
-    PhysicsObject() : m_RealObject(NULL),
+    PhysicsObject() : m_RealObject(NULL), m_WorldScale(1.0f, 1.0f, 1.0f),
                       m_FrictionCount(0), m_FrictionTime(0),
                       m_ContactData(NULL) {}
 
@@ -84,6 +84,7 @@ public:
     }
 
     IVP_Real_Object *m_RealObject;
+    VxVector m_WorldScale;
     int m_FrictionCount;
     IVP_Time m_FrictionTime;
     PhysicsContactData *m_ContactData;
