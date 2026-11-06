@@ -1,16 +1,25 @@
 #include <cmath>
 #include <cstdio>
+#include <cstring>
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#if defined(_WIN32)
+#include <windows.h>
+#endif
 
 #include "CKContext.h"
+#include "CKGlobals.h"
 #include "CKIpionManager.h"
+#include "Convert.h"
 #include "RCK3dObject.h"
 #include "RCKMesh.h"
 #include "VxQuaternion.h"
 #include "ivp_material.hxx"
+
+void InitializePhysicsHostTests();
+int RunPhysicsHostTests(int &total);
 
 static void Check(bool condition, const char *message)
 {
@@ -65,16 +74,17 @@ struct PhysicsFixture
         manager->CreateEnvironment();
     }
 
+    ~PhysicsFixture() { delete context; }
+
     CKContext *context;
     CKIpionManager *manager;
 };
 
 static PhysicsFixture &GetPhysicsFixture()
 {
-    // CKContext owns registered managers. Keep this integration fixture alive
-    // for the process so its manager and IVP environment share one lifetime.
-    static PhysicsFixture *fixture = new PhysicsFixture();
-    return *fixture;
+    // CKContext owns registered managers; destroy it after all local entities.
+    static PhysicsFixture fixture;
+    return fixture;
 }
 
 static void DeletePhysicsObject(CKIpionManager &manager, CK3dEntity &entity)
@@ -137,6 +147,13 @@ static void NamedSurfaceReuseDoesNotNeedGeometry()
     Check(CreateNamedPolygon(*manager, *AsEntity(entity), NULL, 0,
                              "Ball_Paper_Mesh", &respawnMaterial) == CK_OK,
           "A cached named collision surface must be reusable without geometry inputs");
+    const PhysicsObject *respawned = manager->GetPhysicsObject(AsEntity(entity));
+    Check(respawned && respawned->m_RealObject, "Respawned physics object is missing");
+    CKIpionManager::UpdateObjectWorldMatrix(respawned->m_RealObject);
+    VxVector respawnScale;
+    entity.GetScale(&respawnScale, FALSE);
+    Check(NearlyEqual(respawnScale, changedScale),
+          "Rephysicalization must capture the new world scale even when reusing a collision surface");
     DeletePhysicsObject(*manager, *AsEntity(entity));
 }
 
@@ -191,12 +208,40 @@ static void PhysicsWorldMatrixUpdatesKeepWorldScaleStable()
     PhysicsObject *physicsObject = manager->GetPhysicsObject(AsEntity(entity));
     Check(physicsObject && physicsObject->m_RealObject,
           "Transform test physics object is missing");
+    IVP_U_Point beamPosition(0.0, 0.0, 0.0);
+    IVP_U_Quat initialRotation;
+    initialRotation.set(0.2, 0.4, -0.3);
+    physicsObject->m_RealObject->beam_object_to_new_position(&initialRotation, &beamPosition);
+    CKIpionManager::UpdateObjectWorldMatrix(physicsObject->m_RealObject);
+    const VxMatrix firstWorldMatrix = entity.GetWorldMatrix();
     for (int i = 0; i < 1000; ++i)
         CKIpionManager::UpdateObjectWorldMatrix(physicsObject->m_RealObject);
 
+    const VxMatrix finalWorldMatrix = entity.GetWorldMatrix();
+    Check(std::memcmp(&firstWorldMatrix, &finalWorldMatrix, sizeof(VxMatrix)) == 0,
+          "Repeated synchronization of a fixed physics pose must not accumulate scale error");
+
+    for (int i = 0; i < 5000; ++i)
+    {
+        VxQuaternion rotation;
+        rotation.FromEulerAngles(float(i) * 0.017f, float(i) * 0.013f, float(i) * -0.019f);
+        IVP_U_Quat beamRotation;
+        beamRotation.x = rotation.x;
+        beamRotation.y = rotation.y;
+        beamRotation.z = rotation.z;
+        beamRotation.w = rotation.w;
+        physicsObject->m_RealObject->beam_object_to_new_position(&beamRotation, &beamPosition);
+        CKIpionManager::UpdateObjectWorldMatrix(physicsObject->m_RealObject);
+    }
+    physicsObject->m_RealObject->beam_object_to_new_position(&initialRotation, &beamPosition);
+    CKIpionManager::UpdateObjectWorldMatrix(physicsObject->m_RealObject);
+    const VxMatrix returnedWorldMatrix = entity.GetWorldMatrix();
+    Check(std::memcmp(&firstWorldMatrix, &returnedWorldMatrix, sizeof(VxMatrix)) == 0,
+          "Rotating and returning to the same physics pose must preserve the original world scale");
+
     VxVector finalWorldScale;
     entity.GetScale(&finalWorldScale, FALSE);
-    Check(NearlyEqual(initialWorldScale, finalWorldScale, 0.001f),
+    Check(NearlyEqual(initialWorldScale, finalWorldScale, 0.00001f),
           "Physics matrix updates must not feed local-scale error back into world scale");
     DeletePhysicsObject(*manager, *AsEntity(entity));
 }
@@ -215,6 +260,39 @@ static void CollisionCachePolicyIsExplicitAndDeterministic()
           "Physicalize's runtime path must not infer collision geometry from the current render mesh");
 }
 
+static void UnitRotationDoesNotIntroduceVisualScale()
+{
+    PhysicsFixture &fixture = GetPhysicsFixture();
+    RCK3dObject entity(fixture.context, "UnitRotation");
+    VxVector origin(0.0f, 0.0f, 0.0f), scale(1.0f, 1.0f, 1.0f);
+    bool roundedUnit = false;
+    for (int i = 1; i < 200 && !roundedUnit; ++i)
+    {
+        VxQuaternion rotation;
+        rotation.FromEulerAngles(i * 0.017f, i * 0.013f, i * -0.019f);
+        entity.ConstructWorldMatrix(&origin, &scale, &rotation);
+        VxVector measured;
+        entity.GetScale(&measured, FALSE);
+        roundedUnit = measured.x != 1.0f || measured.y != 1.0f || measured.z != 1.0f;
+    }
+    Check(roundedUnit, "Find a float rotation whose measured axis lengths contain rounding error");
+    IVP_Material_Simple material(0.4f, 0.5f);
+    Check(fixture.manager->CreatePhysicsObjectOnParameters(
+              AsEntity(entity), 0, NULL, 0, NULL, NULL, 0, NULL, 1.0f, NULL, NULL,
+              TRUE, &material, 1.0f, const_cast<char *>("RegTest"),
+              TRUE, FALSE, TRUE, 0.1f, 0.1f) == CK_OK, "Create unit-scale rotated object");
+    PhysicsObject *object = fixture.manager->GetPhysicsObject(AsEntity(entity));
+    IVP_U_Matrix pose;
+    object->m_RealObject->get_m_world_f_object_AT(&pose);
+    VxMatrix expected;
+    VxConvertMatrix(pose, expected);
+    CKIpionManager::UpdateObjectWorldMatrix(object->m_RealObject);
+    const VxMatrix actual = entity.GetWorldMatrix();
+    Check(std::memcmp(&expected, &actual, sizeof(VxMatrix)) == 0,
+          "A nominal unit-scale rotation must retain the original physics pose matrix");
+    DeletePhysicsObject(*fixture.manager, *AsEntity(entity));
+}
+
 struct PhysicsTestCase
 {
     const char *name;
@@ -223,11 +301,23 @@ struct PhysicsTestCase
 
 int main()
 {
+    std::setvbuf(stdout, NULL, _IONBF, 0);
+#if defined(_WIN32)
+    SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
+    SetUnhandledExceptionFilter([](EXCEPTION_POINTERS *exception) -> LONG {
+        std::fprintf(stderr, "Exception 0x%lx at %p\n", exception->ExceptionRecord->ExceptionCode,
+                     exception->ExceptionRecord->ExceptionAddress);
+        std::fprintf(stderr, "Image base %p\n", GetModuleHandleA(NULL));
+        return EXCEPTION_EXECUTE_HANDLER;
+    });
+#endif
+    InitializePhysicsHostTests();
     const PhysicsTestCase tests[] = {
         {"Collision cache policy is explicit and deterministic", &CollisionCachePolicyIsExplicitAndDeterministic},
         {"Named surface reuse does not need geometry", &NamedSurfaceReuseDoesNotNeedGeometry},
         {"Unknown named surface does not guess current mesh", &UnknownNamedSurfaceDoesNotGuessCurrentMesh},
         {"Physics world matrix updates keep scale stable", &PhysicsWorldMatrixUpdatesKeepWorldScaleStable},
+        {"Unit rotation does not introduce visual scale", &UnitRotationDoesNotIntroduceVisualScale},
     };
 
     int failed = 0;
@@ -247,9 +337,14 @@ int main()
         }
     }
 
+    int total = sizeof(tests) / sizeof(tests[0]);
+    failed += RunPhysicsHostTests(total);
+    delete GetPhysicsFixture().context;
+    GetPhysicsFixture().context = NULL;
+    CKShutdown();
     std::printf("\n=== Test Summary ===\n");
-    std::printf("Total tests: %zu\n", sizeof(tests) / sizeof(tests[0]));
-    std::printf("Passed: %zu\n", sizeof(tests) / sizeof(tests[0]) - failed);
+    std::printf("Total tests: %d\n", total);
+    std::printf("Passed: %d\n", total - failed);
     std::printf("Failed: %d\n", failed);
     return failed == 0 ? 0 : 1;
 }
