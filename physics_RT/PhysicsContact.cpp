@@ -6,6 +6,12 @@
 #include "CKAttributeManager.h"
 #include "CKIpionManager.h"
 
+PhysicsContactManager::~PhysicsContactManager()
+{
+    while (m_Records.len())
+        RemoveRecord(m_Records.len() - 1);
+}
+
 void PhysicsContactManager::Process(IVP_Time time)
 {
     const int len = m_Records.len();
@@ -15,7 +21,8 @@ void PhysicsContactManager::Process(IVP_Time time)
         PhysicsObject *po = record->m_PhysicsObject;
         PhysicsContactData *data = po->m_ContactData;
         CKBehavior *beh = data ? data->GetBehavior() : NULL;
-        if (!beh)
+        if (!beh || record->m_Index < 0 || record->m_Index >= data->m_GroupOutputCount ||
+            2 * record->m_Index + 1 >= beh->GetOutputCount())
         {
             m_Records.remove_at(i);
             delete record;
@@ -71,6 +78,8 @@ PhysicsContactRecord *PhysicsContactManager::GetRecord(int index)
 
 void PhysicsContactManager::AddRecord(PhysicsObject *obj, int index, IVP_Time time)
 {
+    if (!obj || !obj->m_ContactData || index < 0 || index >= obj->m_ContactData->m_GroupOutputCount)
+        return;
     bool found = false;
     const int len = m_Records.len();
     for (int i = 0; i < len; ++i)
@@ -150,10 +159,10 @@ int PhysicsContactManager::GetContactID(CK3dEntity *entity) const
 }
 
 PhysicsContactData::PhysicsContactData(float timeDelayStart, float timeDelayEnd, int groupOutputCount,
-                                       PhysicsContactManager *man, CKBehavior *beh)
+                                       PhysicsContactManager *man, CKBehavior *beh, PhysicsObject *object)
     : m_TimeDelayStart(timeDelayStart), m_TimeDelayEnd(timeDelayEnd),
       m_GroupOutputCount(groupOutputCount > 0 ? groupOutputCount : 0), m_Manager(man),
-      m_BehaviorID(beh ? beh->GetID() : 0)
+      m_BehaviorID(beh ? beh->GetID() : 0), m_PhysicsObject(object)
 {
     m_GroupOutputs = m_GroupOutputCount > 0 ? new GroupOutput[m_GroupOutputCount] : NULL;
     m_Listener = NULL;
@@ -173,47 +182,20 @@ CKBehavior *PhysicsContactData::GetBehavior() const
 
 PhysicsContactData::~PhysicsContactData()
 {
-    if (m_Listener)
-    {
-        delete m_Listener;
-        m_Listener = NULL;
-    }
+    if (m_Manager)
+        m_Manager->RemoveRecord(m_PhysicsObject);
+    if (m_PhysicsObject && m_PhysicsObject->m_ContactData == this)
+        m_PhysicsObject->m_ContactData = NULL;
+    delete m_Listener;
 
     CKBehavior *beh = GetBehavior();
-    if (!beh || !m_Manager || !m_Manager->m_IpionManager)
+    if (beh)
     {
-        if (m_GroupOutputs)
-            delete[] m_GroupOutputs;
-        return;
+        PhysicsContactData *empty = NULL;
+        beh->SetLocalParameterValue(1, &empty);
+        for (int i = 0; i < m_GroupOutputCount; ++i)
+            if (m_GroupOutputs[i].active && 2 * i + 1 < beh->GetOutputCount())
+                beh->ActivateOutput(2 * i + 1, TRUE);
     }
-
-    CK3dEntity *ent = (CK3dEntity *)beh->GetTarget();
-    if (!ent)
-    {
-        if (m_GroupOutputs)
-            delete[] m_GroupOutputs;
-        return;
-    }
-
-    PhysicsObject *po = m_Manager->m_IpionManager->GetPhysicsObject(ent);
-    m_Manager->RemoveRecord(po);
-
-    PhysicsContactData *data = NULL;
-    beh->SetLocalParameterValue(1, &data);
-
-    const int count = m_GroupOutputCount;
-    for (int i = 0; i < count; ++i)
-    {
-        GroupOutput *output = &m_GroupOutputs[i];
-        if (output->active == TRUE)
-        {
-            output->active = FALSE;
-            const int outputIndex = 2 * i + 1;
-            if (outputIndex < beh->GetOutputCount())
-                beh->ActivateOutput(outputIndex, TRUE);
-        }
-    }
-
-    if (m_GroupOutputs)
-        delete[] m_GroupOutputs;
+    delete[] m_GroupOutputs;
 }

@@ -58,7 +58,7 @@ CKERROR CreatePhysicsContinuousContactProto(CKBehaviorPrototype **pproto)
     proto->SetFlags(CK_BEHAVIORPROTOTYPE_NORMAL);
     proto->SetFunction(PhysicsContinuousContact);
 
-    proto->SetBehaviorFlags((CK_BEHAVIOR_FLAGS)(CKBEHAVIOR_TARGETABLE | CKBEHAVIOR_INTERNALLYCREATEDINPUTPARAMS));
+    proto->SetBehaviorFlags((CK_BEHAVIOR_FLAGS)(CKBEHAVIOR_TARGETABLE | CKBEHAVIOR_INTERNALLYCREATEDOUTPUTS));
     proto->SetBehaviorCallbackFct(PhysicsContinuousContactCallBack);
 
     *pproto = proto;
@@ -113,7 +113,7 @@ public:
             return;
 
         ent = (CK3dEntity *)m_RealObject->client_data;
-        PhysicsObject *po = m_IpionManager->GetPhysicsObject(ent);
+        PhysicsObject *po = m_IpionManager->GetPhysicsObject(ent, FALSE);
         if (!po)
             return;
 
@@ -179,7 +179,7 @@ public:
             return;
 
         ent = (CK3dEntity *)m_RealObject->client_data;
-        PhysicsObject *po = m_IpionManager->GetPhysicsObject(ent);
+        PhysicsObject *po = m_IpionManager->GetPhysicsObject(ent, FALSE);
         if (!po)
             return;
 
@@ -215,7 +215,7 @@ static void ClearPhysicsContactData(CKBehavior *beh, CKIpionManager *man, Physic
         CK3dEntity *ent = (CK3dEntity *)beh->GetTarget();
         if (ent)
         {
-            PhysicsObject *po = man->GetPhysicsObject(ent);
+            PhysicsObject *po = man->GetPhysicsObject(ent, FALSE);
             if (po && po->m_ContactData == data)
                 po->m_ContactData = NULL;
         }
@@ -261,7 +261,7 @@ public:
         if (numberGroupOutput > maxGroupOutput)
             numberGroupOutput = maxGroupOutput;
 
-        PhysicsObject *po = m_IpionManager->GetPhysicsObject(ent);
+        PhysicsObject *po = m_IpionManager->GetPhysicsObject(ent, FALSE);
         if (!po)
             return 1;
 
@@ -271,7 +271,7 @@ public:
             return 1;
 
         PhysicsContactData *data = new PhysicsContactData(timeDelayStart, timeDelayEnd, numberGroupOutput,
-                                                          m_IpionManager->GetContactManager(), beh);
+                                                          m_IpionManager->GetContactManager(), beh, po);
         po->m_ContactData = data;
 
         PhysicsContactListener *listener = new PhysicsContactListener(obj, m_IpionManager);
@@ -286,6 +286,10 @@ int PhysicsContinuousContact(const CKBehaviorContext &behcontext)
 {
     CKBehavior *beh = behcontext.Behavior;
     CKContext *context = behcontext.Context;
+
+    CKIpionManager *callbackManager = CKIpionManager::GetManager(context);
+    if (callbackManager && (beh->IsInputActive(0) || beh->IsInputActive(1)))
+        callbackManager->ClearBehaviorCallbacks(beh->GetID());
 
     CKIpionManager *man = CKIpionManager::GetManager(context);
 
@@ -329,8 +333,6 @@ CKERROR PhysicsContinuousContactCallBack(const CKBehaviorContext &behcontext)
 {
     CKBehavior *beh = behcontext.Behavior;
 
-    if (!beh->GetOwner())
-        return CKBR_OWNERERROR;
 
     if (behcontext.CallbackMessage == CKM_BEHAVIORRESET ||
         behcontext.CallbackMessage == CKM_BEHAVIORDELETE ||
@@ -351,6 +353,13 @@ CKERROR PhysicsContinuousContactCallBack(const CKBehaviorContext &behcontext)
 
     if (behcontext.CallbackMessage == CKM_BEHAVIORSETTINGSEDITED)
     {
+        PhysicsContactData *data = NULL;
+        beh->GetLocalParameterValue(1, &data);
+        CKIpionManager *man = CKIpionManager::GetManager(behcontext.Context);
+        if (data)
+            ClearPhysicsContactData(beh, man, data);
+        if (man)
+            man->ClearBehaviorCallbacks(beh->GetID());
         int numberGroupOutput;
         beh->GetLocalParameterValue(0, &numberGroupOutput);
 

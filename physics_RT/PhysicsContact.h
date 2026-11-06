@@ -1,7 +1,7 @@
 #ifndef PHYSICS_RT_PHYSICSCONTACT_H
 #define PHYSICS_RT_PHYSICSCONTACT_H
 
-#include "CKBehavior.h"
+#include "PhysicsSDK.h"
 
 #include "ivu_types.hxx"
 #include "ivu_vector.hxx"
@@ -22,7 +22,7 @@ public:
     };
 
     PhysicsContactData(float timeDelayStart, float timeDelayEnd, int groupOutputCount,
-                       PhysicsContactManager *man, CKBehavior *beh);
+                       PhysicsContactManager *man, CKBehavior *beh, PhysicsObject *object);
     ~PhysicsContactData();
 
     CKBehavior *GetBehavior() const;
@@ -34,6 +34,7 @@ public:
     CK_ID m_BehaviorID;
     GroupOutput *m_GroupOutputs;
     IVP_Listener_Collision *m_Listener;
+    PhysicsObject *m_PhysicsObject;
 };
 
 struct PhysicsContactRecord
@@ -50,7 +51,8 @@ class PhysicsContactManager
 {
 public:
     explicit PhysicsContactManager(CKIpionManager *man)
-        : m_IpionManager(man), m_NumberGroupOutput(50), m_ContactIDAttribType(0) {}
+        : m_IpionManager(man), m_NumberGroupOutput(50), m_ContactIDAttribType(-1) {}
+    ~PhysicsContactManager();
 
     void Process(IVP_Time time);
 
