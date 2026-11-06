@@ -1,4 +1,4 @@
-#include "CKAll.h"
+#include "PhysicsSDK.h"
 
 #include "CKIpionManager.h"
 
@@ -40,6 +40,8 @@ PLUGIN_EXPORT int CKGetPluginInfoCount() { return 2; }
 
 PLUGIN_EXPORT CKPluginInfo *CKGetPluginInfo(int Index)
 {
+    if (Index < 0 || Index >= 2)
+        return NULL;
     g_PluginInfo[0].m_Author = "TERRATOOLS";
     g_PluginInfo[0].m_Description = "Physics Building Blocks";
     g_PluginInfo[0].m_Extension = "";
@@ -54,7 +56,7 @@ PLUGIN_EXPORT CKPluginInfo *CKGetPluginInfo(int Index)
     g_PluginInfo[1].m_Description = "Physics Manager";
     g_PluginInfo[1].m_Extension = "";
     g_PluginInfo[1].m_Type = CKPLUGIN_MANAGER_DLL;
-    g_PluginInfo[1].m_Version = 0x000001;
+    g_PluginInfo[1].m_Version = 0x000002;
     g_PluginInfo[1].m_InitInstanceFct = InitInstance;
     g_PluginInfo[1].m_ExitInstanceFct = ExitInstance;
     g_PluginInfo[1].m_GUID = TT_PHYSICS_MANAGER_GUID;
