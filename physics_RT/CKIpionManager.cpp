@@ -675,6 +675,17 @@ IVP_Polygon *CKIpionManager::CreatePhysicsPolygon(CKSTRING name, float mass, IVP
     return polygon;
 }
 
+#if PHYSICS_RT_STABLE_ENTITY_ORDER
+static IVP_BOOL EntityIdentityLess(const void *a, const void *b)
+{
+    CK3dEntity *firstEntity = static_cast<CK3dEntity *>(const_cast<void *>(a));
+    CK3dEntity *secondEntity = static_cast<CK3dEntity *>(const_cast<void *>(b));
+    const CK_ID first = firstEntity ? firstEntity->GetID() : 0;
+    const CK_ID second = secondEntity ? secondEntity->GetID() : 0;
+    return first < second ? IVP_TRUE : IVP_FALSE;
+}
+#endif
+
 void CKIpionManager::CreateEnvironment()
 {
 	if (m_Environment)
@@ -695,6 +706,11 @@ void CKIpionManager::CreateEnvironment()
 
     IVP_Environment_Manager *envManager = IVP_Environment_Manager::get_environment_manager();
     m_Environment = envManager->create_environment(&appEnv, "NeMo", 0x7EFAD621);
+#if PHYSICS_RT_STABLE_ENTITY_ORDER
+    // The native object allocator does not preserve the original relationship
+    // between object identity and address. Sphere contacts must use identity.
+    m_Environment->set_client_data_compare(EntityIdentityLess);
+#endif
 
     IVP_U_Point gravity = IVP_U_Point(0.0, -9.81, 0.0);
     m_Environment->set_gravity(&gravity);
@@ -1054,6 +1070,9 @@ void CKIpionManager::FillTemplateInfo(IVP_Template_Real_Object *templ, IVP_U_Poi
     templ->material = material;
     templ->physical_unmoveable = fixed ? IVP_TRUE : IVP_FALSE;
     templ->set_name(name);
+#if PHYSICS_RT_STABLE_ENTITY_ORDER
+    templ->client_data = target;
+#endif
     templ->rot_inertia_is_factor = IVP_TRUE;
     templ->rot_speed_damp_factor.set(rotSpeedDampening, rotSpeedDampening, rotSpeedDampening);
     templ->speed_damp_factor = linearSpeedDampening;

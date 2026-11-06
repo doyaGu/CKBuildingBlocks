@@ -22,6 +22,12 @@ ckbb_add_module(physics_RT
         LINKS ${PHYSICS_RT_IVP_LIBRARIES}
 )
 
+foreach (target physics_RT physics_RTStatic)
+    if (TARGET ${target})
+        target_compile_definitions(${target} PRIVATE PHYSICS_RT_STABLE_ENTITY_ORDER=1)
+    endif ()
+endforeach ()
+
 if (CKBB_BUILD_TESTS AND BUILD_TESTING AND TARGET CK2_3DStatic)
     add_executable(physics_rt_regression_tests
             tests/test_physics_regressions.cpp
