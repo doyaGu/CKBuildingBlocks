@@ -9,8 +9,12 @@ if (CKBB_BUILD_TESTS AND BUILD_TESTING AND TARGET CK2_3DStatic)
     )
     target_compile_features(UnlimitedControllerTest PRIVATE cxx_std_17)
     target_link_libraries(UnlimitedControllerTest PRIVATE CK2_3DStatic)
+    if (COMMAND ckre_copy_runtime_dependencies)
+        ckre_copy_runtime_dependencies(UnlimitedControllerTest)
+    endif ()
     add_test(NAME UnlimitedControllerTest COMMAND UnlimitedControllerTest)
     set_tests_properties(UnlimitedControllerTest PROPERTIES
+            TIMEOUT 60
             WORKING_DIRECTORY "$<TARGET_FILE_DIR:CK2>"
     )
 endif ()
