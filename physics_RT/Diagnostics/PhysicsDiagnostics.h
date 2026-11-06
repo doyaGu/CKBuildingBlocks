@@ -13,6 +13,6 @@ struct PhysicsRTCoreSnapshot
     float contact_inverse_mass, destroyed_energy;
 };
 typedef int(__cdecl *PhysicsRTReadCore)(void *manager, void *entity, PhysicsRTCoreSnapshot *snapshot,
-                                           unsigned int size);
+                                        unsigned int size);
 
 #endif // PHYSICS_RT_PHYSICSDIAGNOSTICS_H

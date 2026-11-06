@@ -7,13 +7,15 @@
 #include "CKParameterOut.h"
 #include "VxMatrix.h"
 #include "VxWindowFunctions.h"
-#include <float.h>
+
 #include "ivp_performancecounter.hxx"
 #include "ivp_surbuild_pointsoup.hxx"
 #include "ivp_surman_polygon.hxx"
 #if IVP_ENABLE_X87_EMULATION
 #include "ivu_x87.hxx"
 #endif
+
+#include <float.h>
 
 static bool IsPhysicsHandleBehavior(CKGUID guid)
 {

@@ -81,7 +81,7 @@ struct PhysicsRT_ObjectDebugAccess : IVP_Real_Object
 };
 
 PHYSICS_RT_DIAGNOSTIC int __cdecl PhysicsRT_ReadCore(void *opaque, void *entity, PhysicsRTCoreSnapshot *snapshot,
-                                                        unsigned int size)
+                                                     unsigned int size)
 {
     PhysicsObject *object =
         static_cast<CKIpionManager *>(opaque)->GetPhysicsObject(static_cast<CK3dEntity *>(entity), FALSE);

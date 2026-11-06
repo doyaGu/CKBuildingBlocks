@@ -57,8 +57,7 @@ static void PHYSICS_RT_CALL SetTimeFactor(void *opaque, float factor)
 
 static int PHYSICS_RT_CALL ReadVelocity(void *opaque, void *entity, float *linear, float *angular)
 {
-    PhysicsObject *object =
-        static_cast<CKIpionManager *>(opaque)->GetPhysicsObject(static_cast<CK3dEntity *>(entity));
+    PhysicsObject *object = static_cast<CKIpionManager *>(opaque)->GetPhysicsObject(static_cast<CK3dEntity *>(entity));
     if (!object || !object->m_RealObject)
         return 0;
 
@@ -81,8 +80,7 @@ static int PHYSICS_RT_CALL ReadVelocity(void *opaque, void *entity, float *linea
 
 static int PHYSICS_RT_CALL IsSleeping(void *opaque, void *entity)
 {
-    PhysicsObject *object =
-        static_cast<CKIpionManager *>(opaque)->GetPhysicsObject(static_cast<CK3dEntity *>(entity));
+    PhysicsObject *object = static_cast<CKIpionManager *>(opaque)->GetPhysicsObject(static_cast<CK3dEntity *>(entity));
     return object && object->m_RealObject && object->m_RealObject->get_core()->movement_state >= IVP_MT_CALM;
 }
 

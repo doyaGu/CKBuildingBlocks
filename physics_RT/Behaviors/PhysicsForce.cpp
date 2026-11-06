@@ -171,7 +171,6 @@ public:
         else
             vec = direction;
 
-
         IVP_U_Point force(vec.x, vec.y, vec.z);
         if (force.quad_length() <= 0.0001)
             force.set(1.0, 0.0, 0.0);

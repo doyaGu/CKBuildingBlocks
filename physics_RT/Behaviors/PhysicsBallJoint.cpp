@@ -207,7 +207,6 @@ CKERROR PhysicsBallJointCallBack(const CKBehaviorContext &behcontext)
 {
     CKBehavior *beh = behcontext.Behavior;
 
-
     switch (behcontext.CallbackMessage)
     {
     case CKM_BEHAVIORRESET:

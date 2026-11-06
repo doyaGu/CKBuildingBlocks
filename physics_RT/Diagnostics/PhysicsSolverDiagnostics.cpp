@@ -98,7 +98,8 @@ PHYSICS_RT_DIAGNOSTIC void *__cdecl PhysicsRT_DebugConstraintCore(void *opaque, 
 
 PHYSICS_RT_DIAGNOSTIC void *__cdecl PhysicsRT_DebugPointTransformAddress(unsigned int kind)
 {
-    auto address = [](auto method) {
+    auto address = [](auto method)
+    {
         void *value = nullptr;
         static_assert(sizeof(method) == sizeof(value));
         std::memcpy(&value, &method, sizeof(value));

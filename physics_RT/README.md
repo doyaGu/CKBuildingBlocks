@@ -6,9 +6,6 @@ and records the IVP revision through its submodule gitlink.
 Imported sources and fixtures retain the upstream license in `UPSTREAM-LICENSE`;
 IVP and its numerical dependency retain their own source licenses.
 
-The [Player replay tools](../../Player/tools/replay/README.md) describe full-level
-input capture, strict trace comparison and protection of the original installation.
-
 ## Validate in the original installation
 
 Ballanced's normal DLL imports the local CK2/VxMath ABI. To run these same

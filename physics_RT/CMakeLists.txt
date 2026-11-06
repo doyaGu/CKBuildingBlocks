@@ -29,7 +29,11 @@ set(PHYSICS_RT_SOURCES physics_RT.cpp
                 PhysicsCallback.h
                 PhysicsContact.cpp
                 PhysicsContact.h
-                PhysicsState.cpp PhysicsState.h PhysicsStateClock.h Convert.h PhysicsSDK.h
+                PhysicsState.cpp
+                PhysicsState.h
+                PhysicsStateClock.h
+                Convert.h
+                PhysicsSDK.h
                 ${BEHAVIORS_SRCS}
 )
 if (PHYSICS_RT_ENABLE_DIAGNOSTICS)
