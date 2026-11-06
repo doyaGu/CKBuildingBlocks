@@ -396,6 +396,14 @@ int CKIpionManager::GetPhysicsObjectCount() const
     return m_PhysicsObjects.Size();
 }
 
+PhysicsObject *CKIpionManager::GetPhysicsObject(CK3dEntity *entity)
+{
+    if (!entity)
+        return NULL;
+    PhysicsObjectTable::Iterator it = m_PhysicsObjects.Find(entity->GetID());
+    return it == m_PhysicsObjects.End() ? NULL : &*it;
+}
+
 PhysicsObject *CKIpionManager::GetPhysicsObject(CK3dEntity *entity, CKBOOL logging)
 {
     if (!entity)
@@ -444,7 +452,13 @@ int CKIpionManager::CreatePhysicsObjectOnParameters(CK3dEntity *target, int conv
                                                     CKBOOL enableCollision, CKBOOL autoCalcMassCenter,
                                                     float linearSpeedDampening, float rotSpeedDampening)
 {
-    if (!target || !m_Environment)
+    if (!target || !m_Environment || convexCount < 0 || ballCount < 0 || concaveCount < 0 ||
+        (convexCount > 0 && !convexes) || (concaveCount > 0 && !concaves))
+        return CKERR_INVALIDPARAMETER;
+
+    if (GetPhysicsObject(target))
+        return CKERR_ALREADYPRESENT;
+    if (collisionGroup && strlen(collisionGroup) >= IVP_NO_COLL_GROUP_STRING_LEN)
         return CKERR_INVALIDPARAMETER;
 
     VxVector scale;

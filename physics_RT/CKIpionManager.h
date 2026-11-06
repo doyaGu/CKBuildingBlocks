@@ -123,7 +123,8 @@ public:
     CKBOOL ProcessPendingReset();
 
     int GetPhysicsObjectCount() const;
-    PhysicsObject *GetPhysicsObject(CK3dEntity *entity, CKBOOL logging = FALSE);
+    PhysicsObject *GetPhysicsObject(CK3dEntity *entity);
+    PhysicsObject *GetPhysicsObject(CK3dEntity *entity, CKBOOL logging);
     void RemovePhysicsObject(CK3dEntity *entity);
 
     int CreatePhysicsObjectOnParameters(CK3dEntity *target, int convexCount, CKMesh **convexes,

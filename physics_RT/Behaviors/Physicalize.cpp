@@ -103,7 +103,7 @@ int Physicalize(const CKBehaviorContext &behcontext)
         ++man->m_PhysicalizeCalls;
         beh->ActivateInput(0, FALSE);
 
-        PhysicsObject *po = man->GetPhysicsObject(ent);
+        PhysicsObject *po = man->GetPhysicsObject(ent, FALSE);
         if (po)
         {
             beh->ActivateOutput(0, TRUE);
@@ -214,7 +214,7 @@ int Physicalize(const CKBehaviorContext &behcontext)
         ++man->m_DePhysicalizeCalls;
         beh->ActivateInput(1, FALSE);
 
-        PhysicsObject *po = man->GetPhysicsObject(ent);
+        PhysicsObject *po = man->GetPhysicsObject(ent, FALSE);
         if (po)
         {
             po->m_RealObject->delete_silently();

@@ -62,6 +62,8 @@ int GetProfilerValues(const CKBehaviorContext &behcontext)
     CKContext *context = behcontext.Context;
 
     CKIpionManager *man = CKIpionManager::GetManager(context);
+    if (!man)
+        return CKBR_GENERICERROR;
 
     if (beh->IsInputActive(1))
     {
