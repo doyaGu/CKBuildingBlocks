@@ -6,10 +6,14 @@
 #include "CK3dObject.h"
 #include "CKParameterOut.h"
 #include "VxMatrix.h"
-
+#include "VxWindowFunctions.h"
+#include <float.h>
 #include "ivp_performancecounter.hxx"
 #include "ivp_surbuild_pointsoup.hxx"
 #include "ivp_surman_polygon.hxx"
+#if IVP_ENABLE_X87_EMULATION
+#include "ivu_x87.hxx"
+#endif
 
 static bool IsPhysicsHandleBehavior(CKGUID guid)
 {
@@ -169,6 +173,9 @@ private:
 CKIpionManager::CKIpionManager(CKContext *context)
     : CKBaseManager(context, TT_PHYSICS_MANAGER_GUID, "TT Physics Manager")
 {
+#if IVP_ENABLE_X87_EMULATION
+    ivp_set_x87_control_word_callbacks(VxGetFPUControlWord, VxSetFPUControlWord);
+#endif
     m_HasPhysicsCalls = 0;
     m_PhysicalizeCalls = 0;
     m_DePhysicalizeCalls = 0;
@@ -187,14 +194,14 @@ CKIpionManager::CKIpionManager(CKContext *context)
     m_TimeManager = NULL;
     m_DeltaTime = 0.0f;
     m_PhysicsDeltaTime = 0.0f;
+    m_PhysicsTimeFactor = 0.001f;
     m_CallbackProcessingDepth = 0;
     m_ResetRequested = FALSE;
+    m_CollisionSurfaces = NULL;
+    m_CollDetectionIDAttribType = -1;
 
     if (context->RegisterNewManager(this) == CKERR_MANAGERALREADYEXISTS)
         context->OutputToConsole("Manager already exists", TRUE);
-
-    m_CollisionSurfaces = NULL;
-    m_CollDetectionIDAttribType = -1;
 }
 
 CKIpionManager::~CKIpionManager()
@@ -206,7 +213,8 @@ CKIpionManager::~CKIpionManager()
 
 CKERROR CKIpionManager::OnCKInit()
 {
-    m_CollisionSurfaces = new IVP_U_String_Hash(64);
+    if (!m_CollisionSurfaces)
+        m_CollisionSurfaces = new IVP_U_String_Hash(64);
 
     m_TimeManager = m_Context->GetTimeManager();
     m_PhysicsTimeFactor = 0.001f;
@@ -267,7 +275,8 @@ CKERROR CKIpionManager::PostClearAll()
 
 CKERROR CKIpionManager::PostProcess()
 {
-    Simulate(m_TimeManager->GetLastDeltaTime());
+    if (m_TimeManager)
+        Simulate(m_TimeManager->GetLastDeltaTime());
 
     return CK_OK;
 }
@@ -763,9 +772,10 @@ void CKIpionManager::Simulate(float deltaTime)
 
 void CKIpionManager::ResetSimulationClock()
 {
+    if (!m_Environment)
+        return;
     m_Environment->reset_time();
     m_Environment->get_time_manager()->env_set_current_time(m_Environment, IVP_Time(0));
-    m_Environment->reset_time();
 }
 
 IVP_Time CKIpionManager::GetSimulationTime() const
@@ -773,20 +783,21 @@ IVP_Time CKIpionManager::GetSimulationTime() const
     return m_Environment->get_current_time();
 }
 
-float CKIpionManager::GetSimulationTimeStep() const
+double CKIpionManager::GetSimulationTimeStep() const
 {
     return m_Environment->get_delta_PSI_time();
 }
 
-void CKIpionManager::SetSimulationTimeStep(float step)
+void CKIpionManager::SetSimulationTimeStep(double step)
 {
     m_Environment->set_delta_PSI_time(step);
 }
 
 void CKIpionManager::SetDeltaTime(float delta)
 {
-    m_DeltaTime = (m_DeltaTime * 3.0f + delta) / 4;
-    m_PhysicsDeltaTime = m_DeltaTime * m_PhysicsTimeFactor;
+    const double smoothedDelta = (m_DeltaTime * 3.0 + delta) * 0.25;
+    m_DeltaTime = (float)smoothedDelta;
+    m_PhysicsDeltaTime = (float)(smoothedDelta * m_PhysicsTimeFactor);
 }
 
 void CKIpionManager::SetTimeFactor(float factor)

@@ -172,8 +172,8 @@ public:
 
     IVP_Time GetSimulationTime() const;
 
-    float GetSimulationTimeStep() const;
-    void SetSimulationTimeStep(float step);
+    double GetSimulationTimeStep() const;
+    void SetSimulationTimeStep(double step);
 
     void SetDeltaTime(float delta);
     void SetTimeFactor(float factor);
