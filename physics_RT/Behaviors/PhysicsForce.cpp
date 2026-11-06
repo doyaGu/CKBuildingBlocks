@@ -5,7 +5,7 @@
 //
 /////////////////////////////////////////////////////
 /////////////////////////////////////////////////////
-#include "CKAll.h"
+#include "PhysicsSDK.h"
 
 #include "CKIpionManager.h"
 
@@ -26,6 +26,7 @@ CKObjectDeclaration *FillBehaviorPhysicsForceDecl()
     od->SetVersion(0x00010000);
     od->SetCreationFunction(CreatePhysicsForceProto);
     od->SetCompatibleClassId(CKCID_3DENTITY);
+    od->NeedManager(TT_PHYSICS_MANAGER_GUID);
     return od;
 }
 

@@ -5,7 +5,7 @@
 //
 /////////////////////////////////////////////////////
 /////////////////////////////////////////////////////
-#include "CKAll.h"
+#include "PhysicsSDK.h"
 
 #include "CKIpionManager.h"
 
@@ -25,6 +25,7 @@ CKObjectDeclaration *FillBehaviorPhysicsResetDecl()
     od->SetVersion(0x00010000);
     od->SetCreationFunction(CreatePhysicsResetProto);
     od->SetCompatibleClassId(CKCID_BEOBJECT);
+    od->NeedManager(TT_PHYSICS_MANAGER_GUID);
     return od;
 }
 

@@ -1,10 +1,11 @@
 #ifndef PHYSICS_RT_IPIONMANAGER_H
 #define PHYSICS_RT_IPIONMANAGER_H
 
-#include "CKBaseManager.h"
+#include "PhysicsSDK.h"
 #include "CKAttributeManager.h"
 #include "CKContext.h"
 #include "XNHashTable.h"
+#include "XClassArray.h"
 #include "VxTimeProfiler.h"
 
 #include "ivu_types.hxx"
