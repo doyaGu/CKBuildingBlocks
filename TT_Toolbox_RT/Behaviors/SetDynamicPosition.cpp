@@ -7,6 +7,7 @@
 ///////////////////////////////////////////
 #include "CKAll.h"
 #include "ToolboxGuids.h"
+#include "../DynamicPositionArithmetic.h"
 
 CKObjectDeclaration *FillBehaviorSetDynamicPositionDecl();
 CKERROR CreateSetDynamicPositionProto(CKBehaviorPrototype **pproto);
@@ -148,14 +149,13 @@ int SetDynamicPosition(const CKBehaviorContext &behcontext)
     float maxDistance2Target;
     beh->GetInputParameterValue(11, &maxDistance2Target);
 
-    float cof = behcontext.DeltaTime * 0.001f;
-    forceX *= cof;
-    forceY *= cof;
-    forceZ *= cof;
+    TTScaleDynamicForce(behcontext.DeltaTime, forceX, &forceX);
+    TTScaleDynamicForce(behcontext.DeltaTime, forceY, &forceY);
+    TTScaleDynamicForce(behcontext.DeltaTime, forceZ, &forceZ);
 
-    targetPosition.x += (position.x - offsetX) * forceX + delta.x * dampingX;
-    targetPosition.y += (position.y - offsetY) * forceY + delta.y * dampingY;
-    targetPosition.z += (position.z - offsetZ) * forceZ + delta.z * dampingZ;
+    TTAdvanceDynamicPosition(targetPosition.x, position.x, offsetX, forceX, delta.x, dampingX, &targetPosition.x);
+    TTAdvanceDynamicPosition(targetPosition.y, position.y, offsetY, forceY, delta.y, dampingY, &targetPosition.y);
+    TTAdvanceDynamicPosition(targetPosition.z, position.z, offsetZ, forceZ, delta.z, dampingZ, &targetPosition.z);
 
     objectPosition -= targetPosition;
 
