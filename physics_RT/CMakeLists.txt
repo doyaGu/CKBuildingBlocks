@@ -1,7 +1,6 @@
 # Match the original hull ordering, including in previously configured builds.
 set(IVP_INCLUDE_QHULL ON CACHE BOOL "Include the original convex hull builder" FORCE)
 set(IVP_REENTRANT_QHULL OFF CACHE BOOL "Use the original Ipion hull builder" FORCE)
-option(IVP_ENABLE_X87_EMULATION "Emulate original extended arithmetic" ON)
 option(PHYSICS_RT_ENABLE_DIAGNOSTICS "Export internal Win32 physics diagnostics" OFF)
 option(PHYSICS_RT_BUILD_PARITY_TESTS "Build Win32 original-image differential tests" OFF)
 if (PHYSICS_RT_ENABLE_DIAGNOSTICS AND
@@ -44,23 +43,12 @@ if (PHYSICS_RT_ENABLE_DIAGNOSTICS)
 endif ()
 ckbb_add_module(physics_RT SOURCES ${PHYSICS_RT_SOURCES} LINKS ${PHYSICS_RT_IVP_LIBRARIES})
 
-function(physics_rt_configure_host target)
-    # IVP's Win32 precision contract propagates /arch:IA32. Use VxMath's
-    # scalar inline operations here; its separately built library keeps SIMD.
-    if (MSVC AND CMAKE_SIZEOF_VOID_P EQUAL 4 AND IVP_ENABLE_X87_EMULATION)
-        target_compile_definitions(${target} PRIVATE VX_SIMD_NONE=1)
-    endif ()
-endfunction()
-
 foreach (target physics_RT physics_RTStatic)
     if (TARGET ${target})
-        physics_rt_configure_host(${target})
         target_compile_definitions(${target} PRIVATE
                 PHYSICS_RT_STABLE_ENTITY_ORDER=1
                 PHYSICS_RT_ENABLE_DIAGNOSTICS=$<BOOL:${PHYSICS_RT_ENABLE_DIAGNOSTICS}>)
-        if (IVP_ENABLE_X87_EMULATION)
-            ivp_enable_numerical_ipo(${target})
-        endif ()
+        ivp_enable_numerical_ipo(${target})
     endif ()
 endforeach ()
 
@@ -70,7 +58,6 @@ if (CKBB_BUILD_TESTS AND BUILD_TESTING AND TARGET CK2_3DStatic)
             tests/PhysicsHostTest.cpp
     )
     target_compile_features(physics_rt_regression_tests PRIVATE cxx_std_17)
-    physics_rt_configure_host(physics_rt_regression_tests)
     target_compile_definitions(physics_rt_regression_tests PRIVATE
             CKBB_SOURCE_DIR="${PROJECT_SOURCE_DIR}"
     )
@@ -119,9 +106,6 @@ if (CKBB_BUILD_TESTS AND BUILD_TESTING AND WIN32 AND TARGET physics_RT)
     set_tests_properties(physics_rt_module_tests PROPERTIES TIMEOUT 30 LABELS "physics;module")
 endif ()
 
-if (IVP_BUILD_TESTS AND IVP_ENABLE_X87_EMULATION)
-    add_subdirectory(ivp/tests/numerics ivp-numerics-tests)
-endif ()
 if (PHYSICS_RT_BUILD_PARITY_TESTS)
     add_subdirectory(tests)
 endif ()

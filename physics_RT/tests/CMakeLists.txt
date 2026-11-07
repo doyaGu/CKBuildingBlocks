@@ -15,7 +15,6 @@ add_executable(physics_rt_parity
         RetailCapturedContinuous.cpp
 )
 target_compile_features(physics_rt_parity PRIVATE cxx_std_17)
-physics_rt_configure_host(physics_rt_parity)
 target_link_libraries(physics_rt_parity PRIVATE ivp_controller ivp_compact_builder ivp_physics ivp_collision physics_RTStatic advapi32)
 add_custom_command(TARGET physics_rt_parity POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different

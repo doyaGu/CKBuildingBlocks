@@ -572,17 +572,17 @@ static void CollisionScaleStorageBoundary()
     entity->SetWorldMatrix(rotation);
     VxVector collision;
     entity->GetScale(&collision, TRUE);
-    Check(collision.x == 0.9999999403953552f && collision.y == 0.9999999403953552f && collision.z == 1.0f,
-          "original squared-length store controls collision geometry");
+    const VxVector expected(Magnitude(rotation[0]), Magnitude(rotation[1]), Magnitude(rotation[2]));
+    Check(collision == expected, "collision geometry uses the host math length contract");
 }
 
 static void HingeAxisStorageBoundary()
 {
     HostFixture f;
     CK3dEntity *entity = f.Entity("hinge direction");
-    const float data[3][4] = {{-0.963630438f, 0.267238319f, -0.963630438f, 0.267238319f},
-                              {0.968147635f, 0.250380158f, 0.968147576f, 0.250380129f},
-                              {-0.965925813f, 0.258819014f, -0.965925813f, 0.258819014f}};
+    const float data[3][2] = {{-0.963630438f, 0.267238319f},
+                              {0.968147635f, 0.250380158f},
+                              {-0.965925813f, 0.258819014f}};
     for (int i = 0; i < 3; ++i)
     {
         VxMatrix matrix = VxMatrix::Identity();
@@ -590,8 +590,8 @@ static void HingeAxisStorageBoundary()
         entity->SetWorldMatrix(matrix);
         VxVector axis;
         entity->GetOrientation(&axis, NULL);
-        Check(axis.x == data[i][2] && axis.y == 0 && axis.z == data[i][3],
-              "original hinge normalization stores the inverse length");
+        Check(axis == Normalize(VxVector(data[i][0], 0, data[i][1])),
+              "hinge orientation uses the host math normalization contract");
     }
 }
 

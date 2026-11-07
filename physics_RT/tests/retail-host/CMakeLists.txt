@@ -17,11 +17,18 @@ endforeach ()
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 get_filename_component(physics_root "${CMAKE_CURRENT_SOURCE_DIR}/../.." ABSOLUTE)
-option(IVP_ENABLE_X87_EMULATION "Emulate original extended arithmetic" ON)
 set(IVP_INCLUDE_QHULL ON CACHE BOOL "" FORCE)
 set(IVP_REENTRANT_QHULL OFF CACHE BOOL "" FORCE)
 set(IVP_BUILD_TESTS OFF CACHE BOOL "Build IVP numerical tests")
 add_subdirectory("${physics_root}/ivp" ivp)
+
+get_filename_component(default_vxmath_root "${physics_root}/../../VxMath" ABSOLUTE)
+set(VXMATH_ROOT "${default_vxmath_root}" CACHE PATH "VxMath component for scalar arithmetic")
+if (NOT EXISTS "${VXMATH_ROOT}/cmake/VxScalar.cmake")
+    message(FATAL_ERROR "Set VXMATH_ROOT to the VxMath component")
+endif ()
+include("${VXMATH_ROOT}/cmake/VxScalar.cmake")
+vx_add_scalar_arithmetic(physics_RT_scalar_arithmetic)
 
 aux_source_directory("${physics_root}/Behaviors" behavior_sources)
 add_library(physics_RT_retail_validation SHARED
@@ -40,8 +47,6 @@ target_compile_definitions(physics_RT_retail_validation PRIVATE
 target_link_libraries(physics_RT_retail_validation PRIVATE
         "${PHYSICS_RT_RETAIL_SDK_ROOT}/Lib/CK2.lib"
         "${PHYSICS_RT_RETAIL_SDK_ROOT}/Lib/VxMath.lib"
-        ivp_controller ivp_compact_builder ivp_physics ivp_collision)
-if (IVP_ENABLE_X87_EMULATION)
-    ivp_enable_numerical_ipo(physics_RT_retail_validation)
-endif ()
+        ivp_controller ivp_compact_builder ivp_physics ivp_collision physics_RT_scalar_arithmetic)
+ivp_enable_numerical_ipo(physics_RT_retail_validation)
 set_target_properties(physics_RT_retail_validation PROPERTIES OUTPUT_NAME physics_RT)

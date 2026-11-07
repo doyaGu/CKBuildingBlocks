@@ -7,13 +7,12 @@
 #include "CKParameterOut.h"
 #include "VxMatrix.h"
 #include "VxWindowFunctions.h"
+#include "VxScalar.h"
 
 #include "ivp_performancecounter.hxx"
 #include "ivp_surbuild_pointsoup.hxx"
 #include "ivp_surman_polygon.hxx"
-#if IVP_ENABLE_X87_EMULATION
-#include "ivu_x87.hxx"
-#endif
+#include "ivu_fpu.hxx"
 
 #include <float.h>
 
@@ -177,9 +176,7 @@ private:
 CKIpionManager::CKIpionManager(CKContext *context)
     : CKBaseManager(context, TT_PHYSICS_MANAGER_GUID, "TT Physics Manager")
 {
-#if IVP_ENABLE_X87_EMULATION
-    ivp_set_x87_control_word_callbacks(VxGetFPUControlWord, VxSetFPUControlWord);
-#endif
+    ivp_set_fpu_control_word_callbacks(VxGetFPUControlWord, VxSetFPUControlWord);
     m_HasPhysicsCalls = 0;
     m_PhysicalizeCalls = 0;
     m_DePhysicalizeCalls = 0;
@@ -856,9 +853,15 @@ void CKIpionManager::SetSimulationTimeStep(double step)
 
 void CKIpionManager::SetDeltaTime(float delta)
 {
-    const double smoothedDelta = (m_DeltaTime * 3.0 + delta) * 0.25;
-    m_DeltaTime = (float)smoothedDelta;
-    m_PhysicsDeltaTime = (float)(smoothedDelta * m_PhysicsTimeFactor);
+    VxScalarContext arithmetic;
+    VxScalarInitContext(arithmetic);
+    const VxScalar previous = VxScalarMultiply(arithmetic, VxScalarLoad(arithmetic, m_DeltaTime),
+                                               VxScalarLoad(arithmetic, 3));
+    const VxScalar smoothed = VxScalarMultiply(arithmetic,
+        VxScalarAdd(arithmetic, previous, VxScalarLoad(arithmetic, delta)), VxScalarLoad(arithmetic, 0.25f));
+    m_DeltaTime = VxScalarStore(arithmetic, smoothed);
+    m_PhysicsDeltaTime = VxScalarStore(arithmetic,
+        VxScalarMultiply(arithmetic, smoothed, VxScalarLoad(arithmetic, m_PhysicsTimeFactor)));
 }
 
 void CKIpionManager::SetTimeFactor(float factor)
@@ -1140,11 +1143,15 @@ int CKIpionManager::AddConvexSurface(IVP_SurfaceBuilder_Ledge_Soup *builder, CKM
 
     IVP_U_Vector<IVP_U_Point> points(count);
     IVP_U_Point *pts = new IVP_U_Point[count];
+    VxScalarContext arithmetic;
+    VxScalarInitContext(arithmetic);
     for (int p = 0; p < count; ++p)
     {
         const VxVector *vertex = vertices[p];
-        pts[p].set(IVP_DOUBLE(vertex->x) * s.x, IVP_DOUBLE(vertex->y) * s.y,
-                   IVP_DOUBLE(vertex->z) * s.z);
+        for (int axis = 0; axis < 3; ++axis)
+            pts[p].k[axis] = VxScalarStoreDouble(arithmetic,
+                VxScalarMultiply(arithmetic, VxScalarLoad(arithmetic, (*vertex)[axis]),
+                                   VxScalarLoad(arithmetic, s[axis])));
 
         points.add(&pts[p]);
     }

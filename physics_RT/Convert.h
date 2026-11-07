@@ -4,14 +4,17 @@
 #include "VxVector.h"
 #include "VxQuaternion.h"
 #include "VxMatrix.h"
+#include "VxScalar.h"
 
 #include "ivu_linear.hxx"
 
 inline void VxConvertVector(const IVP_U_Point &in, VxVector &out)
 {
-    out.x = (float)in.k[0];
-    out.y = (float)in.k[1];
-    out.z = (float)in.k[2];
+    VxScalarContext arithmetic;
+    VxScalarInitContext(arithmetic);
+    out.x = VxScalarStore(arithmetic, VxScalarLoad(arithmetic, in.k[0]));
+    out.y = VxScalarStore(arithmetic, VxScalarLoad(arithmetic, in.k[1]));
+    out.z = VxScalarStore(arithmetic, VxScalarLoad(arithmetic, in.k[2]));
 }
 
 inline void VxConvertVector(const IVP_U_Float_Point &in, VxVector &out)
@@ -37,10 +40,12 @@ inline void VxConvertVector(const VxVector &in, IVP_U_Float_Point &out)
 
 inline void VxConvertQuaternion(const IVP_U_Quat &in, VxQuaternion &out)
 {
-    out.x = (float)in.x;
-    out.y = (float)in.y;
-    out.z = (float)in.z;
-    out.w = (float)in.w;
+    VxScalarContext arithmetic;
+    VxScalarInitContext(arithmetic);
+    out.x = VxScalarStore(arithmetic, VxScalarLoad(arithmetic, in.x));
+    out.y = VxScalarStore(arithmetic, VxScalarLoad(arithmetic, in.y));
+    out.z = VxScalarStore(arithmetic, VxScalarLoad(arithmetic, in.z));
+    out.w = VxScalarStore(arithmetic, VxScalarLoad(arithmetic, in.w));
 }
 
 inline void VxConvertQuaternion(const VxQuaternion &in, IVP_U_Quat &out)
@@ -53,17 +58,19 @@ inline void VxConvertQuaternion(const VxQuaternion &in, IVP_U_Quat &out)
 
 inline void VxConvertMatrix(const IVP_U_Matrix &in, VxMatrix &out)
 {
+    VxScalarContext arithmetic;
+    VxScalarInitContext(arithmetic);
     // Transpose
     for (int i = 0; i < 3; ++i)
         for (int j = 0; j < 3; ++j)
-            out[j][i] = (float)in.get_elem(i, j);
+            out[j][i] = VxScalarStore(arithmetic, VxScalarLoad(arithmetic, in.get_elem(i, j)));
     out[0][3] = 0.0f;
     out[1][3] = 0.0f;
     out[2][3] = 0.0f;
 
-    out[3][0] = (float)in.vv.k[0];
-    out[3][1] = (float)in.vv.k[1];
-    out[3][2] = (float)in.vv.k[2];
+    out[3][0] = VxScalarStore(arithmetic, VxScalarLoad(arithmetic, in.vv.k[0]));
+    out[3][1] = VxScalarStore(arithmetic, VxScalarLoad(arithmetic, in.vv.k[1]));
+    out[3][2] = VxScalarStore(arithmetic, VxScalarLoad(arithmetic, in.vv.k[2]));
     out[3][3] = 1.0f;
 }
 
