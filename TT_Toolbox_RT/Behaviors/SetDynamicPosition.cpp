@@ -7,11 +7,23 @@
 ///////////////////////////////////////////
 #include "CKAll.h"
 #include "ToolboxGuids.h"
-#include "../DynamicPositionArithmetic.h"
+#include "VxScalar.h"
 
 CKObjectDeclaration *FillBehaviorSetDynamicPositionDecl();
 CKERROR CreateSetDynamicPositionProto(CKBehaviorPrototype **pproto);
 int SetDynamicPosition(const CKBehaviorContext &behcontext);
+
+static float AdvanceDynamicPosition(VxScalarContext &arithmetic, float target, float distance, float offset,
+                                    float force, float delta, float damping)
+{
+    const VxScalar error =
+        VxScalarSubtract(arithmetic, VxScalarLoad(arithmetic, distance), VxScalarLoad(arithmetic, offset));
+    const VxScalar response = VxScalarMultiply(arithmetic, error, VxScalarLoad(arithmetic, force));
+    const VxScalar momentum =
+        VxScalarMultiply(arithmetic, VxScalarLoad(arithmetic, delta), VxScalarLoad(arithmetic, damping));
+    return VxScalarStore(arithmetic, VxScalarAdd(arithmetic, VxScalarAdd(arithmetic, response, momentum),
+                                                 VxScalarLoad(arithmetic, target)));
+}
 
 CKObjectDeclaration *FillBehaviorSetDynamicPositionDecl()
 {
@@ -149,13 +161,20 @@ int SetDynamicPosition(const CKBehaviorContext &behcontext)
     float maxDistance2Target;
     beh->GetInputParameterValue(11, &maxDistance2Target);
 
-    TTScaleDynamicForce(behcontext.DeltaTime, forceX, &forceX);
-    TTScaleDynamicForce(behcontext.DeltaTime, forceY, &forceY);
-    TTScaleDynamicForce(behcontext.DeltaTime, forceZ, &forceZ);
+    VxScalarContext arithmetic;
+    VxScalarInitContext(arithmetic);
+    const VxScalar time =
+        VxScalarMultiply(arithmetic, VxScalarLoad(arithmetic, behcontext.DeltaTime), VxScalarLoad(arithmetic, 0.001f));
+    forceX = VxScalarStore(arithmetic, VxScalarMultiply(arithmetic, time, VxScalarLoad(arithmetic, forceX)));
+    forceY = VxScalarStore(arithmetic, VxScalarMultiply(arithmetic, time, VxScalarLoad(arithmetic, forceY)));
+    forceZ = VxScalarStore(arithmetic, VxScalarMultiply(arithmetic, time, VxScalarLoad(arithmetic, forceZ)));
 
-    TTAdvanceDynamicPosition(targetPosition.x, position.x, offsetX, forceX, delta.x, dampingX, &targetPosition.x);
-    TTAdvanceDynamicPosition(targetPosition.y, position.y, offsetY, forceY, delta.y, dampingY, &targetPosition.y);
-    TTAdvanceDynamicPosition(targetPosition.z, position.z, offsetZ, forceZ, delta.z, dampingZ, &targetPosition.z);
+    targetPosition.x =
+        AdvanceDynamicPosition(arithmetic, targetPosition.x, position.x, offsetX, forceX, delta.x, dampingX);
+    targetPosition.y =
+        AdvanceDynamicPosition(arithmetic, targetPosition.y, position.y, offsetY, forceY, delta.y, dampingY);
+    targetPosition.z =
+        AdvanceDynamicPosition(arithmetic, targetPosition.z, position.z, offsetZ, forceZ, delta.z, dampingZ);
 
     objectPosition -= targetPosition;
 
