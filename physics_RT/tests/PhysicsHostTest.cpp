@@ -156,7 +156,7 @@ static void TimingAndState()
     f.manager->m_DeltaTime = 13.27400016784668f;
     f.manager->m_PhysicsTimeFactor = 0.0013699999544769526f;
     f.manager->SetDeltaTime(16.582000732421875f);
-    Check(Bits(f.manager->m_DeltaTime) == 0x41619db2, "smoothed delta write boundary");
+    Check(Bits(f.manager->m_DeltaTime) == 0x41619db2, "smoothed physics timestep rounds to float");
     Check(Bits(f.manager->m_PhysicsDeltaTime) == 0x3c9e418f, "physics delta must retain the double intermediate");
     const PhysicsRTStateApi *api = PhysicsRT_GetStateApi(1);
     Check(api && api->size == sizeof(*api) && api->version == 1, "state API v1 layout");
@@ -255,45 +255,47 @@ static void MatrixConversions()
     Check(std::memcmp(&matrix, &roundtrip, sizeof(matrix)) == 0, "matrix transpose round trip");
 }
 
-struct BehaviorContract
+struct BehaviorPrototypeCounts
 {
     CKObjectDeclaration *(*fill)();
     int inputs, outputs, parameters, outputParameters, locals;
 };
-static const BehaviorContract contracts[] = {{FillBehaviorPhysicalizeDecl, 2, 2, 12, 0, 4},
-                                             {FillBehaviorPhysicsImpulseDecl, 1, 1, 5, 0, 2},
-                                             {FillBehaviorPhysicsForceDecl, 2, 2, 5, 0, 1},
-                                             {FillBehaviorPhysicsWakeUpDecl, 1, 1, 0, 0, 0},
-                                             {FillBehaviorSetPhysicsGlobalsDecl, 2, 1, 2, 0, 0},
-                                             {FillBehaviorPhysicsHingeDecl, 2, 2, 5, 0, 1},
-                                             {FillBehaviorSetPhysicsSpringDecl, 2, 2, 9, 0, 1},
-                                             {FillBehaviorSetPhysicsSliderDecl, 2, 2, 6, 0, 1},
-                                             {FillBehaviorPhysicsBallJointDecl, 2, 2, 3, 0, 2},
-                                             {FillBehaviorPhysicsCollDetectionDecl, 2, 1, 4, 4, 2},
-                                             {FillBehaviorPhysicsContinuousContactDecl, 2, 10, 2, 0, 2},
-                                             {FillBehaviorPhysicsBuoyancyDecl, 1, 1, 12, 0, 1},
-                                             {FillBehaviorPhysicsResetDecl, 1, 1, 0, 0, 0},
-                                             {FillBehaviorGetProfilerValuesDecl, 2, 2, 0, 5, 0},
-                                             {FillBehaviorDeleteCollisionSurfacesDecl, 1, 1, 0, 0, 0}};
+static const BehaviorPrototypeCounts PrototypeCounts[] = {
+    {FillBehaviorPhysicalizeDecl, 2, 2, 12, 0, 4},
+    {FillBehaviorPhysicsImpulseDecl, 1, 1, 5, 0, 2},
+    {FillBehaviorPhysicsForceDecl, 2, 2, 5, 0, 1},
+    {FillBehaviorPhysicsWakeUpDecl, 1, 1, 0, 0, 0},
+    {FillBehaviorSetPhysicsGlobalsDecl, 2, 1, 2, 0, 0},
+    {FillBehaviorPhysicsHingeDecl, 2, 2, 5, 0, 1},
+    {FillBehaviorSetPhysicsSpringDecl, 2, 2, 9, 0, 1},
+    {FillBehaviorSetPhysicsSliderDecl, 2, 2, 6, 0, 1},
+    {FillBehaviorPhysicsBallJointDecl, 2, 2, 3, 0, 2},
+    {FillBehaviorPhysicsCollDetectionDecl, 2, 1, 4, 4, 2},
+    {FillBehaviorPhysicsContinuousContactDecl, 2, 10, 2, 0, 2},
+    {FillBehaviorPhysicsBuoyancyDecl, 1, 1, 12, 0, 1},
+    {FillBehaviorPhysicsResetDecl, 1, 1, 0, 0, 0},
+    {FillBehaviorGetProfilerValuesDecl, 2, 2, 0, 5, 0},
+    {FillBehaviorDeleteCollisionSurfacesDecl, 1, 1, 0, 0, 0}
+};
 
-static void BehaviorContracts()
+static void BehaviorPrototypes()
 {
     HostFixture f;
     CK3dEntity *owner = f.Entity("owner");
     XArray<CKGUID> guids;
-    for (const BehaviorContract &contract : contracts)
+    for (const BehaviorPrototypeCounts &prototype : PrototypeCounts)
     {
-        ScopedDeclaration declaration(contract.fill());
+        ScopedDeclaration declaration(prototype.fill());
         Check(declaration->GetManagerNeededCount() == 1 && declaration->GetManagerNeeded(0) == TT_PHYSICS_MANAGER_GUID,
               "declare physics manager dependency");
         for (CKGUID guid : guids)
             Check(guid != declaration->GetGuid(), "unique behavior GUIDs");
         guids.PushBack(declaration->GetGuid());
-        CKBehavior *behavior = f.Behavior(contract.fill, owner);
-        Check(behavior->GetInputCount() == contract.inputs && behavior->GetOutputCount() == contract.outputs &&
-                  behavior->GetInputParameterCount() == contract.parameters &&
-                  behavior->GetOutputParameterCount() == contract.outputParameters &&
-                  behavior->GetLocalParameterCount() == contract.locals,
+        CKBehavior *behavior = f.Behavior(prototype.fill, owner);
+        Check(behavior->GetInputCount() == prototype.inputs && behavior->GetOutputCount() == prototype.outputs &&
+                  behavior->GetInputParameterCount() == prototype.parameters &&
+                  behavior->GetOutputParameterCount() == prototype.outputParameters &&
+                  behavior->GetLocalParameterCount() == prototype.locals,
               declaration->GetName());
     }
     Check(CKGet_TT_Physics_PluginInfoCount() == 2 && !CKGet_TT_Physics_PluginInfo(-1) &&
@@ -337,7 +339,7 @@ static void CallbackMutation()
     Check(deleted == 3 && !f.manager->m_PreSimulateCallbacks->m_HasCallbacks, "cancel queued and active callbacks");
     f.manager->m_PreSimulateCallbacks->Process(new TestCallback(f.manager, behavior, calls, deleted, 2));
     Check(f.manager->m_ResetRequested && f.manager->m_CallbackProcessingDepth == 0, "reset deferred during Execute");
-    Check(f.manager->ProcessPendingReset() && !f.manager->m_ResetRequested, "reset at safe boundary");
+    Check(f.manager->ProcessPendingReset() && !f.manager->m_ResetRequested, "reset runs after callbacks finish");
     Check(deleted == 4 && f.manager->GetEnvironment(), "reset released pending callback");
 }
 
@@ -562,7 +564,7 @@ static void BuoyancyReset()
     Check(f.Run(behavior) == CKBR_OK && f.manager->m_LiquidSurfaces.len() == 1, "reinstall buoyancy after reset");
 }
 
-static void CollisionScaleStorageBoundary()
+static void CollisionShapeScaleRounding()
 {
     HostFixture f;
     CK3dEntity *entity = f.Entity("rotated collision scale");
@@ -573,10 +575,10 @@ static void CollisionScaleStorageBoundary()
     VxVector collision;
     entity->GetScale(&collision, TRUE);
     const VxVector expected(Magnitude(rotation[0]), Magnitude(rotation[1]), Magnitude(rotation[2]));
-    Check(collision == expected, "collision geometry uses the host math length contract");
+    Check(collision == expected, "collision shape scale uses VxMath vector magnitude rounding");
 }
 
-static void HingeAxisStorageBoundary()
+static void HingeAxisNormalizationRounding()
 {
     HostFixture f;
     CK3dEntity *entity = f.Entity("hinge direction");
@@ -591,7 +593,7 @@ static void HingeAxisStorageBoundary()
         VxVector axis;
         entity->GetOrientation(&axis, NULL);
         Check(axis == Normalize(VxVector(data[i][0], 0, data[i][1])),
-              "hinge orientation uses the host math normalization contract");
+              "hinge orientation uses VxMath vector normalization rounding");
     }
 }
 
@@ -606,9 +608,9 @@ int RunPhysicsHostTests(int &total)
                           {"Velocity and profiler isolation", VelocityAndProfiler},
                           {"Convex input precision", ConvexInputPrecision},
                           {"Matrix conversions", MatrixConversions},
-                          {"Collision scale storage boundary", CollisionScaleStorageBoundary},
-                          {"Hinge axis storage boundary", HingeAxisStorageBoundary},
-                          {"All 15 BB contracts", BehaviorContracts},
+                          {"Collision shape scale rounding", CollisionShapeScaleRounding},
+                          {"Hinge axis normalization rounding", HingeAxisNormalizationRounding},
+                          {"All 15 building block prototypes", BehaviorPrototypes},
                           {"Callback mutation and pending reset", CallbackMutation},
                           {"Stop cancels deferred creation", StopCancelsDeferredCreation},
                           {"Object and constraint lifetimes", ObjectAndConstraintLifetimes},

@@ -2,7 +2,7 @@
 #define PHYSICS_RT_PHYSICSSDK_H
 
 // VxMath's legacy compiler header defaults DLL_EXPORT to dllexport. Select
-// the host's import/static contract before declaring CK2 SDK classes here.
+// the host's DLL import or static-link definitions before declaring CK2 SDK classes here.
 #include "VxDefines.h"
 #undef DLL_EXPORT
 #if defined(_WIN32) && !defined(CK_LIB)

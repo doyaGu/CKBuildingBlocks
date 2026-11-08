@@ -27,16 +27,17 @@ temporarily replaced test modules and verify their hashes after restoration.
 Do not deploy Ballanced's ordinary DLL into that original runtime: its C++
 imports differ even though the public plugin entry points have the same names.
 
-## Arithmetic contract
+## Floating-point evaluation and storage
 
 Enable `IVP_ENABLE_X87_EMULATION=ON` for the original evaluation and write-back
 rules. It defaults to `ON`. The native Player also enables
 `VXMATH_ENABLE_X87_EMULATION=ON`; both settings are used for original replay
 acceptance. The original Ipion convex hull builder remains the default.
 
-On MSVC Win32, IVP propagates `/arch:IA32` to preserve the native precision
-contract. VxMath owns portable extended arithmetic through ordinary structures
-and functions, with the existing SIMD abstraction for binary32 matrix work.
+On MSVC Win32, IVP propagates `/arch:IA32` to preserve x87 intermediate
+precision and floating-point return values. VxMath owns portable extended
+arithmetic through ordinary structures and functions, with the existing SIMD
+abstraction for binary32 matrix work.
 The non-SIMD implementation evaluates the same operations in software. Native
 IVP and VxMath share the existing FPU control-word API across platforms.
 
@@ -81,8 +82,9 @@ to the directory containing the four local component repositories.
 
 The normal Ballanced build also registers host tests when `CKBB_BUILD_TESTS`,
 `BUILD_TESTING` and `CKRE_BUILD_STATIC` are enabled. The host suite exercises
-all 15 BB contracts and behavior execution, numerical write boundaries,
-matrix conversion, caching, scale, state access, callbacks and real teardown.
+the input/output ports and parameters of all 15 building blocks, behavior
+execution, float rounding, matrix conversion, caching, scale, state access,
+callbacks and real teardown.
 IVP's 11 core tests and two extended-arithmetic tests are registered separately.
 Windows shared builds additionally test loading the actual module and its
 plugin/state/diagnostic exports.

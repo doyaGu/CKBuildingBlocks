@@ -246,7 +246,7 @@ static void PhysicsWorldMatrixUpdatesKeepWorldScaleStable()
     DeletePhysicsObject(*manager, *AsEntity(entity));
 }
 
-static void CollisionCachePolicyIsExplicitAndDeterministic()
+static void CollisionCacheReusesShapesBySurfaceName()
 {
     const std::string managerSource = ReadSource("physics_RT/CKIpionManager.cpp");
     const std::string behaviorSource = ReadSource("physics_RT/Behaviors/Physicalize.cpp");
@@ -313,7 +313,7 @@ int main()
 #endif
     InitializePhysicsHostTests();
     const PhysicsTestCase tests[] = {
-        {"Collision cache policy is explicit and deterministic", &CollisionCachePolicyIsExplicitAndDeterministic},
+        {"Collision cache reuses shapes by surface name", &CollisionCacheReusesShapesBySurfaceName},
         {"Named surface reuse does not need geometry", &NamedSurfaceReuseDoesNotNeedGeometry},
         {"Unknown named surface does not guess current mesh", &UnknownNamedSurfaceDoesNotGuessCurrentMesh},
         {"Physics world matrix updates keep scale stable", &PhysicsWorldMatrixUpdatesKeepWorldScaleStable},
