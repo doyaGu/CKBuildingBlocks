@@ -62,6 +62,7 @@ int SetLevelScore(const CKBehaviorContext &behcontext)
     {
         man->PostPlayerCommand(TT_PLAYER_COMMAND_NO_GAMEINFO, 0x14, 0);
         context->OutputToConsoleExBeep("SetLevelScore: gameInfo not exists");
+        beh->ActivateOutput(0);
         return CKBR_OK;
     }
 

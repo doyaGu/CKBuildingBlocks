@@ -66,16 +66,21 @@ int CreateNewGameInfo(const CKBehaviorContext &behcontext)
     }
 
     CGameInfo *gameInfo = man->GetGameInfo();
-    if (!gameInfo)
+    if (gameInfo)
     {
-        gameInfo = new CGameInfo;
-        if (path)
-        {
-            strncpy(gameInfo->regSubkey, path, sizeof(gameInfo->regSubkey) - 1);
-            gameInfo->regSubkey[sizeof(gameInfo->regSubkey) - 1] = '\0';
-        }
-        man->SetGameInfo(gameInfo);
+        // Retail TT_CreateNewGameInfo (0x10003F40) leaves the address output untouched
+        // when a game info already exists.
+        beh->ActivateOutput(0);
+        return CKBR_OK;
     }
+
+    gameInfo = new CGameInfo;
+    if (path)
+    {
+        strncpy(gameInfo->regSubkey, path, sizeof(gameInfo->regSubkey) - 1);
+        gameInfo->regSubkey[sizeof(gameInfo->regSubkey) - 1] = '\0';
+    }
+    man->SetGameInfo(gameInfo);
 
     beh->SetOutputParameterValue(0, &gameInfo, sizeof(CGameInfo *));
     beh->ActivateOutput(0);

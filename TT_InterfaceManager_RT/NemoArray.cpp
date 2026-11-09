@@ -402,7 +402,10 @@ void CNemoArray::Read(CKDataArray *array)
         for (int c = 0; c < size; ++c, ++it)
         {
             CK_ARRAYTYPE type = array->GetColumnType(c);
-            if (type != 0 && it->GetType() == type)
+            // Retail CNemoArray::Read (0x1000A9D0) stops at the first column without a type.
+            if (type == 0)
+                break;
+            if (it->GetType() == type)
             {
                 if (type == CKARRAYTYPE_STRING)
                 {
@@ -424,23 +427,25 @@ void CNemoArray::Write(CKDataArray *array)
     const int size = Size();
     if (array->GetRowCount() > 0 && array->GetColumnCount() == size)
     {
-        XArray<CNemoElement>::Iterator it = m_Elements.Begin();
-        for (int c = 0; c < size; ++c, ++it)
+        // Retail CNemoArray::Write (0x1000ADF0) only advances the array column after a
+        // stored element; a type mismatch keeps the column for the next element.
+        int c = 0;
+        for (XArray<CNemoElement>::Iterator it = m_Elements.Begin(); it != m_Elements.End(); ++it)
         {
             CK_ARRAYTYPE type = array->GetColumnType(c);
-            if (type != 0 && it->GetType() == type)
+            if (it->GetType() != type)
+                continue;
+            if (type == CKARRAYTYPE_STRING)
             {
-                if (type == CKARRAYTYPE_STRING)
-                {
-                    char str[128];
-                    array->GetElementStringValue(0, c, str, sizeof(str));
-                    it->SetString(str);
-                }
-                else
-                {
-                    it->SetValue(array->GetElement(0, c), type);
-                }
+                char str[128];
+                array->GetElementStringValue(0, c, str, sizeof(str));
+                it->SetString(str);
             }
+            else
+            {
+                it->SetValue(array->GetElement(0, c), type);
+            }
+            ++c;
         }
     }
 }

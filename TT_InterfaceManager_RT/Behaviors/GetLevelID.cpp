@@ -60,8 +60,9 @@ int GetLevelID(const CKBehaviorContext &behcontext)
     CGameInfo *gameInfo = man->GetGameInfo();
     if (!gameInfo)
     {
-        man->PostPlayerCommand(TT_PLAYER_COMMAND_NO_GAMEINFO, 0x0E, 0);
+        man->PostPlayerCommand(TT_PLAYER_COMMAND_NO_GAMEINFO, 0x0C, 0);
         context->OutputToConsoleExBeep("GetLevelID: gameInfo not exists");
+        beh->ActivateOutput(0);
         return CKBR_OK;
     }
 

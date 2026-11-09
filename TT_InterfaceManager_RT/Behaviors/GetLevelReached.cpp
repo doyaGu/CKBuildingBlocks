@@ -62,6 +62,7 @@ int GetLevelReached(const CKBehaviorContext &behcontext)
     {
         man->PostPlayerCommand(TT_PLAYER_COMMAND_NO_GAMEINFO, 0x0F, 0);
         context->OutputToConsoleExBeep("GetLevelReached: gameInfo not exists");
+        beh->ActivateOutput(0);
         return CKBR_OK;
     }
 

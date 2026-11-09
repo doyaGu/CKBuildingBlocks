@@ -62,10 +62,12 @@ int SetLevelID(const CKBehaviorContext &behcontext)
     {
         man->PostPlayerCommand(TT_PLAYER_COMMAND_NO_GAMEINFO, 0x12, 0);
         context->OutputToConsoleExBeep("SetLevelID: gameInfo not exists");
+        beh->ActivateOutput(0);
         return CKBR_OK;
     }
 
-    beh->GetInputParameterValue(0, &gameInfo->levelID);
+    // Retail TT_SetLevelID stores the ID into the level-bonus slot (game info +0x424).
+    beh->GetInputParameterValue(0, &gameInfo->levelBonus);
 
     beh->ActivateOutput(0);
     return CKBR_OK;

@@ -63,6 +63,7 @@ int SetGameData(const CKBehaviorContext &behcontext)
     {
         man->PostPlayerCommand(TT_PLAYER_COMMAND_NO_GAMEINFO, 0x06, 0);
         context->OutputToConsoleExBeep("SetGameData: gameInfo not exists");
+        beh->ActivateOutput(0);
         return CKBR_OK;
     }
 

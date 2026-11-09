@@ -21,4 +21,10 @@ CKBOOL TTWriteRegistryInteger(VxConfigRoot root, const char *subKey, const char 
 CKBOOL TTReadRegistryFloat(VxConfigRoot root, const char *subKey, const char *valueName, float *value);
 CKBOOL TTWriteRegistryFloat(VxConfigRoot root, const char *subKey, const char *valueName, float value);
 
+// RegQueryValueEx into a 4-byte buffer: float entries yield their IEEE bits (what a
+// REG_DWORD written from a float holds), other entries their integer value.
+CKBOOL TTQueryRegistryDword(VxConfigRoot root, const char *subKey, const char *valueName, CKDWORD *value);
+// RegQueryValueEx into a fixed buffer: a value that does not fit fails instead of truncating.
+CKBOOL TTQueryRegistryString(VxConfigRoot root, const char *subKey, const char *valueName, char *buffer, size_t bufferSize);
+
 #endif

@@ -62,6 +62,7 @@ int GetGameName(const CKBehaviorContext &behcontext)
     {
         man->PostPlayerCommand(TT_PLAYER_COMMAND_NO_GAMEINFO, 0x03, 0);
         context->OutputToConsoleExBeep("GetGameName: gameInfo not exists");
+        beh->ActivateOutput(0);
         return CKBR_OK;
     }
 

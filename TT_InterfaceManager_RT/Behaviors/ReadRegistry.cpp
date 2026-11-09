@@ -13,18 +13,18 @@
 #include <string.h>
 #include "RegistryUtils.h"
 
-#ifndef _MSC_VER
-#define _snprintf snprintf
-#endif
-
 CKObjectDeclaration *FillBehaviorReadRegistryDecl();
 CKERROR CreateReadRegistryProto(CKBehaviorPrototype **pproto);
 int ReadRegistry(const CKBehaviorContext &behcontext);
 CKERROR ReadRegistryCallBack(const CKBehaviorContext &behcontext);
 
-static CKBOOL ReadIntegerFromRegistry(const char *subKey, CKContext *context, const char *valueName, int *value);
-static CKBOOL ReadFloatFromRegistry(const char *subKey, CKContext *context, const char *valueName, float *value);
-static CKBOOL ReadStringFromRegistry(const char *subKey, CKContext *context, const char *valueName, char *buffer, size_t bufferSize);
+// Retail reads every value from HKEY_LOCAL_MACHINE (TT_WriteRegistry writes HKEY_CURRENT_USER).
+static const VxConfigRoot ReadRegistryRoot = VXCONFIG_ROOT_LOCAL_MACHINE;
+// Retail queries strings into a 256-byte buffer and sets the string output with that size.
+static const int ReadRegistryStringSize = 256;
+
+static void *ReadDwordFromRegistry(CKBehavior *beh, CKContext *context, const char *subKey, const char *valueName, CKDWORD *data);
+static void *ReadStringFromRegistry(CKBehavior *beh, CKContext *context, const char *subKey, const char *valueName, char *buffer);
 
 CKObjectDeclaration *FillBehaviorReadRegistryDecl()
 {
@@ -78,184 +78,106 @@ int ReadRegistry(const CKBehaviorContext &behcontext)
     CKBOOL saveArrayMode = FALSE;
     beh->GetLocalParameterValue(0, &saveArrayMode);
 
-    char regSection[200] = {0};
-    char regEntry[64] = {0};
-    char arrayToLoad[64] = {0};
-    beh->GetInputParameterValue(0, regSection);
+    const char *regSection = (const char *)beh->GetInputParameterReadDataPtr(0);
+    if (!regSection)
+        regSection = "";
 
-    if (saveArrayMode)
-        beh->GetInputParameterValue(3, arrayToLoad);
-    else
-        beh->GetInputParameterValue(1, regEntry);
+    CKDWORD data = 0;
+    char str[ReadRegistryStringSize];
 
-    if (saveArrayMode)
+    if (!saveArrayMode)
     {
-        CKDataArray *array = (CKDataArray *)beh->GetInputParameterObject(2);
-        if (!array)
-        {
-            context->OutputToConsoleExBeep("TT_ReadRegistry: Destination array is NULL");
-            beh->ActivateOutput(1);
+        // Retail TT_ReadRegistry (0x10007A00), single value: Reg-Section is the key as given.
+        const char *regEntry = (const char *)beh->GetInputParameterReadDataPtr(1);
+        if (!regEntry)
+            regEntry = "";
+
+        CKParameterOut *out = beh->GetOutputParameter(0);
+        if (!out)
             return CKBR_OK;
-        }
-        int cols = array->GetColumnCount();
-        int rows = array->GetRowCount();
-        const char *arrayName = (arrayToLoad[0] != '\0') ? arrayToLoad : array->GetName();
-        if (!arrayName || arrayName[0] == '\0')
-        {
-            context->OutputToConsoleExBeep("TT_ReadRegistry: Array name is empty");
-            beh->ActivateOutput(1);
-            return CKBR_OK;
-        }
-        char baseSection[200] = {0};
-        const int baseLen = _snprintf(baseSection, sizeof(baseSection), "%s\\%s\\", regSection, arrayName);
-        if (baseLen < 0 || baseLen >= (int)sizeof(baseSection))
-        {
-            context->OutputToConsoleExBeep("TT_ReadRegistry: Registry path is too long");
-            beh->ActivateOutput(1);
-            return CKBR_OK;
-        }
 
-        if (cols > 0)
+        void *value;
+        int size = 0;
+        CKGUID guid = out->GetGUID();
+        if (guid == CKPGUID_INT || guid == CKPGUID_FLOAT || guid == CKPGUID_BOOL)
         {
-            for (int c = 0; c < cols; ++c)
-            {
-                const int sectionLen = _snprintf(regSection, sizeof(regSection), "%s%d\\", baseSection, c);
-                if (sectionLen < 0 || sectionLen >= (int)sizeof(regSection))
-                {
-                    context->OutputToConsoleExBeep("TT_ReadRegistry: Registry path is too long");
-                    beh->ActivateOutput(1);
-                    return CKBR_OK;
-                }
-
-                CK_ARRAYTYPE type = array->GetColumnType(c);
-                for (int i = 0; i < rows; ++i)
-                {
-                    switch (type)
-                    {
-                    case CKARRAYTYPE_INT:
-                    {
-                        const int entryLen = _snprintf(regEntry, sizeof(regEntry), "%d", i);
-                        if (entryLen < 0 || entryLen >= (int)sizeof(regEntry))
-                        {
-                            context->OutputToConsoleExBeep("TT_ReadRegistry: Registry entry is too long");
-                            beh->ActivateOutput(1);
-                            return CKBR_OK;
-                        }
-                        int val = 0;
-                        if (!ReadIntegerFromRegistry(regSection, context, regEntry, &val))
-                        {
-                            beh->ActivateOutput(1);
-                            return CKBR_OK;
-                        }
-                        array->SetElementValue(i, c, &val, sizeof(val));
-                    }
-                    break;
-
-                    case CKARRAYTYPE_FLOAT:
-                    {
-                        const int entryLen = _snprintf(regEntry, sizeof(regEntry), "%d", i);
-                        if (entryLen < 0 || entryLen >= (int)sizeof(regEntry))
-                        {
-                            context->OutputToConsoleExBeep("TT_ReadRegistry: Registry entry is too long");
-                            beh->ActivateOutput(1);
-                            return CKBR_OK;
-                        }
-                        float val = 0.0f;
-                        if (!ReadFloatFromRegistry(regSection, context, regEntry, &val))
-                        {
-                            beh->ActivateOutput(1);
-                            return CKBR_OK;
-                        }
-                        array->SetElementValue(i, c, &val, sizeof(val));
-                    }
-                    break;
-
-                    case CKARRAYTYPE_PARAMETER:
-                    {
-                        CKParameter *parameter = *(CKParameter **)array->GetElement(i, c);
-                        if (parameter->GetGUID() != CKPGUID_BOOL)
-                        {
-                            context->OutputToConsoleExBeep("TT_ReadRegistry: ArrayColumnType invalid(use string/bool/int/float)");
-                            beh->ActivateOutput(1);
-                            return CKBR_OK;
-                        }
-                        const int entryLen = _snprintf(regEntry, sizeof(regEntry), "%d", i);
-                        if (entryLen < 0 || entryLen >= (int)sizeof(regEntry))
-                        {
-                            context->OutputToConsoleExBeep("TT_ReadRegistry: Registry entry is too long");
-                            beh->ActivateOutput(1);
-                            return CKBR_OK;
-                        }
-                        int val = 0;
-                        if (!ReadIntegerFromRegistry(regSection, context, regEntry, &val))
-                        {
-                            beh->ActivateOutput(1);
-                            return CKBR_OK;
-                        }
-                        array->SetElementValue(i, c, &val, sizeof(val));
-                    }
-                    break;
-                    case CKARRAYTYPE_STRING:
-                    {
-                        const int entryLen = _snprintf(regEntry, sizeof(regEntry), "%d", i);
-                        if (entryLen < 0 || entryLen >= (int)sizeof(regEntry))
-                        {
-                            context->OutputToConsoleExBeep("TT_ReadRegistry: Registry entry is too long");
-                            beh->ActivateOutput(1);
-                            return CKBR_OK;
-                        }
-                        char str[256] = {0};
-                        if (!ReadStringFromRegistry(regSection, context, regEntry, str, sizeof(str)))
-                        {
-                            beh->ActivateOutput(1);
-                            return CKBR_OK;
-                        }
-                        array->SetElementStringValue(i, c, str);
-                    }
-                    break;
-                    default:
-                        break;
-                    }
-                }
-            }
-        }
-    }
-    else
-    {
-        CKGUID guid = beh->GetOutputParameter(0)->GetGUID();
-        if (guid == CKPGUID_INT || guid == CKPGUID_BOOL)
-        {
-            int val = 0;
-            if (!ReadIntegerFromRegistry(regSection, context, regEntry, &val))
-            {
-                beh->ActivateOutput(1);
-                return CKBR_OK;
-            }
-            beh->SetOutputParameterValue(0, &val);
-        }
-        else if (guid == CKPGUID_FLOAT)
-        {
-            float val = 0.0f;
-            if (!ReadFloatFromRegistry(regSection, context, regEntry, &val))
-            {
-                beh->ActivateOutput(1);
-                return CKBR_OK;
-            }
-            beh->SetOutputParameterValue(0, &val);
+            // Float and bool outputs take the raw REG_DWORD bits as well.
+            value = ReadDwordFromRegistry(beh, context, regSection, regEntry, &data);
         }
         else if (guid == CKPGUID_STRING)
         {
-            char str[256] = {0};
-            if (!ReadStringFromRegistry(regSection, context, regEntry, str, sizeof(str)))
+            value = ReadStringFromRegistry(beh, context, regSection, regEntry, str);
+            size = ReadRegistryStringSize;
+        }
+        else
+        {
+            return CKBR_OK;
+        }
+
+        // A failed read has already activated FAILED; retail still sets the output from a
+        // NULL buffer and activates OK. Size 0 keeps that a no-op instead of resizing the
+        // string output to an uninitialised 256-byte buffer.
+        beh->SetOutputParameterValue(0, value, value ? size : 0);
+        beh->ActivateOutput(0);
+        return CKBR_OK;
+    }
+
+    // Array mode: one key per column, "<section>\<Array to load>\<column>\", one value per row.
+    CKDataArray *array = (CKDataArray *)beh->GetInputParameterObject(2);
+    if (!array)
+    {
+        context->OutputToConsoleExBeep("TT_ReadRegistry: Destination array is NULL");
+        beh->ActivateOutput(1);
+        return CKBR_OK;
+    }
+
+    const char *arrayToLoad = (const char *)beh->GetInputParameterReadDataPtr(3);
+    XString base(regSection);
+    base << "\\" << (arrayToLoad ? arrayToLoad : "") << "\\";
+
+    const int cols = array->GetColumnCount();
+    const int rows = array->GetRowCount();
+    for (int c = 0; c < cols; ++c)
+    {
+        CK_ARRAYTYPE type = array->GetColumnType(c);
+        XString subKey(base);
+        subKey << c << "\\";
+        for (int i = 0; i < rows; ++i)
+        {
+            XString regEntry;
+            regEntry << i;
+
+            void *value;
+            switch (type)
             {
-                beh->ActivateOutput(1);
-                return CKBR_OK;
+            case CKARRAYTYPE_INT:
+            case CKARRAYTYPE_FLOAT:
+                value = ReadDwordFromRegistry(beh, context, subKey.CStr(), regEntry.CStr(), &data);
+                break;
+            case CKARRAYTYPE_PARAMETER:
+            {
+                CKParameter *parameter = *(CKParameter **)array->GetElement(i, c);
+                if (!parameter || parameter->GetGUID() != CKPGUID_BOOL)
+                {
+                    context->OutputToConsoleExBeep("TT_ReadRegistry: ArrayCollumnType invalid(use string/bool/int/float)");
+                    continue;
+                }
+                value = ReadDwordFromRegistry(beh, context, subKey.CStr(), regEntry.CStr(), &data);
+                break;
             }
-            beh->SetOutputParameterValue(0, str, (int)strlen(str) + 1);
+            case CKARRAYTYPE_STRING:
+                value = ReadStringFromRegistry(beh, context, subKey.CStr(), regEntry.CStr(), str);
+                break;
+            default:
+                continue;
+            }
+            // Retail keeps going after a failed read and stores the NULL result, which
+            // clears an int/float/string cell and leaves a bool parameter unchanged.
+            array->SetElementValue(i, c, value, 0);
         }
     }
 
-    beh->ActivateOutput(0);
+    // Retail never activates OK in array mode.
     return CKBR_OK;
 }
 
@@ -263,8 +185,6 @@ CKERROR ReadRegistryCallBack(const CKBehaviorContext &behcontext)
 {
     CKBehavior *beh = behcontext.Behavior;
     CKContext *context = behcontext.Context;
-
-    char buffer[16];
 
     switch (behcontext.CallbackMessage)
     {
@@ -277,32 +197,29 @@ CKERROR ReadRegistryCallBack(const CKBehaviorContext &behcontext)
         CKParameterOut *data = beh->GetOutputParameter(0);
         if (!data)
         {
-            snprintf(buffer, sizeof(buffer), "Data");
-            data = beh->CreateOutputParameter(buffer, CKPGUID_INT);
+            beh->CreateOutputParameter("Data", CKPGUID_INT);
+            break;
         }
 
-        if (data)
+        CKGUID guid = data->GetGUID();
+        if (guid != CKPGUID_INT &&
+            guid != CKPGUID_FLOAT &&
+            guid != CKPGUID_BOOL &&
+            guid != CKPGUID_STRING)
         {
-            CKGUID guid = data->GetGUID();
-            if (guid != CKPGUID_INT &&
-                guid != CKPGUID_FLOAT &&
-                guid != CKPGUID_BOOL &&
-                guid != CKPGUID_STRING)
+            context->DestroyObject(data);
+            data = beh->CreateOutputParameter("Data", CKPGUID_INT);
+            if (data)
             {
-                snprintf(buffer, sizeof(buffer), "Data");
-                context->DestroyObject(data);
-                data = beh->CreateOutputParameter(buffer, CKPGUID_INT);
-                if (data)
-                {
-                    int zero = 0;
-                    data->SetValue(&zero, sizeof(zero));
-                }
-                context->OutputToConsoleExBeep("TT_ReadRegistry: ArrayColumnType invalid(use string/bool/int/float)");
+                int zero = 0;
+                data->SetValue(&zero, sizeof(zero));
             }
+            context->OutputToConsoleExBeep("TT_ReadRegistry: OutputParameter-Type invalid(use string/bool/int/float)");
         }
+        break;
     }
     default:
-        break;
+        return CKBR_OK;
     }
 
     CKBOOL saveArrayMode = FALSE;
@@ -325,45 +242,28 @@ CKERROR ReadRegistryCallBack(const CKBehaviorContext &behcontext)
     return CKBR_OK;
 }
 
-static CKBOOL ReadIntegerFromRegistry(const char *subKey, CKContext *context, const char *valueName, int *value)
+// Retail TT_ReadRegistry_0/_2 (0x10007ED0/0x10007FA0): REG_DWORD query, FAILED on error.
+static void *ReadDwordFromRegistry(CKBehavior *beh, CKContext *context, const char *subKey, const char *valueName, CKDWORD *data)
 {
-    if (!value)
-        return FALSE;
-
-    if (!TTReadRegistryInteger(VXCONFIG_ROOT_CURRENT_USER, subKey, valueName, value))
+    *data = 0;
+    if (!TTQueryRegistryDword(ReadRegistryRoot, subKey, valueName, data))
     {
-        context->OutputToConsoleExBeep("TT_ReadRegistry:  ReadError: %s.", valueName);
-        return FALSE;
+        beh->ActivateOutput(1);
+        context->OutputToConsoleExBeep("TT_ReadRegistry: ReadError: %s %d.", valueName, 0);
+        return NULL;
     }
-    return TRUE;
+    return data;
 }
 
-static CKBOOL ReadFloatFromRegistry(const char *subKey, CKContext *context, const char *valueName, float *value)
+// Retail TT_ReadRegistry_1 (0x10008070): REG_SZ query into 256 bytes, FAILED on error.
+static void *ReadStringFromRegistry(CKBehavior *beh, CKContext *context, const char *subKey, const char *valueName, char *buffer)
 {
-    if (!value)
-        return FALSE;
-
-    if (!TTReadRegistryFloat(VXCONFIG_ROOT_CURRENT_USER, subKey, valueName, value))
+    memset(buffer, 0, ReadRegistryStringSize);
+    if (!TTQueryRegistryString(ReadRegistryRoot, subKey, valueName, buffer, ReadRegistryStringSize))
     {
-        context->OutputToConsoleExBeep("TT_ReadRegistry:  ReadError: %s.", valueName);
-        return FALSE;
+        beh->ActivateOutput(1);
+        context->OutputToConsoleExBeep("TT_ReadRegistry: ReadError: %s %d.", valueName, 0);
+        return NULL;
     }
-    return TRUE;
-}
-
-static CKBOOL ReadStringFromRegistry(const char *subKey, CKContext *context, const char *valueName, char *buffer, size_t bufferSize)
-{
-    if (!buffer || bufferSize == 0)
-        return FALSE;
-
-    buffer[0] = '\0';
-
-    if (!TTReadRegistryString(VXCONFIG_ROOT_CURRENT_USER, subKey, valueName, buffer, bufferSize))
-    {
-        context->OutputToConsoleExBeep("TT_ReadRegistry:  ReadError: %s.", valueName);
-        return FALSE;
-    }
-
-    buffer[bufferSize - 1] = '\0';
-    return TRUE;
+    return buffer;
 }
