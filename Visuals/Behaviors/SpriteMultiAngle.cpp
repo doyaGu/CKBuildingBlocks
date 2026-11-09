@@ -156,6 +156,9 @@ int SpriteMultiAngle(const CKBehaviorContext &behcontext)
 
 /*******************************************************/
 /******************** INIT CALLBACK ********************/
+// Ballance Visuals.dll 0x2578F270: the sprite is created on ATTACH and LOAD
+// (not CREATE), placed at the owner and the owner hidden in the same step;
+// DETACH destroys the sprite and shows the owner again; DELETE is ignored.
 CKERROR spriteinitcallback(const CKBehaviorContext &behcontext)
 {
     CKBehavior *beh = behcontext.Behavior;
@@ -163,19 +166,22 @@ CKERROR spriteinitcallback(const CKBehaviorContext &behcontext)
 
     switch (behcontext.CallbackMessage)
     {
-    case CKM_BEHAVIORCREATE:
+    case CKM_BEHAVIORATTACH:
     case CKM_BEHAVIORLOAD:
     {
         // We create the 3dsprite
         CKSprite3D *cksprite3d = (CKSprite3D *)ctx->CreateObject(CKCID_SPRITE3D, "MultiSprite", beh->IsDynamic() ? CK_OBJECTCREATION_DYNAMIC : CK_OBJECTCREATION_NONAMECHECK);
+        if (!cksprite3d)
+            return CKBR_OK;
         cksprite3d->ModifyObjectFlags(CK_OBJECT_NOTTOBELISTEDANDSAVED, 0);
-        // if(!cksprite3d) return 0;
         cksprite3d->SetMode(VXSPRITE3D_YROTATE);
         // and save it as a local param
         beh->SetLocalParameterObject(0, cksprite3d);
 
         // We create the Material of the sprite
         CKMaterial *ckmat = (CKMaterial *)ctx->CreateObject(CKCID_MATERIAL, "MultiMaterial", beh->IsDynamic() ? CK_OBJECTCREATION_DYNAMIC : CK_OBJECTCREATION_NONAMECHECK);
+        if (!ckmat)
+            return CKBR_OK;
         ckmat->ModifyObjectFlags(CK_OBJECT_NOTTOBELISTEDANDSAVED, 0);
         ckmat->SetDiffuse(VxColor(1.0f, 1.0f, 1.0f, 1.0f));
         ckmat->SetSpecular(VxColor(0.0f, 0.0f, 0.0f));
@@ -187,7 +193,7 @@ CKERROR spriteinitcallback(const CKBehaviorContext &behcontext)
 
         ckmat->SetTexture0(tex);
         // we get a BOOL (input parameter)
-        CKBOOL t;
+        CKBOOL t = FALSE;
         beh->GetInputParameterValue(2, &t);
 
         if (tex)
@@ -195,18 +201,17 @@ CKERROR spriteinitcallback(const CKBehaviorContext &behcontext)
             tex->SetTransparent(t);
             if (t)
             {
-                // we get a int (input parameter)
-                VxColor col;
+                VxColor col(0.0f, 0.0f, 0.0f, 0.0f);
                 beh->GetInputParameterValue(3, &col);
 
                 tex->SetTransparentColor(RGBAFTOCOLOR(col.r, col.g, col.b, col.a));
             }
         }
 
-        float sizex;
+        float sizex = 1.0f;
         beh->GetInputParameterValue(0, &sizex);
 
-        float sizey;
+        float sizey = 1.0f;
         beh->GetInputParameterValue(1, &sizey);
 
         Vx2DVector vect(sizex, sizey);
@@ -217,22 +222,19 @@ CKERROR spriteinitcallback(const CKBehaviorContext &behcontext)
 
         // we now have to add the emitter to the owner scene(s)
         CKScene *scene = behcontext.CurrentScene;
-        if (beh->IsParentScriptActiveInScene(scene))
+        if (scene && beh->IsParentScriptActiveInScene(scene))
         {
             scene->AddObjectToScene(cksprite3d);
         }
-    }
-    break;
 
-    case CKM_BEHAVIORATTACH:
-    {
+        // Place the sprite at the owner and hide the owner.
         CK3dEntity *ent = (CK3dEntity *)beh->GetOwner();
-        // if(!ent) return 0;
-
-        VxVector V(0.0, 0.0, 0.0);
-        CKSprite3D *cksprite3d = (CKSprite3D *)beh->GetLocalParameterObject(0);
-        cksprite3d->SetPosition(&V, ent);
-        ent->Show(CKHIDE);
+        if (ent)
+        {
+            VxVector V(0.0f, 0.0f, 0.0f);
+            cksprite3d->SetPosition(&V, ent);
+            ent->Show(CKHIDE);
+        }
     }
     break;
 
@@ -241,15 +243,11 @@ CKERROR spriteinitcallback(const CKBehaviorContext &behcontext)
         CK3dEntity *ent = (CK3dEntity *)beh->GetOwner();
         if (ent)
         {
+            CKObject *spr = beh->GetLocalParameterObject(0);
+            if (spr)
+                ctx->DestroyObject(spr);
             ent->Show(CKSHOW);
         }
-    }
-    break;
-
-    case CKM_BEHAVIORDELETE:
-    {
-        CKSprite3D *spr = (CKSprite3D *)beh->GetLocalParameterObject(0);
-        ctx->DestroyObject(spr);
     }
     break;
 
