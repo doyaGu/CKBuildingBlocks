@@ -23,7 +23,7 @@ CKERROR FollowCameraCallBack(const CKBehaviorContext &behcontext);
 CKObjectDeclaration *FillBehaviorFollowCameraDecl()
 {
     CKObjectDeclaration *od = CreateCKObjectDeclaration("TT FollowCamera");
-    od->SetDescription("Camera follows an object");
+    od->SetDescription("Kamera folgt einem Objekt");
     od->SetCategory("TT Toolbox/3D Transformations");
     od->SetType(CKDLL_BEHAVIORPROTOTYPE);
     od->SetGuid(CKGUID(0x595b4723, 0x576c6749));
@@ -80,6 +80,19 @@ int FollowCamera(const CKBehaviorContext &behcontext)
     if (!camera)
         return CKBR_OWNERERROR;
 
+    // TT_Toolbox_RT.dll 0x10003250: the camera's own target (vtable +0x210,
+    // CKCamera::GetTarget) is fetched first and is what the block moves to the
+    // view point; the camera is never rotated with LookAt.
+    CK3dEntity *cameraTarget = camera->GetTarget();
+
+    // Stop is handled before any parameter is read or the camera touched.
+    if (beh->IsInputActive(1))
+    {
+        beh->ActivateInput(1, FALSE);
+        beh->ActivateOutput(1, TRUE);
+        return CKBR_OK;
+    }
+
     CK3dEntity *targetEntity = (CK3dEntity *)beh->GetInputParameterObject(0);
 
     VxVector viewOffset, cameraOffset;
@@ -98,18 +111,16 @@ int FollowCamera(const CKBehaviorContext &behcontext)
     backAtt = 0.25f;
     beh->GetInputParameterValue(6, &backAtt);
 
+    // The DLL takes |m[0][0]| and |m[1][1]| (elements 0 and 5) when m[0][0] < 0.
     VxMatrix mat = camera->GetWorldMatrix();
     if (mat[0][0] < 0.0f)
     {
         mat[0][0] = fabsf(mat[0][0]);
-        mat[3][3] = fabsf(mat[3][3]);
+        mat[1][1] = fabsf(mat[1][1]);
         camera->SetWorldMatrix(mat);
     }
 
     camera->SetFov(fovAngle);
-
-    VxVector viewPosOld = VxVector::axis0();
-    VxVector camPosOld = VxVector::axis0();
 
     VxVector targetViewPos = VxVector::axis0();
     VxVector targetCamPos = VxVector::axis0();
@@ -120,12 +131,8 @@ int FollowCamera(const CKBehaviorContext &behcontext)
         targetEntity->Transform(&targetCamPos, &cameraOffset);
     }
 
-    if (beh->IsInputActive(1))
-    {
-        beh->ActivateInput(1, FALSE);
-        beh->ActivateOutput(1, TRUE);
-        return CKBR_OK;
-    }
+    VxVector viewPosOld = VxVector::axis0();
+    VxVector camPosOld = VxVector::axis0();
 
     if (beh->IsInputActive(0))
     {
@@ -142,10 +149,12 @@ int FollowCamera(const CKBehaviorContext &behcontext)
         }
         else
         {
-            VxVector pos;
-            camera->GetPosition(&pos);
-            camPosOld = pos;
-            viewPosOld = targetViewPos;
+            // Start from where the camera and its target currently are.
+            camera->GetPosition(&camPosOld);
+            if (cameraTarget)
+                cameraTarget->GetPosition(&viewPosOld);
+            else
+                viewPosOld = targetViewPos;
         }
 
         beh->SetLocalParameterValue(LOCAL_VIEW_POS_OLD, &viewPosOld);
@@ -166,7 +175,8 @@ int FollowCamera(const CKBehaviorContext &behcontext)
 
     if (timeBased)
     {
-        float deltaTime = behcontext.DeltaTime;
+        // The DLL reads the time manager's last delta time here (offset 0xA0).
+        float deltaTime = beh->GetCKContext()->GetTimeManager()->GetLastDeltaTime();
         float oldDeltaTime = 0.0f;
         beh->GetLocalParameterValue(LOCAL_OLD_DELTA_TIME, &oldDeltaTime);
 
@@ -197,18 +207,20 @@ int FollowCamera(const CKBehaviorContext &behcontext)
     viewPosOld += viewDelta * viewAtt;
     camPosOld += camDelta * cameraAtt;
 
-    VxVector camToView = viewPosOld - camPosOld;
-    float camDist = Magnitude(cameraOffset);
-    float viewDist = Magnitude(camToView);
-
-    if (camDist > viewDist)
+    // Pull the camera back when it is closer to the followed entity than the
+    // Camera Offset length (distance measured in the entity's local frame).
+    VxVector camLocal(0.0f, 0.0f, 0.0f);
+    if (targetEntity)
+        targetEntity->InverseTransform(&camLocal, &camPosOld);
+    if (Magnitude(cameraOffset) > Magnitude(camLocal))
     {
         VxVector diff = targetCamPos - camPosOld;
         camPosOld += diff * backAtt;
     }
 
+    if (cameraTarget)
+        cameraTarget->SetPosition(&viewPosOld);
     camera->SetPosition(&camPosOld);
-    camera->LookAt(&viewPosOld);
 
     beh->SetLocalParameterValue(LOCAL_VIEW_POS_OLD, &viewPosOld);
     beh->SetLocalParameterValue(LOCAL_CAM_POS_OLD, &camPosOld);
