@@ -33,35 +33,27 @@ extern int CMDecalTR[3][3];
 
 void ConvolveTexture3x3(CKTexture *texture, int kernel[3][3], int scale);
 
-#if defined(_M_IX86) || defined(_M_X64) || defined(_M_ARM64) || defined(_M_ARM64EC) || defined(__i386__) || defined(__x86_64__) || defined(__aarch64__)
+// Pixel kernels matching the integer MMX/SSE2 code of the original DLL.
+// Builds the 24-entry pmaddwd weight table from a 3x3 kernel and a non-zero scale.
+void BuildConvolutionKernelData(int kernel[3][3], int scale, short kernelData[24]);
+// paddedSource is (width + 2) x (height + 2) with clamped borders; writes width x height.
 void ConvolvePaddedPixels3x3(const CKDWORD *paddedSource,
                              CKDWORD *destination,
                              int width,
                              int height,
                              const short *kernelData);
-void ConvolveTemporalPixels3x3(const CKDWORD *currentFrame,
-                               CKDWORD *previousFrame,
-                               int width,
-                               int height,
-                               const short *kernelData,
-                               int damping);
+// Water Texture step: writes the new frame over previousFrame.
 void ApplyWaterRipple(CKDWORD *currentFrame,
                       CKDWORD *previousFrame,
                       int width,
                       int height,
                       CKDWORD borderColor,
                       int damping);
-void SwapPixelBuffers(CKDWORD *first, CKDWORD *second, CKDWORD pixelCount);
+// Blend Textures: output = first * (1 - blendFactor) + second * blendFactor.
 void BlendPixelBuffers(CKDWORD *output,
                        const CKDWORD *first,
                        const CKDWORD *second,
                        int pixelCount,
                        float blendFactor);
-void BlendPixelBuffersScalar(CKDWORD *output,
-                             const CKDWORD *first,
-                             const CKDWORD *second,
-                             int pixelCount,
-                             float blendFactor);
-#endif
 
 #endif // TEXTUREPROCESSING_H

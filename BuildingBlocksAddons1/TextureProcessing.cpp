@@ -7,7 +7,6 @@
 /////////////////////////////////////////////////////
 #include "CKAll.h"
 #include "TextureProcessing.h"
-#include "VxSIMD.h"
 
 #include <string.h>
 
@@ -41,6 +40,16 @@ int CMDecalTR[3][3] = {0, 0, 0, 0, 0, 0, 1, 0, 0};
 CKDWORD *g_Buffer = NULL;
 int g_Size = 0;
 
+// The kernels below reproduce the integer MMX/SSE2 paths of the original
+// BuildingBlocksAddons1.dll byte for byte. Pixels are handled as four
+// independent 8-bit lanes (B, G, R, A from the low byte up); alpha is not
+// special-cased by any of them.
+
+static inline int PixelLane(CKDWORD pixel, int lane)
+{
+    return static_cast<int>((pixel >> (lane * 8)) & 0xFF);
+}
+
 static inline int ClampToByte(int value)
 {
     if (value < 0)
@@ -50,6 +59,7 @@ static inline int ClampToByte(int value)
     return value;
 }
 
+// Arithmetic shift right by 8 (psrad 8): rounds towards negative infinity.
 static inline int ShiftRightSigned8(int value)
 {
     if (value >= 0)
@@ -57,52 +67,28 @@ static inline int ShiftRightSigned8(int value)
     return -(((-value) + 255) >> 8);
 }
 
-static inline void DecodeColor(CKDWORD color, int &r, int &g, int &b, int &a)
+void BuildConvolutionKernelData(int kernel[3][3], int scale, short kernelData[24])
 {
-    r = ColorGetRed(color);
-    g = ColorGetGreen(color);
-    b = ColorGetBlue(color);
-    a = ColorGetAlpha(color);
-}
+    // The DLL stores (k << 8) / scale truncated to 16 bits.
+    short n[3][3];
+    for (int a = 0; a < 3; ++a)
+        for (int b = 0; b < 3; ++b)
+            n[a][b] = static_cast<short>(static_cast<int>(static_cast<unsigned int>(kernel[a][b]) << 8) / scale);
 
-static inline CKDWORD EncodeColor(int r, int g, int b, int a)
-{
-    return RGBAITOCOLOR(ClampToByte(r), ClampToByte(g), ClampToByte(b), ClampToByte(a));
-}
-
-static inline CKDWORD SampleWithBorder(const CKDWORD *data, int width, int height, int x, int y, CKDWORD borderColor)
-{
-    if (x < 0 || y < 0 || x >= width || y >= height)
-        return borderColor;
-    return data[y * width + x];
-}
-
-static inline void DecodeKernel(const short *matrixData, int kernel[3][3])
-{
-    if (!matrixData)
+    // pmaddwd layout: (centre, left) pairs for the two-pixel load, then the
+    // right-hand weight broadcast to the four lanes.
+    for (int row = 0; row < 3; ++row)
     {
-        kernel[0][0] = 0;
-        kernel[0][1] = 0;
-        kernel[0][2] = 0;
-        kernel[1][0] = 0;
-        kernel[1][1] = 256;
-        kernel[1][2] = 0;
-        kernel[2][0] = 0;
-        kernel[2][1] = 0;
-        kernel[2][2] = 0;
-        return;
+        short *dst = kernelData + row * 8;
+        dst[0] = n[row][1];
+        dst[1] = n[row][0];
+        dst[2] = n[row][1];
+        dst[3] = n[row][0];
+        dst[4] = n[row][2];
+        dst[5] = n[row][2];
+        dst[6] = n[row][2];
+        dst[7] = n[row][2];
     }
-
-    // Matrix layout matches the table created in ConvolveTexture3x3().
-    kernel[0][0] = matrixData[1];
-    kernel[0][1] = matrixData[0];
-    kernel[0][2] = matrixData[4];
-    kernel[1][0] = matrixData[9];
-    kernel[1][1] = matrixData[8];
-    kernel[1][2] = matrixData[12];
-    kernel[2][0] = matrixData[17];
-    kernel[2][1] = matrixData[16];
-    kernel[2][2] = matrixData[20];
 }
 
 void ConvolveTexture3x3(CKTexture *texture, int kernel[3][3], int scale)
@@ -115,28 +101,24 @@ void ConvolveTexture3x3(CKTexture *texture, int kernel[3][3], int scale)
         for (int a = 0; a < 3; ++a)
             for (int b = 0; b < 3; ++b)
                 scale += kernel[a][b];
+        if (!scale)
+            scale = 1;
     }
-    if (!scale)
-        scale = 1;
 
     const int width = texture->GetWidth();
     const int height = texture->GetHeight();
-    if (width <= 0 || height <= 0)
-        return;
 
     CKDWORD *image = reinterpret_cast<CKDWORD *>(texture->LockSurfacePtr());
     if (!image)
         return;
+    if (width <= 0 || height <= 0)
+    {
+        texture->ReleaseSurfacePtr();
+        return;
+    }
 
-    short normalized[3][3];
-    for (int a = 0; a < 3; ++a)
-        for (int b = 0; b < 3; ++b)
-            normalized[a][b] = static_cast<short>((kernel[a][b] * 256) / scale);
-
-    short kernelData[24] = {
-        normalized[0][1], normalized[0][0], normalized[0][1], normalized[0][0], normalized[0][2], normalized[0][2], normalized[0][2], normalized[0][2],
-        normalized[1][1], normalized[1][0], normalized[1][1], normalized[1][0], normalized[1][2], normalized[1][2], normalized[1][2], normalized[1][2],
-        normalized[2][1], normalized[2][0], normalized[2][1], normalized[2][0], normalized[2][2], normalized[2][2], normalized[2][2], normalized[2][2]};
+    short kernelData[24];
+    BuildConvolutionKernelData(kernel, scale, kernelData);
 
     const int paddedSize = (width + 2) * (height + 2);
     const int dstSize = width * height;
@@ -158,8 +140,8 @@ void ConvolveTexture3x3(CKTexture *texture, int kernel[3][3], int scale)
         const CKDWORD *srcRow = image + y * width;
         CKDWORD *dstRow = padded + (y + 1) * paddedStride + 1;
         dstRow[-1] = srcRow[0];
-        memcpy(dstRow, srcRow, rowBytes);
         dstRow[width] = srcRow[width - 1];
+        memcpy(dstRow, srcRow, rowBytes);
     }
 
     memcpy(padded + 1, image, rowBytes);
@@ -174,198 +156,107 @@ void ConvolveTexture3x3(CKTexture *texture, int kernel[3][3], int scale)
     texture->ReleaseSurfacePtr();
 }
 
-void BlendPixelBuffersScalar(CKDWORD *output, const CKDWORD *first, const CKDWORD *second, int pixelCount, float blendFactor)
+void ConvolvePaddedPixels3x3(const CKDWORD *paddedSource, CKDWORD *destination, int width, int height, const short *kernelData)
 {
-    CKDWORD *out = output;
-    const CKDWORD *lhs = first;
-    const CKDWORD *rhs = second;
-    const float rhsFactor = blendFactor;
-    const float lhsFactor = (1.0f - blendFactor);
+    if (!paddedSource || !destination || !kernelData || width <= 0 || height <= 0)
+        return;
 
-    while (pixelCount-- > 0)
+    // Weight for (row, column) of the 3x3 neighbourhood.
+    int weight[3][3];
+    for (int row = 0; row < 3; ++row)
     {
-        const CKDWORD c0 = *lhs++;
-        const CKDWORD c1 = *rhs++;
-        CKDWORD ag = static_cast<CKDWORD>(((c0 & 0xFF00FF00) >> 2) * lhsFactor + ((c1 & 0xFF00FF00) >> 2) * rhsFactor);
-        CKDWORD rb = static_cast<CKDWORD>(((c0 & 0x00FF00FF)) * lhsFactor + ((c1 & 0x00FF00FF)) * rhsFactor);
-        ag = (ag << 2) & 0xFF00FF00;
-        rb &= 0x00FF00FF;
-        *out++ = ag | rb;
+        weight[row][0] = kernelData[row * 8 + 1];
+        weight[row][1] = kernelData[row * 8 + 0];
+        weight[row][2] = kernelData[row * 8 + 4];
     }
+
+    const int stride = width + 2;
+    // The DLL's MMX loop only advances one extra pixel at the end of each row,
+    // not the two padding pixels, so output row y samples the padded image
+    // y pixels to the left of where it should (a one-pixel-per-row shear).
+    const CKDWORD *centre = paddedSource + stride + 1;
+    for (int y = 0; y < height; ++y)
+    {
+        for (int x = 0; x < width; ++x, ++centre)
+        {
+            int sum[4] = {0, 0, 0, 0};
+            for (int row = 0; row < 3; ++row)
+            {
+                const CKDWORD *src = centre + (row - 1) * stride;
+                for (int column = 0; column < 3; ++column)
+                {
+                    const CKDWORD pixel = src[column - 1];
+                    const int w = weight[row][column];
+                    for (int lane = 0; lane < 4; ++lane)
+                        sum[lane] += PixelLane(pixel, lane) * w;
+                }
+            }
+
+            CKDWORD out = 0;
+            for (int lane = 0; lane < 4; ++lane)
+                out |= static_cast<CKDWORD>(ClampToByte(ShiftRightSigned8(sum[lane]))) << (lane * 8);
+            *destination++ = out;
+        }
+        ++centre;
+    }
+}
+
+static CKDWORD BlendWeightBits(double value)
+{
+    // _ftol truncates to 64 bits (0x8000000000000000 when out of range) and
+    // the DLL keeps the low 32 bits.
+    if (!(value > -9.2e18 && value < 9.2e18))
+        return 0;
+    return static_cast<CKDWORD>(static_cast<unsigned long long>(static_cast<long long>(value)));
 }
 
 void BlendPixelBuffers(CKDWORD *output, const CKDWORD *first, const CKDWORD *second, int pixelCount, float blendFactor)
 {
-    BlendPixelBuffersScalar(output, first, second, pixelCount, blendFactor);
-}
-
-void ConvolvePaddedPixels3x3(const CKDWORD *paddedSource, CKDWORD *destination, int width, int height, const short *kernelData)
-{
-    if (!paddedSource || !destination || width <= 0 || height <= 0)
+    if (!output || !first || !second || pixelCount <= 0)
         return;
 
-    int kernel[3][3];
-    DecodeKernel(kernelData, kernel);
+    // fld factor / fmul 256.0f and fld1 / fsub factor / fmul 256.0f on the
+    // x87 stack, which runs at double precision.
+    const double f = static_cast<double>(blendFactor);
+    const CKDWORD second32 = BlendWeightBits(f * 256.0);
+    const CKDWORD first32 = BlendWeightBits((1.0 - f) * 256.0);
 
-    const int paddedStride = width + 2;
-    for (int y = 0; y < height; ++y)
+    // The 32-bit weight w is spread as (w << 16) | w over two 16-bit lanes and
+    // duplicated, so B and R use lane 0 and G and A use lane 1.
+    unsigned int firstWeight[4];
+    unsigned int secondWeight[4];
+    const CKDWORD firstPacked = first32 | (first32 << 16);
+    const CKDWORD secondPacked = second32 | (second32 << 16);
+    for (int lane = 0; lane < 4; ++lane)
     {
-        const CKDWORD *row0 = paddedSource + y * paddedStride;
-        const CKDWORD *row1 = row0 + paddedStride;
-        const CKDWORD *row2 = row1 + paddedStride;
+        firstWeight[lane] = (firstPacked >> ((lane & 1) * 16)) & 0xFFFF;
+        secondWeight[lane] = (secondPacked >> ((lane & 1) * 16)) & 0xFFFF;
+    }
 
-        for (int x = 0; x < width; ++x)
+    for (int i = 0; i < pixelCount; ++i)
+    {
+        const CKDWORD c0 = first[i];
+        const CKDWORD c1 = second[i];
+        CKDWORD out = 0;
+        for (int lane = 0; lane < 4; ++lane)
         {
-            int sumR = 0;
-            int sumG = 0;
-            int sumB = 0;
-            int sumA = 0;
-
-            int r, g, b, a;
-            DecodeColor(row0[x], r, g, b, a);
-            sumR += r * kernel[0][0];
-            sumG += g * kernel[0][0];
-            sumB += b * kernel[0][0];
-            sumA += a * kernel[0][0];
-
-            DecodeColor(row0[x + 1], r, g, b, a);
-            sumR += r * kernel[0][1];
-            sumG += g * kernel[0][1];
-            sumB += b * kernel[0][1];
-            sumA += a * kernel[0][1];
-
-            DecodeColor(row0[x + 2], r, g, b, a);
-            sumR += r * kernel[0][2];
-            sumG += g * kernel[0][2];
-            sumB += b * kernel[0][2];
-            sumA += a * kernel[0][2];
-
-            DecodeColor(row1[x], r, g, b, a);
-            sumR += r * kernel[1][0];
-            sumG += g * kernel[1][0];
-            sumB += b * kernel[1][0];
-            sumA += a * kernel[1][0];
-
-            DecodeColor(row1[x + 1], r, g, b, a);
-            sumR += r * kernel[1][1];
-            sumG += g * kernel[1][1];
-            sumB += b * kernel[1][1];
-            sumA += a * kernel[1][1];
-
-            DecodeColor(row1[x + 2], r, g, b, a);
-            sumR += r * kernel[1][2];
-            sumG += g * kernel[1][2];
-            sumB += b * kernel[1][2];
-            sumA += a * kernel[1][2];
-
-            DecodeColor(row2[x], r, g, b, a);
-            sumR += r * kernel[2][0];
-            sumG += g * kernel[2][0];
-            sumB += b * kernel[2][0];
-            sumA += a * kernel[2][0];
-
-            DecodeColor(row2[x + 1], r, g, b, a);
-            sumR += r * kernel[2][1];
-            sumG += g * kernel[2][1];
-            sumB += b * kernel[2][1];
-            sumA += a * kernel[2][1];
-
-            DecodeColor(row2[x + 2], r, g, b, a);
-            sumR += r * kernel[2][2];
-            sumG += g * kernel[2][2];
-            sumB += b * kernel[2][2];
-            sumA += a * kernel[2][2];
-
-            destination[y * width + x] = EncodeColor(ShiftRightSigned8(sumR),
-                                                     ShiftRightSigned8(sumG),
-                                                     ShiftRightSigned8(sumB),
-                                                     ShiftRightSigned8(sumA));
+            // pmullw keeps the low 16 bits, paddusw saturates, psrlw 8.
+            const unsigned int a = (PixelLane(c0, lane) * firstWeight[lane]) & 0xFFFF;
+            const unsigned int b = (PixelLane(c1, lane) * secondWeight[lane]) & 0xFFFF;
+            unsigned int sum = a + b;
+            if (sum > 0xFFFF)
+                sum = 0xFFFF;
+            out |= static_cast<CKDWORD>(sum >> 8) << (lane * 8);
         }
+        output[i] = out;
     }
 }
 
-void SwapPixelBuffers(CKDWORD *first, CKDWORD *second, CKDWORD pixelCount)
+static inline CKDWORD WaterSample(const CKDWORD *frame, int width, int height, int x, int y, CKDWORD borderColor)
 {
-    if (!first || !second || pixelCount == 0)
-        return;
-
-#if defined(VX_SIMD_SSE2)
-    CKDWORD i = 0;
-    for (; i + 3 < pixelCount; i += 4)
-    {
-        __m128i a = _mm_loadu_si128(reinterpret_cast<const __m128i *>(first + i));
-        __m128i b = _mm_loadu_si128(reinterpret_cast<const __m128i *>(second + i));
-        _mm_storeu_si128(reinterpret_cast<__m128i *>(first + i), b);
-        _mm_storeu_si128(reinterpret_cast<__m128i *>(second + i), a);
-    }
-    for (; i < pixelCount; ++i)
-    {
-        CKDWORD tmp = first[i];
-        first[i] = second[i];
-        second[i] = tmp;
-    }
-#else
-    for (CKDWORD i = 0; i < pixelCount; ++i)
-    {
-        CKDWORD tmp = first[i];
-        first[i] = second[i];
-        second[i] = tmp;
-    }
-#endif
-}
-
-void ConvolveTemporalPixels3x3(const CKDWORD *currentFrame, CKDWORD *previousFrame, int width, int height, const short *kernelData, int damping)
-{
-    if (!currentFrame || !previousFrame || width <= 0 || height <= 0)
-        return;
-
-    int kernel[3][3];
-    DecodeKernel(kernelData, kernel);
-
-    for (int y = 0; y < height; ++y)
-    {
-        for (int x = 0; x < width; ++x)
-        {
-            int convR = 0;
-            int convG = 0;
-            int convB = 0;
-            int convA = 0;
-
-            for (int ky = -1; ky <= 1; ++ky)
-            {
-                const int sy = (y + ky < 0) ? 0 : ((y + ky >= height) ? (height - 1) : (y + ky));
-                for (int kx = -1; kx <= 1; ++kx)
-                {
-                    const int sx = (x + kx < 0) ? 0 : ((x + kx >= width) ? (width - 1) : (x + kx));
-                    int r, g, b, a;
-                    DecodeColor(currentFrame[sy * width + sx], r, g, b, a);
-                    const int w = kernel[ky + 1][kx + 1];
-                    convR += r * w;
-                    convG += g * w;
-                    convB += b * w;
-                    convA += a * w;
-                }
-            }
-
-            int prevR, prevG, prevB, prevA;
-            DecodeColor(previousFrame[y * width + x], prevR, prevG, prevB, prevA);
-
-            int outR = ClampToByte(ShiftRightSigned8(convR) - prevR);
-            int outG = ClampToByte(ShiftRightSigned8(convG) - prevG);
-            int outB = ClampToByte(ShiftRightSigned8(convB) - prevB);
-            int outA = ClampToByte(ShiftRightSigned8(convA) - prevA);
-
-            if (damping > 0 && damping < 31)
-            {
-                outR -= (outR >> damping);
-                outG -= (outG >> damping);
-                outB -= (outB >> damping);
-                outA -= (outA >> damping);
-            }
-
-            previousFrame[y * width + x] = EncodeColor(outR, outG, outB, outA);
-        }
-    }
+    if (x < 0 || y < 0 || x >= width || y >= height)
+        return borderColor;
+    return frame[y * width + x];
 }
 
 void ApplyWaterRipple(CKDWORD *currentFrame, CKDWORD *previousFrame, int width, int height, CKDWORD borderColor, int damping)
@@ -373,36 +264,46 @@ void ApplyWaterRipple(CKDWORD *currentFrame, CKDWORD *previousFrame, int width, 
     if (!currentFrame || !previousFrame || width <= 0 || height <= 0)
         return;
 
+    // psrlw takes the zero-extended 32-bit damping as its count: any count
+    // above 15 (including negative values) shifts everything out.
+    const unsigned int shift = static_cast<unsigned int>(damping);
+
     for (int y = 0; y < height; ++y)
     {
+        // The SSE2 path handles the first and last rows with MMX code that
+        // averages the four neighbours as (l + r + u + d) >> 2; the rows in
+        // between use pavgb twice: ((u, d) avg + (l, r) avg) >> 1.
+        const bool edgeRow = (y == 0 || y == height - 1);
         for (int x = 0; x < width; ++x)
         {
-            int lR, lG, lB, lA;
-            int rR, rG, rB, rA;
-            int uR, uG, uB, uA;
-            int dR, dG, dB, dA;
-            int pR, pG, pB, pA;
+            const CKDWORD left = WaterSample(currentFrame, width, height, x - 1, y, borderColor);
+            const CKDWORD right = WaterSample(currentFrame, width, height, x + 1, y, borderColor);
+            const CKDWORD up = WaterSample(currentFrame, width, height, x, y - 1, borderColor);
+            const CKDWORD down = WaterSample(currentFrame, width, height, x, y + 1, borderColor);
+            const CKDWORD old = previousFrame[y * width + x];
 
-            DecodeColor(SampleWithBorder(currentFrame, width, height, x - 1, y, borderColor), lR, lG, lB, lA);
-            DecodeColor(SampleWithBorder(currentFrame, width, height, x + 1, y, borderColor), rR, rG, rB, rA);
-            DecodeColor(SampleWithBorder(currentFrame, width, height, x, y - 1, borderColor), uR, uG, uB, uA);
-            DecodeColor(SampleWithBorder(currentFrame, width, height, x, y + 1, borderColor), dR, dG, dB, dA);
-            DecodeColor(previousFrame[y * width + x], pR, pG, pB, pA);
-
-            int outR = ClampToByte((((lR + rR + uR + dR) >> 2) << 1) - pR);
-            int outG = ClampToByte((((lG + rG + uG + dG) >> 2) << 1) - pG);
-            int outB = ClampToByte((((lB + rB + uB + dB) >> 2) << 1) - pB);
-            int outA = ClampToByte((((lA + rA + uA + dA) >> 2) << 1) - pA);
-
-            if (damping > 0 && damping < 31)
+            CKDWORD out = 0;
+            for (int lane = 0; lane < 4; ++lane)
             {
-                outR -= (outR >> damping);
-                outG -= (outG >> damping);
-                outB -= (outB >> damping);
-                outA -= (outA >> damping);
-            }
+                const int l = PixelLane(left, lane);
+                const int r = PixelLane(right, lane);
+                const int u = PixelLane(up, lane);
+                const int d = PixelLane(down, lane);
 
-            previousFrame[y * width + x] = EncodeColor(outR, outG, outB, outA);
+                int s;
+                if (edgeRow)
+                    s = (l + r + u + d) >> 2;
+                else
+                    s = (((u + d + 1) >> 1) + ((l + r + 1) >> 1)) >> 1;
+
+                int t = 2 * s - PixelLane(old, lane);
+                if (t < 0)
+                    t = 0;
+                if (shift < 16)
+                    t -= t >> shift;
+                out |= static_cast<CKDWORD>(ClampToByte(t)) << (lane * 8);
+            }
+            previousFrame[y * width + x] = out;
         }
     }
 }
