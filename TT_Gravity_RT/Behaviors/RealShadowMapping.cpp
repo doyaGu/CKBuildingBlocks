@@ -6,6 +6,7 @@
 /////////////////////////////////////////////////////
 /////////////////////////////////////////////////////
 #include "CKAll.h"
+#include "RealShadowMappingGeometry.h"
 
 #define TERRATOOLS_GUID CKGUID(0x56495254, 0x4f4f4c53)
 
@@ -37,6 +38,7 @@ typedef struct
 
 void A_GetFloors(RealShadowStruct *tss, CK3dEntity *ent, CKBehavior *beh);
 void A_Delete_SoftShadow_From_Floors(RealShadowFloor *floor, CKMaterial *cmat, int nb_floors);
+static void A_Delete_SoftShadow_From_FloorIds(const CK_ID *ids, CKMaterial *cmat, int nb_floors);
 
 CKObjectDeclaration *FillBehaviorRealShadowMappingDecl()
 {
@@ -143,9 +145,6 @@ CKERROR RealShadowMappingCallBack(const CKBehaviorContext &behcontext)
         memset(tss.floor, 0, sizeof(tss.floor));
 
         beh->SetLocalParameterValue(0, &tss, sizeof(RealShadowStruct));
-
-        CKBOOL active = FALSE;
-        beh->SetLocalParameterValue(1, &active);
     }
     break;
     case CKM_BEHAVIORDETACH:
@@ -182,6 +181,7 @@ CKERROR RealShadowMappingCallBack(const CKBehaviorContext &behcontext)
     return CKBR_OK;
 }
 
+// TT_Gravity_RT.dll 0x10003620 (RealShadowMappingPreRenderCallBack).
 void RealShadowMappingRenderCallBack(CKRenderContext *dev, void *arg)
 {
     CKBehavior *beh = (CKBehavior *)arg;
@@ -192,35 +192,42 @@ void RealShadowMappingRenderCallBack(CKRenderContext *dev, void *arg)
     CKBOOL active = FALSE;
     beh->GetLocalParameterValue(1, &active);
     CK3dEntity *ent = (CK3dEntity *)beh->GetTarget();
+    if (!ent)
+        active = TRUE;
 
     RealShadowStruct *tss = (RealShadowStruct *)beh->GetLocalParameterWriteDataPtr(0);
     if (!tss)
         return;
-    CKMaterial *mat = (CKMaterial *)context->GetObject(tss->matID);
 
     //////////////////////////////////////////////////
     //  We get the Floors that WERE under the object
     //////////////////////////////////////////////////
     int old_nb_floors_under = tss->nb_floors_under;
+    if (old_nb_floors_under < 0)
+        old_nb_floors_under = 0;
+    if (old_nb_floors_under > A_MAX_NUMBER_OF_FLOOR_UNDER_OBJECT)
+        old_nb_floors_under = A_MAX_NUMBER_OF_FLOOR_UNDER_OBJECT;
 
-#if CKVERSION == 0x13022002
-    CKMemoryPool memoryPool(context, old_nb_floors_under * sizeof(CK_ID));
-    CK_ID *old_floor = (CK_ID *)memoryPool.Mem();
-#else
-    VxScratch memoryPool(old_nb_floors_under * sizeof(CK_ID));
-    CK_ID *old_floor = (CK_ID *)memoryPool.Mem();
-#endif
-
+    // DLL quirk: the snapshot copies only 4 bytes per floor but is read back
+    // with the 28-byte floor stride, so only the slots that fall inside the
+    // copied bytes (in practice the first old floor) hold a real id. The rest
+    // are uninitialised in the DLL; we use 0 so those floors keep the channel.
+    CK_ID old_floor[A_MAX_NUMBER_OF_FLOOR_UNDER_OBJECT];
     for (int i = 0; i < old_nb_floors_under; ++i)
-        old_floor[i] = tss->floor[i].id;
+        old_floor[i] = RealShadowOldFloorSlotCopied(i, old_nb_floors_under) ? tss->floor[i].id : 0;
 
+    CKMaterial *mat = (CKMaterial *)context->GetObject(tss->matID);
+
+    // Off: strip the (quirky) old floor list and mark the block as stopped.
+    // The callback still re-places the shadow below for this frame, so the
+    // shadow stays on the floors after Off; the behavior function then removes
+    // this callback on its next run.
     if (beh->IsInputActive(1))
     {
         beh->ActivateInput(1, FALSE);
         beh->ActivateOutput(1, TRUE);
         if (mat)
-            A_Delete_SoftShadow_From_Floors(tss->floor, mat, tss->nb_floors_under);
-        tss->nb_floors_under = 0;
+            A_Delete_SoftShadow_From_FloorIds(old_floor, mat, old_nb_floors_under);
         active = TRUE;
     }
 
@@ -231,17 +238,15 @@ void RealShadowMappingRenderCallBack(CKRenderContext *dev, void *arg)
         active = FALSE;
     }
 
-    if (active || !ent || !mat)
+    if (!mat || !ent)
     {
-        if (mat && tss->nb_floors_under > 0)
-            A_Delete_SoftShadow_From_Floors(tss->floor, mat, tss->nb_floors_under);
-        tss->nb_floors_under = 0;
+        // The DLL dereferences both unconditionally.
         beh->SetLocalParameterValue(1, &active);
         return;
     }
 
     // we get the input texture id
-    CK_ID newtexID;
+    CK_ID newtexID = 0;
     beh->GetInputParameterValue(1, &newtexID);
 
     // if the texture change ( or at start )
@@ -252,10 +257,10 @@ void RealShadowMappingRenderCallBack(CKRenderContext *dev, void *arg)
         mat->SetTexture0(tex);
     }
 
-    VXBLEND_MODE srcBlend = VXBLEND_SRCALPHA;
+    VXBLEND_MODE srcBlend = VXBLEND_ZERO;
     beh->GetInputParameterValue(3, &srcBlend);
 
-    VXBLEND_MODE destBlend = VXBLEND_INVSRCALPHA;
+    VXBLEND_MODE destBlend = VXBLEND_SRCCOLOR;
     beh->GetInputParameterValue(4, &destBlend);
 
     A_GetFloors(tss, ent, beh);
@@ -285,21 +290,17 @@ void RealShadowMappingRenderCallBack(CKRenderContext *dev, void *arg)
         if (out)
         {
             o = (CK3dEntity *)context->GetObject(old_floor[a]);
-            if (!o)
+            if (!CKIsChildClassOf(o, CKCID_3DENTITY))
                 continue;
-            if (CKIsChildClassOf(o, CKCID_3DENTITY))
+            dMesh = (CKMesh *)o->GetCurrentMesh();
+            if (dMesh)
             {
-                dMesh = (CKMesh *)o->GetCurrentMesh();
-                if (dMesh)
-                {
-                    matChannel = dMesh->GetChannelByMaterial(mat);
-                    if (matChannel >= 0)
-                        dMesh->RemoveChannel(matChannel);
-                }
+                matChannel = dMesh->GetChannelByMaterial(mat);
+                if (matChannel >= 0)
+                    dMesh->RemoveChannel(matChannel);
             }
         }
     }
-
 
     //////////////////////////////////////////////////
     //  We ADD the material to the floors
@@ -313,47 +314,46 @@ void RealShadowMappingRenderCallBack(CKRenderContext *dev, void *arg)
     for (int a = 0; a < tss->nb_floors_under; a++)
     {
         o = (CK3dEntity *)context->GetObject(floor[a].id);
-        if (!o)
+        if (!CKIsChildClassOf(o, CKCID_3DENTITY))
             continue;
-        VxVector floorPos;
-        o->GetPosition(&floorPos);
-        if (CKIsChildClassOf(o, CKCID_3DENTITY))
+        dMesh = (CKMesh *)o->GetCurrentMesh();
+        if (!dMesh)
+            continue;
+
+        matChannel = dMesh->GetChannelByMaterial(mat);
+
+        // There were no shadow channel applied to the mesh: the blend modes are
+        // only set when the channel is first added.
+        if (matChannel < 0)
         {
-            dMesh = (CKMesh *)o->GetCurrentMesh();
-            if (dMesh)
-            {
-                matChannel = dMesh->GetChannelByMaterial(mat);
-
-                // There were no shadow channel applied to the mesh
-                if (matChannel < 0)
-                    matChannel = dMesh->AddChannel(mat, FALSE);
-                dMesh->SetChannelSourceBlend(matChannel, srcBlend);
-                dMesh->SetChannelDestBlend(matChannel, destBlend);
-
-                ////////////////////////////////////////////////////////
-                //  We now change the U,V coords of the shadow channel
-                ////////////////////////////////////////////////////////
-                uvArray = (Vx2DVector *)dMesh->GetTextureCoordinatesPtr(&cStride, matChannel);
-                vertexArray = (VxVector *)dMesh->GetPositionsPtr(&stride);
-
-                int vertexCount = dMesh->GetVertexCount();
-
-                for (int i = 0; i < vertexCount; i++,
-                        vertexArray = (VxVector *) ((CKBYTE *) vertexArray + stride),
-                        uvArray = (Vx2DVector *) ((CKBYTE *) uvArray + cStride))
-                {
-                    // Transform Vertex Position from mesh coordinates system to projector coordinate system
-                    uvArray->x = (vertexArray->x - floor[a].max.x) / (floor[a].min.x - floor[a].max.x);
-                    uvArray->y = (vertexArray->z - floor[a].max.z) / (floor[a].min.z - floor[a].max.z);
-                }
-
-                dMesh->UVChanged();
-            }
+            matChannel = dMesh->AddChannel(mat, FALSE);
+            dMesh->SetChannelSourceBlend(matChannel, srcBlend);
+            dMesh->SetChannelDestBlend(matChannel, destBlend);
         }
+
+        ////////////////////////////////////////////////////////
+        //  We now change the U,V coords of the shadow channel
+        ////////////////////////////////////////////////////////
+        uvArray = (Vx2DVector *)dMesh->GetTextureCoordinatesPtr(&cStride, matChannel);
+        vertexArray = (VxVector *)dMesh->GetPositionsPtr(&stride);
+
+        int vertexCount = dMesh->GetVertexCount();
+
+        for (int i = 0; i < vertexCount; i++,
+                vertexArray = (VxVector *) ((CKBYTE *) vertexArray + stride),
+                uvArray = (Vx2DVector *) ((CKBYTE *) uvArray + cStride))
+        {
+            // Transform Vertex Position from mesh coordinates system to projector coordinate system
+            uvArray->x = (vertexArray->x - floor[a].max.x) / (floor[a].min.x - floor[a].max.x);
+            uvArray->y = (vertexArray->z - floor[a].max.z) / (floor[a].min.z - floor[a].max.z);
+        }
+
+        dMesh->UVChanged();
     }
     beh->SetLocalParameterValue(1, &active);
 }
 
+// TT_Gravity_RT.dll 0x100039A0 (A_GetFloors_0).
 void A_GetFloors(RealShadowStruct *tss, CK3dEntity *ent, CKBehavior *beh)
 {
     if (!tss || !ent || !beh)
@@ -361,10 +361,10 @@ void A_GetFloors(RealShadowStruct *tss, CK3dEntity *ent, CKBehavior *beh)
 
     CKContext *context = beh->GetCKContext();
 
-    VxVector light;
-    beh->GetInputParameterValue(0, &light);
+    VxVector lightVector(0.0f, 0.0f, 0.0f);
+    beh->GetInputParameterValue(0, &lightVector);
 
-    Vx2DVector size;
+    Vx2DVector size(0.0f, 0.0f);
     beh->GetInputParameterValue(2, &size);
 
     CKFloorManager *FloorManager = (CKFloorManager *)context->GetManagerByGuid(FLOOR_MANAGER_GUID);
@@ -372,130 +372,110 @@ void A_GetFloors(RealShadowStruct *tss, CK3dEntity *ent, CKBehavior *beh)
         return;
     int floorAttribute = FloorManager->GetFloorAttribute();
 
-    CKAttributeManager *attman = beh->m_Context->GetAttributeManager();
+    CKAttributeManager *attman = context->GetAttributeManager();
     if (!attman)
         return;
     const XObjectPointerArray &floor_objects = attman->GetGlobalAttributeListPtr(floorAttribute);
 
     VxVector objPos;
     ent->GetPosition(&objPos);
-    light += objPos;
+    const VxVector light = RealShadowLightPosition(objPos, lightVector);
+    const float radius = ent->GetRadius();
 
-    CKBOOL under;
     int nbf_under = 0; // number of floors under
-    float tmp_y;
-
-    CK3dEntity *floor;
     int floor_count = floor_objects.Size();
 
     for (int n = 0; n < floor_count; ++n)
     {
-        floor = (CK3dEntity *)floor_objects[n];
+        CK3dEntity *floor = (CK3dEntity *)floor_objects[n];
+        if (!floor || !floor->IsVisible() || floor->IsAllOutsideFrustrum())
+            continue;
 
-        if (floor->IsVisible() && !floor->IsAllOutsideFrustrum())
+        CKBOOL under = FALSE;
+
+        VxVector vMax(1000.0f, 0, 1000.0f);
+        VxVector vMin(-1000.0f, 0, -1000.0f);
+
+        VxVector floorPos;
+        floor->GetPosition(&floorPos);
+
+        const VxBbox &Bbox_floorWorld = floor->GetBoundingBox();
+
+        if (!(light.y > 0.0f && objPos.y > Bbox_floorWorld.Min.y))
+            continue;
+
+        // Centre: ray from the light through the object onto this floor;
+        // falls back to the floor's height when the ray misses it.
+        VxVector centre;
+        VxIntersectionDesc desc;
+        VxVector pos = objPos;
+        floor->RayIntersection(&light, &pos, &desc, NULL);
+        if (desc.Object == floor)
+            floor->Transform(&centre, &desc.IntersectionPoint);
+        else
+            centre = RealShadowProject(light, objPos, 0.0f, 0.0f, floorPos.y);
+        const float height = centre.y;
+
+        beh->SetOutputParameterValue(0, &centre);
+        if (centre.x > Bbox_floorWorld.Min.x && centre.x < Bbox_floorWorld.Max.x &&
+            centre.z > Bbox_floorWorld.Min.z && centre.z < Bbox_floorWorld.Max.z)
+            under = TRUE;
+
+        // Corners: position +- (radius*Size.x, radius*Size.y) thrown from the
+        // light onto the centre hit's height.
+        VxVector corners[4];
+        RealShadowCorners(light, objPos, radius, size, height, corners);
+        for (int i = 0; i < 4; ++i)
         {
-            under = FALSE;
+            const VxVector &c = corners[i];
+            beh->SetOutputParameterValue(i + 1, &c);
 
-            VxVector vMax(1000.0f, 0, 1000.0f);
-            VxVector vMin(-1000.0f, 0, -1000.0f);
+            if (!under &&
+                c.x > Bbox_floorWorld.Min.x && c.x < Bbox_floorWorld.Max.x &&
+                c.z > Bbox_floorWorld.Min.z && c.z < Bbox_floorWorld.Max.z)
+                under = TRUE;
 
-            VxVector floorPos;
-            floor->GetPosition(&floorPos);
+            if (c.x < vMax.x)
+                vMax.x = c.x;
+            if (c.x > vMin.x)
+                vMin.x = c.x;
+            if (c.z < vMax.z)
+                vMax.z = c.z;
+            if (c.z > vMin.z)
+                vMin.z = c.z;
+        }
 
-            tmp_y = 0;
-
-            const VxBbox &Bbox_floorWorld = floor->GetBoundingBox();
-
-            VxIntersectionDesc desc;
-
-            if (light.y <= 0.0f || Bbox_floorWorld.Min.y >= objPos.y)
-                continue;
-
-            VxVector vector[5];
-
-            for (int i = 0; i < 5; ++i)
-            {
-                if (i == 0)
-                {
-                    VxVector pos = objPos;
-                    floor->RayIntersection(&light, &pos, &desc, NULL);
-                    if (desc.Object == floor)
-                    {
-                        floor->Transform(&vector[0], &desc.IntersectionPoint);
-                        tmp_y = vector[0].y;
-                    }
-                    else
-                    {
-                        float y1 = light.y - floorPos.y;
-                        float y2 = light.y - objPos.y;
-                        if (fabsf(y2) < 1e-6f)
-                            continue;
-                        vector[0].x = light.x + (objPos.x - floorPos.x) * y1 / y2;
-                        vector[0].y = floorPos.y;
-                        vector[0].z = light.z + (objPos.z - floorPos.z) * y1 / y2;
-                        tmp_y = floorPos.y;
-                    }
-
-                    beh->SetOutputParameterValue(0, &vector[0]);
-
-                    if (!under &&
-                        vector[0].x > Bbox_floorWorld.Min.x &&
-                        vector[0].x < Bbox_floorWorld.Max.x &&
-                        vector[0].z > Bbox_floorWorld.Min.z &&
-                        vector[0].z < Bbox_floorWorld.Max.z)
-                    {
-                        under = TRUE;
-                    }
-                }
-                else
-                {
-                    float y1 = light.y - tmp_y;
-                    float y2 = light.y - objPos.y;
-                    if (fabsf(y2) < 1e-6f)
-                        continue;
-                    vector[i].x = light.x + (objPos.x - floorPos.x) * y1 / y2;
-                    vector[i].y = tmp_y;
-                    vector[i].z = light.z + (objPos.z - floorPos.z) * y1 / y2;
-
-                    beh->SetOutputParameterValue(i, &vector[i]);
-
-                    if (!under &&
-                        vector[i].x > Bbox_floorWorld.Min.x &&
-                        vector[i].x < Bbox_floorWorld.Max.x &&
-                        vector[i].z > Bbox_floorWorld.Min.z &&
-                        vector[i].z < Bbox_floorWorld.Max.z)
-                    {
-                        under = TRUE;
-                    }
-
-                    if (vector[i].x < vMax.x)
-                        vMax.x = vector[i].x;
-                    if (vector[i].x > vMin.x)
-                        vMin.x = vector[i].x;
-                    if (vector[i].z < vMax.z)
-                        vMax.z = vector[i].z;
-                    if (vector[i].z > vMin.z)
-                        vMin.z = vector[i].z;
-                }
-            }
-
-            if (under)
-            {
-                if (nbf_under < A_MAX_NUMBER_OF_FLOOR_UNDER_OBJECT)
-                {
-                    floor->InverseTransform(&vMax, &vMax);
-                    floor->InverseTransform(&vMin, &vMin);
-                    RealShadowFloor &f = tss->floor[nbf_under];
-                    f.max = vMax;
-                    f.min = vMin;
-                    f.id = floor->GetID();
-                    nbf_under++;
-                }
-            }
+        if (under && nbf_under < A_MAX_NUMBER_OF_FLOOR_UNDER_OBJECT)
+        {
+            floor->InverseTransform(&vMax, &vMax);
+            floor->InverseTransform(&vMin, &vMin);
+            RealShadowFloor &f = tss->floor[nbf_under];
+            f.max = vMax;
+            f.min = vMin;
+            f.id = floor->GetID();
+            nbf_under++;
         }
     }
 
     tss->nb_floors_under = nbf_under;
+}
+
+static void A_Delete_SoftShadow_From_FloorIds(const CK_ID *ids, CKMaterial *cmat, int nb_floors)
+{
+    CKContext *context = cmat->GetCKContext();
+    for (int a = 0; a < nb_floors; a++)
+    {
+        CK3dEntity *o = (CK3dEntity *)context->GetObject(ids[a]);
+        if (!CKIsChildClassOf(o, CKCID_3DENTITY))
+            continue;
+        CKMesh *dMesh = o->GetCurrentMesh();
+        if (dMesh)
+        {
+            int matChannel = dMesh->GetChannelByMaterial(cmat);
+            if (matChannel >= 0)
+                dMesh->RemoveChannel(matChannel);
+        }
+    }
 }
 
 void A_Delete_SoftShadow_From_Floors(RealShadowFloor *floor, CKMaterial *cmat, int nb_floors)
