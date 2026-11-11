@@ -6,9 +6,11 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
+#include <random>
 #include <stdexcept>
 #include <string>
-#include <unistd.h>
+#include <system_error>
 
 extern void SetProcessorSpecific_FunctionsPtr();
 CKERROR CreateReadRegistryProto(CKBehaviorPrototype **pproto);
@@ -24,18 +26,37 @@ static CKSTRING Str(const char *text) { return const_cast<CKSTRING>(text); }
 class ScratchRegistry {
 public:
     ScratchRegistry() {
-        char pattern[] = "/tmp/tt_im_registry_XXXXXX";
-        Check(mkdtemp(pattern) != nullptr, "create scratch registry dir");
-        m_Home = pattern;
+        const auto temp = std::filesystem::temp_directory_path();
+        std::random_device random;
+        for (unsigned attempt = 0; attempt < 100; ++attempt) {
+            const auto directory = temp / ("tt_im_registry_" + std::to_string(random()) + "_" + std::to_string(attempt));
+            std::error_code error;
+            // Reserve the directory atomically when test processes run in parallel.
+            if (std::filesystem::create_directory(directory, error)) {
+                m_Home = directory.string();
+                break;
+            }
+            Check(!error || error == std::errc::file_exists, "create scratch registry dir");
+        }
+        Check(!m_Home.empty(), "reserve scratch registry dir");
         m_HadHome = VxGetEnvironmentVariable("BALLANCE_USER_CONFIG_HOME", m_PreviousHome) != FALSE;
-        Check(VxSetEnvironmentVariable("BALLANCE_USER_CONFIG_HOME", m_Home.c_str()), "set config home");
+        if (!VxSetEnvironmentVariable("BALLANCE_USER_CONFIG_HOME", m_Home.c_str())) {
+            std::error_code error;
+            std::filesystem::remove(m_Home, error);
+            Check(false, "set config home");
+        }
     }
     ~ScratchRegistry() {
         VxSetEnvironmentVariable("BALLANCE_USER_CONFIG_HOME", m_HadHome ? m_PreviousHome.CStr() : nullptr);
-        std::remove((m_Home + "/Ballance/registry.ini").c_str());
-        rmdir((m_Home + "/Ballance").c_str());
-        rmdir(m_Home.c_str());
+        std::error_code error;
+        const auto directory = std::filesystem::path(m_Home) / "Ballance";
+        std::filesystem::remove(directory / "registry.ini", error);
+        std::filesystem::remove(directory, error);
+        std::filesystem::remove(m_Home, error);
     }
+
+    ScratchRegistry(const ScratchRegistry &) = delete;
+    ScratchRegistry &operator=(const ScratchRegistry &) = delete;
 
 private:
     std::string m_Home;
