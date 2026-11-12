@@ -140,6 +140,10 @@ public:
         return m_DefaultRegistryPath.Empty() ? NULL : m_DefaultRegistryPath.CStr();
     }
 
+    // Explicit per-context storage; an empty filename retains the application profile.
+    const char *GetRegistryFile() const { return m_RegistryFile.Length() ? m_RegistryFile.CStr() : NULL; }
+    void SetRegistryFile(const char *filename) { m_RegistryFile = filename ? filename : ""; }
+
     void SetDefaultRegistryPath(const char *path)
     {
         m_DefaultRegistryPath = path ? path : "";
@@ -260,6 +264,7 @@ protected:
     int m_CommandHead;
     int m_CommandTail;
     XString m_DefaultRegistryPath;
+    XString m_RegistryFile;
 };
 
 #endif // TT_INTERFACEMANAGER_H

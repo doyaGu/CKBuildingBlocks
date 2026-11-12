@@ -87,7 +87,7 @@ int SetBooleanValueToRegistry(const CKBehaviorContext &behcontext)
     strcpy(buffer, gameInfo->regSubkey);
     strcat(buffer, regKey);
 
-    if (!TTWriteRegistryBoolean(gameInfo, regKey, valueName, value ? TRUE : FALSE))
+    if (!TTWriteRegistryBoolean(gameInfo, regKey, valueName, value ? TRUE : FALSE, TTRegistryFile(context)))
     {
         context->OutputToConsoleExBeep("TT_SetBooleanValueToRegistry: Failed to set %s %s", valueName, value ? "TRUE" : "FALSE");
         beh->ActivateOutput(1);

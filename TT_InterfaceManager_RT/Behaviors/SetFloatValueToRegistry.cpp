@@ -87,7 +87,7 @@ int SetFloatValueToRegistry(const CKBehaviorContext &behcontext)
     strcpy(buffer, gameInfo->regSubkey);
     strcat(buffer, regKey);
 
-    if (!TTWriteRegistryFloat(gameInfo->registryRoot, buffer, valueName, value))
+    if (!TTWriteRegistryFloat(gameInfo->registryRoot, buffer, valueName, value, TTRegistryFile(context)))
     {
         context->OutputToConsoleExBeep("TT_SetFloatValueToRegistry: Failed to set %s %f", valueName, value);
         beh->ActivateOutput(1);

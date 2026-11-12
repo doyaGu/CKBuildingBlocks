@@ -89,7 +89,7 @@ int GetFloatValueFromRegistry(const CKBehaviorContext &behcontext)
     strcpy(buffer, gameInfo->regSubkey);
     strcat(buffer, regKey);
 
-    if (!TTReadRegistryFloat(gameInfo->registryRoot, buffer, valueName, &value))
+    if (!TTReadRegistryFloat(gameInfo->registryRoot, buffer, valueName, &value, TTRegistryFile(context)))
     {
         beh->SetOutputParameterValue(0, &value);
         beh->ActivateOutput(1);

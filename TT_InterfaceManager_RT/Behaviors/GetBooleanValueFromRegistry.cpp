@@ -90,7 +90,7 @@ int GetBooleanValueFromRegistry(const CKBehaviorContext &behcontext)
     strcat(buffer, regKey);
 
     XBOOL readValue = FALSE;
-    if (!TTReadRegistryBoolean(gameInfo, regKey, valueName, &readValue))
+    if (!TTReadRegistryBoolean(gameInfo, regKey, valueName, &readValue, TTRegistryFile(context)))
     {
         beh->SetOutputParameterValue(0, &value);
         beh->ActivateOutput(1);

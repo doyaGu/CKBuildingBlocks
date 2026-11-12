@@ -303,7 +303,7 @@ CKERROR WriteRegistryCallBack(const CKBehaviorContext &behcontext)
 
 static CKBOOL WriteIntegerToRegistry(const char *subKey, CKContext *context, int value, const char *valueName)
 {
-    if (!TTWriteRegistryInteger(VXCONFIG_ROOT_CURRENT_USER, subKey, valueName, value))
+    if (!TTWriteRegistryInteger(VXCONFIG_ROOT_CURRENT_USER, subKey, valueName, value, TTRegistryFile(context)))
     {
         context->OutputToConsoleExBeep("TT_WriteRegistry: failed to set : %s.", valueName);
         return FALSE;
@@ -313,7 +313,7 @@ static CKBOOL WriteIntegerToRegistry(const char *subKey, CKContext *context, int
 
 static CKBOOL WriteFloatToRegistry(const char *subKey, CKContext *context, float value, const char *valueName)
 {
-    if (!TTWriteRegistryFloat(VXCONFIG_ROOT_CURRENT_USER, subKey, valueName, value))
+    if (!TTWriteRegistryFloat(VXCONFIG_ROOT_CURRENT_USER, subKey, valueName, value, TTRegistryFile(context)))
     {
         context->OutputToConsoleExBeep("TT_WriteRegistry: failed to set : %s.", valueName);
         return FALSE;
@@ -326,7 +326,7 @@ static CKBOOL WriteStringToRegistry(const char *subKey, CKContext *context, cons
     if (!str)
         str = "";
 
-    if (!TTWriteRegistryString(VXCONFIG_ROOT_CURRENT_USER, subKey, valueName, str))
+    if (!TTWriteRegistryString(VXCONFIG_ROOT_CURRENT_USER, subKey, valueName, str, TTRegistryFile(context)))
     {
         context->OutputToConsoleExBeep("TT_WriteRegistry: failed to set : %s.", valueName);
         return FALSE;

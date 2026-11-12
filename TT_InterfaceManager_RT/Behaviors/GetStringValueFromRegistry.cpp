@@ -89,7 +89,7 @@ int GetStringValueFromRegistry(const CKBehaviorContext &behcontext)
     strcpy(buffer, gameInfo->regSubkey);
     strcat(buffer, regKey);
 
-    if (!TTReadRegistryString(gameInfo->registryRoot, buffer, valueName, str, sizeof(str)))
+    if (!TTReadRegistryString(gameInfo->registryRoot, buffer, valueName, str, sizeof(str), TTRegistryFile(context)))
     {
         beh->SetOutputParameterValue(0, " ");
         beh->ActivateOutput(1);

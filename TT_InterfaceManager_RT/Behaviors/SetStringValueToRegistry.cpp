@@ -87,7 +87,7 @@ int SetStringValueToRegistry(const CKBehaviorContext &behcontext)
     strcpy(buffer, gameInfo->regSubkey);
     strcat(buffer, regKey);
 
-    if (!TTWriteRegistryString(gameInfo->registryRoot, buffer, valueName, str))
+    if (!TTWriteRegistryString(gameInfo->registryRoot, buffer, valueName, str, TTRegistryFile(context)))
     {
         beh->ActivateOutput(1);
         return CKBR_OK;

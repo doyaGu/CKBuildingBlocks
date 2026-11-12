@@ -246,7 +246,7 @@ CKERROR ReadRegistryCallBack(const CKBehaviorContext &behcontext)
 static void *ReadDwordFromRegistry(CKBehavior *beh, CKContext *context, const char *subKey, const char *valueName, CKDWORD *data)
 {
     *data = 0;
-    if (!TTQueryRegistryDword(ReadRegistryRoot, subKey, valueName, data))
+    if (!TTQueryRegistryDword(ReadRegistryRoot, subKey, valueName, data, TTRegistryFile(context)))
     {
         beh->ActivateOutput(1);
         context->OutputToConsoleExBeep("TT_ReadRegistry: ReadError: %s %d.", valueName, 0);
@@ -259,7 +259,7 @@ static void *ReadDwordFromRegistry(CKBehavior *beh, CKContext *context, const ch
 static void *ReadStringFromRegistry(CKBehavior *beh, CKContext *context, const char *subKey, const char *valueName, char *buffer)
 {
     memset(buffer, 0, ReadRegistryStringSize);
-    if (!TTQueryRegistryString(ReadRegistryRoot, subKey, valueName, buffer, ReadRegistryStringSize))
+    if (!TTQueryRegistryString(ReadRegistryRoot, subKey, valueName, buffer, ReadRegistryStringSize, TTRegistryFile(context)))
     {
         beh->ActivateOutput(1);
         context->OutputToConsoleExBeep("TT_ReadRegistry: ReadError: %s %d.", valueName, 0);

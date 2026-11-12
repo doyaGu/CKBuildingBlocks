@@ -1,4 +1,5 @@
 #include "RegistryUtils.h"
+#include "InterfaceManager.h"
 
 #include "VxConfiguration.h"
 
@@ -27,55 +28,55 @@ static CKBOOL TTOpenConfig(VxConfigRoot root, const char *section, VxConfig::Mod
     return TRUE;
 }
 
-CKBOOL TTReadRegistryString(VxConfigRoot root, const char *subKey, const char *valueName, char *buffer, size_t bufferSize) {
-    VxConfig config(root, TTRegistryBaseSection());
+CKBOOL TTReadRegistryString(VxConfigRoot root, const char *subKey, const char *valueName, char *buffer, size_t bufferSize, const char *registryFile) {
+    VxConfig config(root, TTRegistryBaseSection(), registryFile);
     if (!TTOpenConfig(root, subKey, VxConfig::READ, config))
         return FALSE;
     return config.ReadStringEntry(valueName, buffer, bufferSize);
 }
 
-CKBOOL TTWriteRegistryString(VxConfigRoot root, const char *subKey, const char *valueName, const char *value) {
-    VxConfig config(root, TTRegistryBaseSection());
+CKBOOL TTWriteRegistryString(VxConfigRoot root, const char *subKey, const char *valueName, const char *value, const char *registryFile) {
+    VxConfig config(root, TTRegistryBaseSection(), registryFile);
     if (!TTOpenConfig(root, subKey, VxConfig::WRITE, config))
         return FALSE;
     config.WriteStringEntry(valueName, value ? value : "");
     return TRUE;
 }
 
-CKBOOL TTReadRegistryInteger(VxConfigRoot root, const char *subKey, const char *valueName, int *value) {
-    VxConfig config(root, TTRegistryBaseSection());
+CKBOOL TTReadRegistryInteger(VxConfigRoot root, const char *subKey, const char *valueName, int *value, const char *registryFile) {
+    VxConfig config(root, TTRegistryBaseSection(), registryFile);
     if (!TTOpenConfig(root, subKey, VxConfig::READ, config))
         return FALSE;
     return config.ReadIntegerEntry(valueName, value);
 }
 
-CKBOOL TTWriteRegistryInteger(VxConfigRoot root, const char *subKey, const char *valueName, int value) {
-    VxConfig config(root, TTRegistryBaseSection());
+CKBOOL TTWriteRegistryInteger(VxConfigRoot root, const char *subKey, const char *valueName, int value, const char *registryFile) {
+    VxConfig config(root, TTRegistryBaseSection(), registryFile);
     if (!TTOpenConfig(root, subKey, VxConfig::WRITE, config))
         return FALSE;
     config.WriteIntegerEntry(valueName, value);
     return TRUE;
 }
 
-CKBOOL TTReadRegistryFloat(VxConfigRoot root, const char *subKey, const char *valueName, float *value) {
-    VxConfig config(root, TTRegistryBaseSection());
+CKBOOL TTReadRegistryFloat(VxConfigRoot root, const char *subKey, const char *valueName, float *value, const char *registryFile) {
+    VxConfig config(root, TTRegistryBaseSection(), registryFile);
     if (!TTOpenConfig(root, subKey, VxConfig::READ, config))
         return FALSE;
     return config.ReadFloatEntry(valueName, value);
 }
 
-CKBOOL TTWriteRegistryFloat(VxConfigRoot root, const char *subKey, const char *valueName, float value) {
-    VxConfig config(root, TTRegistryBaseSection());
+CKBOOL TTWriteRegistryFloat(VxConfigRoot root, const char *subKey, const char *valueName, float value, const char *registryFile) {
+    VxConfig config(root, TTRegistryBaseSection(), registryFile);
     if (!TTOpenConfig(root, subKey, VxConfig::WRITE, config))
         return FALSE;
     config.WriteFloatEntry(valueName, value);
     return TRUE;
 }
 
-CKBOOL TTQueryRegistryDword(VxConfigRoot root, const char *subKey, const char *valueName, CKDWORD *value) {
+CKBOOL TTQueryRegistryDword(VxConfigRoot root, const char *subKey, const char *valueName, CKDWORD *value, const char *registryFile) {
     if (!value)
         return FALSE;
-    VxConfig config(root, TTRegistryBaseSection());
+    VxConfig config(root, TTRegistryBaseSection(), registryFile);
     if (!TTOpenConfig(root, subKey, VxConfig::READ, config))
         return FALSE;
     VxConfigValueType type = VXCONFIG_VALUE_STRING;
@@ -95,7 +96,7 @@ CKBOOL TTQueryRegistryDword(VxConfigRoot root, const char *subKey, const char *v
     return TRUE;
 }
 
-CKBOOL TTQueryRegistryString(VxConfigRoot root, const char *subKey, const char *valueName, char *buffer, size_t bufferSize) {
+CKBOOL TTQueryRegistryString(VxConfigRoot root, const char *subKey, const char *valueName, char *buffer, size_t bufferSize, const char *registryFile) {
     if (!buffer || bufferSize == 0)
         return FALSE;
     // One spare byte tells a value that fits from one that would be truncated.
@@ -110,63 +111,68 @@ CKBOOL TTQueryRegistryString(VxConfigRoot root, const char *subKey, const char *
     return TRUE;
 }
 
-CKBOOL TTReadRegistryString(const CGameInfo *gameInfo, const char *regKey, const char *valueName, char *buffer, size_t bufferSize) {
+CKBOOL TTReadRegistryString(const CGameInfo *gameInfo, const char *regKey, const char *valueName, char *buffer, size_t bufferSize, const char *registryFile) {
     char section[512];
     if (!TTBuildRegistrySection(gameInfo, regKey, section, sizeof(section)))
         return FALSE;
-    return TTReadRegistryString(gameInfo->registryRoot, section, valueName, buffer, bufferSize);
+    return TTReadRegistryString(gameInfo->registryRoot, section, valueName, buffer, bufferSize, registryFile);
 }
 
-CKBOOL TTWriteRegistryString(const CGameInfo *gameInfo, const char *regKey, const char *valueName, const char *value) {
+CKBOOL TTWriteRegistryString(const CGameInfo *gameInfo, const char *regKey, const char *valueName, const char *value, const char *registryFile) {
     char section[512];
     if (!TTBuildRegistrySection(gameInfo, regKey, section, sizeof(section)))
         return FALSE;
-    return TTWriteRegistryString(gameInfo->registryRoot, section, valueName, value);
+    return TTWriteRegistryString(gameInfo->registryRoot, section, valueName, value, registryFile);
 }
 
-CKBOOL TTReadRegistryInteger(const CGameInfo *gameInfo, const char *regKey, const char *valueName, int *value) {
+CKBOOL TTReadRegistryInteger(const CGameInfo *gameInfo, const char *regKey, const char *valueName, int *value, const char *registryFile) {
     char section[512];
     if (!TTBuildRegistrySection(gameInfo, regKey, section, sizeof(section)))
         return FALSE;
-    return TTReadRegistryInteger(gameInfo->registryRoot, section, valueName, value);
+    return TTReadRegistryInteger(gameInfo->registryRoot, section, valueName, value, registryFile);
 }
 
-CKBOOL TTWriteRegistryInteger(const CGameInfo *gameInfo, const char *regKey, const char *valueName, int value) {
+CKBOOL TTWriteRegistryInteger(const CGameInfo *gameInfo, const char *regKey, const char *valueName, int value, const char *registryFile) {
     char section[512];
     if (!TTBuildRegistrySection(gameInfo, regKey, section, sizeof(section)))
         return FALSE;
-    return TTWriteRegistryInteger(gameInfo->registryRoot, section, valueName, value);
+    return TTWriteRegistryInteger(gameInfo->registryRoot, section, valueName, value, registryFile);
 }
 
-CKBOOL TTReadRegistryFloat(const CGameInfo *gameInfo, const char *regKey, const char *valueName, float *value) {
+CKBOOL TTReadRegistryFloat(const CGameInfo *gameInfo, const char *regKey, const char *valueName, float *value, const char *registryFile) {
     char section[512];
     if (!TTBuildRegistrySection(gameInfo, regKey, section, sizeof(section)))
         return FALSE;
-    return TTReadRegistryFloat(gameInfo->registryRoot, section, valueName, value);
+    return TTReadRegistryFloat(gameInfo->registryRoot, section, valueName, value, registryFile);
 }
 
-CKBOOL TTWriteRegistryFloat(const CGameInfo *gameInfo, const char *regKey, const char *valueName, float value) {
+CKBOOL TTWriteRegistryFloat(const CGameInfo *gameInfo, const char *regKey, const char *valueName, float value, const char *registryFile) {
     char section[512];
     if (!TTBuildRegistrySection(gameInfo, regKey, section, sizeof(section)))
         return FALSE;
-    return TTWriteRegistryFloat(gameInfo->registryRoot, section, valueName, value);
+    return TTWriteRegistryFloat(gameInfo->registryRoot, section, valueName, value, registryFile);
 }
 
-CKBOOL TTReadRegistryBoolean(const CGameInfo *gameInfo, const char *regKey, const char *valueName, XBOOL *value) {
+CKBOOL TTReadRegistryBoolean(const CGameInfo *gameInfo, const char *regKey, const char *valueName, XBOOL *value, const char *registryFile) {
     char section[512];
     if (!TTBuildRegistrySection(gameInfo, regKey, section, sizeof(section)))
         return FALSE;
-    VxConfig config(gameInfo->registryRoot, TTRegistryBaseSection());
+    VxConfig config(gameInfo->registryRoot, TTRegistryBaseSection(), registryFile);
     config.OpenSection(section, VxConfig::READ);
     return config.ReadBooleanEntry(valueName, value);
 }
 
-CKBOOL TTWriteRegistryBoolean(const CGameInfo *gameInfo, const char *regKey, const char *valueName, XBOOL value) {
+CKBOOL TTWriteRegistryBoolean(const CGameInfo *gameInfo, const char *regKey, const char *valueName, XBOOL value, const char *registryFile) {
     char section[512];
     if (!TTBuildRegistrySection(gameInfo, regKey, section, sizeof(section)))
         return FALSE;
-    VxConfig config(gameInfo->registryRoot, TTRegistryBaseSection());
+    VxConfig config(gameInfo->registryRoot, TTRegistryBaseSection(), registryFile);
     config.OpenSection(section, VxConfig::WRITE);
     config.WriteBooleanEntry(valueName, value);
     return TRUE;
+}
+
+const char *TTRegistryFile(CKContext *context) {
+    InterfaceManager *manager = context ? InterfaceManager::GetManager(context) : NULL;
+    return manager ? manager->GetRegistryFile() : NULL;
 }

@@ -13,7 +13,6 @@
 #include <string>
 #include <system_error>
 
-extern void SetProcessorSpecific_FunctionsPtr();
 CKERROR CreateReadRegistryProto(CKBehaviorPrototype **pproto);
 int ReadRegistry(const CKBehaviorContext &behcontext);
 CKERROR CreateCreateNewGameInfoProto(CKBehaviorPrototype **pproto);
@@ -110,6 +109,7 @@ static void QueryHelpersMirrorRegQueryValueEx() {
 
 class ReadRegistryFixture {
 public:
+    bool OwnsRuntime;
     CKContext *context = nullptr;
     CKBehavior *behavior = nullptr;
     CKBehaviorPrototype *prototype = nullptr;
@@ -117,9 +117,8 @@ public:
     CKParameterLocal *inputs[4] = {};
 
     ReadRegistryFixture(CKERROR (*createPrototype)(CKBehaviorPrototype **) = CreateReadRegistryProto,
-                        int inputCount = 4) {
-        SetProcessorSpecific_FunctionsPtr();
-        Check(CKStartUp() == CK_OK, "start runtime");
+                        int inputCount = 4, bool ownsRuntime = true) : OwnsRuntime(ownsRuntime) {
+        if (OwnsRuntime) Check(CKStartUp() == CK_OK, "start runtime");
         CKBuildClassHierarchyTable();
         Check(CKCreateContext(&context, nullptr, 0, 0) == CK_OK, "create context");
         behavior = CKBehavior::Cast(context->CreateObject(CKCID_BEHAVIOR, Str("ReadRegistry")));
@@ -138,7 +137,7 @@ public:
     ~ReadRegistryFixture() {
         if (context) CKCloseContext(context);
         delete prototype;
-        CKShutdown();
+        if (OwnsRuntime) CKShutdown();
     }
 
     void SetString(int input, const char *value) {
@@ -312,12 +311,45 @@ static void WriteKeepsColumnOnTypeMismatch() {
     Check(outI == 42, "next element is written from the kept column");
 }
 
+static void ContextRegistryFilesStayIndependent() {
+    char base[2048] = {};
+    Check(VxConfig::GetRegistryFilePath(base, sizeof(base)), "resolve isolated config path");
+    struct Files {
+        std::string First, Second;
+        ~Files() { std::remove(First.c_str()); std::remove(Second.c_str()); }
+    } files{std::string(base) + ".first", std::string(base) + ".second"};
+    ReadRegistryFixture first;
+    ReadRegistryFixture second(CreateReadRegistryProto, 4, false);
+    auto *firstManager = new InterfaceManager(first.context);
+    auto *secondManager = new InterfaceManager(second.context);
+    firstManager->SetRegistryFile(files.First.c_str());
+    secondManager->SetRegistryFile(files.Second.c_str());
+    int expected = 11;
+    for (auto *fixture : {&first, &second}) {
+        VxConfig config(VXCONFIG_ROOT_LOCAL_MACHINE, "", TTRegistryFile(fixture->context));
+        config.OpenSection("Software\\TT\\Contexts", VxConfig::WRITE);
+        config.WriteIntegerEntry("Value", expected);
+        expected += 11;
+    }
+    expected = 11;
+    for (auto *fixture : {&first, &second}) {
+        fixture->SetString(0, "Software\\TT\\Contexts");
+        fixture->SetString(1, "Value");
+        fixture->Run();
+        int actual = 0;
+        fixture->behavior->GetOutputParameterValue(0, &actual);
+        Check(actual == expected, "behavior reads its own context registry");
+        expected += 11;
+    }
+}
+
 int main() {
     try {
         ScratchRegistry registry;
         GameInfoUsesTheApplicationRegistryPath();
         NewGameInfoUsesHostDefaultsAndCompositionOverrides();
         QueryHelpersMirrorRegQueryValueEx();
+        ContextRegistryFilesStayIndependent();
         SingleValueReadsLocalMachine();
         ArrayModeReadsColumnsWithoutOk();
         WriteKeepsColumnOnTypeMismatch();

@@ -85,7 +85,7 @@ int SetIntegerValueToRegistry(const CKBehaviorContext &behcontext)
     strcpy(buffer, gameInfo->regSubkey);
     strcat(buffer, regKey);
 
-    if (!TTWriteRegistryInteger(gameInfo->registryRoot, buffer, valueName, value))
+    if (!TTWriteRegistryInteger(gameInfo->registryRoot, buffer, valueName, value, TTRegistryFile(context)))
     {
         context->OutputToConsoleExBeep("TT_SetIntegerValueToRegistry: Failed to set %s %d", valueName, value);
         beh->ActivateOutput(1);
