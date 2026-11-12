@@ -54,6 +54,7 @@ option(CKBB_BUILD_SHARED "Build building blocks as DLLs (SHARED)" ON)
 option(CKBB_BUILD_STATIC "Build building blocks as static libraries (STATIC)" OFF)
 option(CKBB_INSTALL "Generate install target" ${CKBB_IS_TOP_LEVEL})
 option(CKBB_BUILD_TESTS "Build the test suite" ${CKBB_IS_TOP_LEVEL})
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/CKBBTests.cmake")
 
 # =============================================================================
 # CMake modules
@@ -209,6 +210,12 @@ set(CKBB_ALL_MODULES
         TT_ParticleSystems_RT
         TT_Toolbox_RT
 )
+
+foreach (_test_module IN LISTS CKBB_TEST_MODULES)
+    if (NOT _test_module IN_LIST CKBB_ALL_MODULES)
+        message(FATAL_ERROR "Unknown CKBB_TEST_MODULES entry: ${_test_module}")
+    endif ()
+endforeach ()
 
 if (NOT WIN32)
     list(REMOVE_ITEM CKBB_ALL_MODULES

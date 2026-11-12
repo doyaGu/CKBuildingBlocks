@@ -2,7 +2,8 @@
 aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/Behaviors BEHAVIORS_SRCS)
 ckbb_add_module(Characters SOURCES Characters.cpp Characters.rc ${BEHAVIORS_SRCS})
 
-if (CKBB_BUILD_TESTS AND BUILD_TESTING AND TARGET CK2_3DStatic)
+ckbb_tests_enabled(Characters _module_tests_enabled)
+if (_module_tests_enabled AND TARGET CK2_3DStatic)
     add_executable(UnlimitedControllerTest
             tests/UnlimitedControllerTest.cpp
             Behaviors/UnlimitedController.cpp

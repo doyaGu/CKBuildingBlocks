@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 project(PhysicsRetailValidation LANGUAGES C CXX)
 
-# The ordinary Ballanced target imports the reconstructed CK2/VxMath ABI.
+# The ordinary NeMo2 target imports the reconstructed CK2/VxMath ABI.
 # This separate validation target imports the original 2.1 SDK ABI so the
 # same physics sources can be tested in an existing original installation.
 if (NOT WIN32 OR NOT MSVC OR NOT CMAKE_SIZEOF_VOID_P EQUAL 4)

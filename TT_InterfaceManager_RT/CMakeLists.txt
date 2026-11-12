@@ -14,7 +14,8 @@ ckbb_add_module(TT_InterfaceManager_RT
                 ${BEHAVIORS_SRCS}
 )
 
-if (CKBB_BUILD_TESTS AND BUILD_TESTING AND TARGET CK2_3DStatic)
+ckbb_tests_enabled(TT_InterfaceManager_RT _module_tests_enabled)
+if (_module_tests_enabled AND TARGET CK2_3DStatic)
     add_executable(TTInterfaceManagerRetailTest
             tests/RetailBehaviorTest.cpp
             Behaviors/ReadRegistry.cpp

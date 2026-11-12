@@ -52,7 +52,8 @@ foreach (target physics_RT physics_RTStatic)
     endif ()
 endforeach ()
 
-if (CKBB_BUILD_TESTS AND BUILD_TESTING AND TARGET CK2_3DStatic)
+ckbb_tests_enabled(physics_RT _module_tests_enabled)
+if (_module_tests_enabled AND TARGET CK2_3DStatic)
     add_executable(physics_rt_regression_tests
             tests/test_physics_regressions.cpp
             tests/PhysicsHostTest.cpp
@@ -88,11 +89,11 @@ if (CKBB_BUILD_TESTS AND BUILD_TESTING AND TARGET CK2_3DStatic)
                 COMMAND_EXPAND_LISTS)
     endif ()
     set_tests_properties(physics_rt_regression_tests PROPERTIES TIMEOUT 60 LABELS "physics;host")
-elseif (CKBB_BUILD_TESTS AND BUILD_TESTING)
+elseif (_module_tests_enabled)
     message(STATUS "physics_RT host tests need CKRE_BUILD_STATIC=ON (CK2_3DStatic)")
 endif ()
 
-if (CKBB_BUILD_TESTS AND BUILD_TESTING AND WIN32 AND TARGET physics_RT)
+if (_module_tests_enabled AND WIN32 AND TARGET physics_RT)
     add_executable(physics_rt_module_tests tests/PhysicsModuleTest.cpp)
     target_include_directories(physics_rt_module_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
     add_dependencies(physics_rt_module_tests physics_RT)

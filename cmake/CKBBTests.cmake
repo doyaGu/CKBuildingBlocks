@@ -1,0 +1,11 @@
+set(CKBB_TEST_MODULES "" CACHE STRING "Building block test modules; empty selects all")
+
+function(ckbb_tests_enabled MODULE OUT_VAR)
+    set(enabled OFF)
+    if (CKBB_BUILD_TESTS AND BUILD_TESTING)
+        if (NOT CKBB_TEST_MODULES OR MODULE IN_LIST CKBB_TEST_MODULES)
+            set(enabled ON)
+        endif ()
+    endif ()
+    set(${OUT_VAR} ${enabled} PARENT_SCOPE)
+endfunction()

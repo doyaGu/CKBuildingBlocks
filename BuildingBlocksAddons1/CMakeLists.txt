@@ -15,7 +15,8 @@ ckbb_add_module(BuildingBlocksAddons1
         ${BEHAVIORS_SRCS}
 )
 
-if (CKBB_BUILD_TESTS AND BUILD_TESTING AND TARGET CK2_3DStatic)
+ckbb_tests_enabled(BuildingBlocksAddons1 _module_tests_enabled)
+if (_module_tests_enabled AND TARGET CK2_3DStatic)
     add_executable(BuildingBlocksAddons1TextureProcessingTest
             tests/TextureProcessingTest.cpp
             TextureProcessing.cpp

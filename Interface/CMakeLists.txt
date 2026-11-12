@@ -29,7 +29,8 @@ if (NOT WIN32)
     endif ()
 endif ()
 
-if (CKBB_BUILD_TESTS AND BUILD_TESTING AND NOT WIN32)
+ckbb_tests_enabled(Interface _module_tests_enabled)
+if (_module_tests_enabled AND NOT WIN32)
     include(CTest)
     enable_testing()
     add_executable(test_interface_stb_font_backend

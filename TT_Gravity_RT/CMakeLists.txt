@@ -5,7 +5,8 @@ ckbb_add_module(TT_Gravity_RT
         SOURCES TT_Gravity_RT.cpp ${BEHAVIORS_SRCS}
 )
 
-if (CKBB_BUILD_TESTS AND BUILD_TESTING AND TARGET CK2_3DStatic)
+ckbb_tests_enabled(TT_Gravity_RT _module_tests_enabled)
+if (_module_tests_enabled AND TARGET CK2_3DStatic)
     add_executable(RealShadowMappingGeometryTest tests/RealShadowMappingGeometryTest.cpp)
     target_compile_features(RealShadowMappingGeometryTest PRIVATE cxx_std_17)
     target_link_libraries(RealShadowMappingGeometryTest PRIVATE CK2_3DStatic)
