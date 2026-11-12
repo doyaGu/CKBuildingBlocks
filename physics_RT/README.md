@@ -1,4 +1,4 @@
-# physics_RT in Ballanced
+# physics_RT
 
 The host integrates the numerical and geometry work from
 [physics_RT `81fe77d`](https://github.com/doyaGu/physics_RT/tree/81fe77d86609e7436424642c838e81ec6b58e5f4)
@@ -8,8 +8,8 @@ IVP and its numerical dependency retain their own source licenses.
 
 ## Validate in the original installation
 
-Ballanced's normal DLL imports the local CK2/VxMath ABI. To run these same
-physics sources with the original runtime, use the separate SDK validation
+The normal module imports the local CK2/VxMath ABI. To run these physics
+sources with the original runtime, use the separate SDK validation
 project. Import libraries and headers must come from the original Virtools
 2.1 SDK; the original installation supplies its existing runtime DLLs.
 
@@ -21,16 +21,16 @@ cmake --build build/physics-original --config Release --target physics_RT_retail
 ```
 
 The resulting `Release/physics_RT.dll` is for original-runtime validation.
-Use the existing Player, BML, assets and configuration under
-the selected legal installation for game launches and replays. Snapshot any
-temporarily replaced test modules and verify their hashes after restoration.
-Do not deploy Ballanced's ordinary DLL into that original runtime: its C++
+Use the original runtime and application data from the selected installation
+for reference launches and replays. Snapshot any temporarily replaced test
+modules and verify their hashes after restoration.
+Do not deploy the ordinary module into that original runtime: its C++
 imports differ even though the public plugin entry points have the same names.
 
 ## Floating-point evaluation and storage
 
 Enable `IVP_ENABLE_X87_EMULATION=ON` for the original evaluation and write-back
-rules. It defaults to `ON`. The native Player also enables
+rules. It defaults to `ON`. The engine also enables
 `VXMATH_ENABLE_X87_EMULATION=ON`; both settings are used for original replay
 acceptance. The original Ipion convex hull builder remains the default.
 
@@ -41,8 +41,8 @@ abstraction for binary32 matrix work.
 The non-SIMD implementation evaluates the same operations in software. Native
 IVP and VxMath share the existing FPU control-word API across platforms.
 
-The integration preserves Ballanced's named collision-surface cache, cached
-paper-ball respawn, parent/world scale handling, multiball shapes, double-anchor
+The integration preserves the named collision-surface cache, cached
+respawn state, parent/world scale handling, multiball shapes, double-anchor
 ball joints, contact bounds checks, behavior-ID lookup and explicit resource
 ownership. It also preserves the local negative-time-factor guard, buoyancy
 strength/idempotence handling, missing-reference guards and profiler units.
@@ -63,7 +63,7 @@ setting changes release the old listener and pending contact records.
 
 The focused validation project builds this module against the local CK2,
 VxMath and static RenderEngine without building a GPU rasterizer. It requires
-the Ballanced component checkout and an SDL3 3.4.8 package for the selected
+the NeMo2 component checkout and an SDL3 3.4.20+ package for the selected
 architecture. All builds must be out of source.
 
 ```powershell
@@ -77,10 +77,10 @@ ctest --test-dir build/physics-release -C Release --output-on-failure --no-tests
 Use a separate directory with `-A x64` for an x64 build. Internal diagnostics
 remain off. Original-runtime replay qualification is recorded separately for
 each architecture.
-For a component checkout outside Ballanced, set `PHYSICS_RT_COMPONENT_ROOT`
+For a different component layout, set `PHYSICS_RT_COMPONENT_ROOT`
 to the directory containing the four local component repositories.
 
-The normal Ballanced build also registers host tests when `CKBB_BUILD_TESTS`,
+The NeMo2 build also registers host tests when `CKBB_BUILD_TESTS`,
 `BUILD_TESTING` and `CKRE_BUILD_STATIC` are enabled. The host suite exercises
 the input/output ports and parameters of all 15 building blocks, behavior
 execution, float rounding, matrix conversion, caching, scale, state access,
