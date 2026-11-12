@@ -2,6 +2,7 @@
 #include "VxWindowFunctions.h"
 #include "../NemoArray.h"
 #include "../RegistryUtils.h"
+#include "../InterfaceManager.h"
 
 #include <cstdio>
 #include <cstdlib>
@@ -15,12 +16,27 @@
 extern void SetProcessorSpecific_FunctionsPtr();
 CKERROR CreateReadRegistryProto(CKBehaviorPrototype **pproto);
 int ReadRegistry(const CKBehaviorContext &behcontext);
+CKERROR CreateCreateNewGameInfoProto(CKBehaviorPrototype **pproto);
+int CreateNewGameInfo(const CKBehaviorContext &behcontext);
 
 static void Check(bool value, const char *message) {
     if (!value) throw std::runtime_error(message);
 }
 
 static CKSTRING Str(const char *text) { return const_cast<CKSTRING>(text); }
+
+static void GameInfoUsesTheApplicationRegistryPath() {
+    CGameInfo defaults;
+    Check(strcmp(defaults.regSubkey, "\"Software\\\\Virtools\\\\Settings\"") == 0,
+          "default registry namespace");
+    CGameInfo application("Software\\Sample\\Settings");
+    Check(strcmp(application.regSubkey, "Software\\Sample\\Settings") == 0,
+          "application registry path");
+    const std::string oversized(600, 'x');
+    CGameInfo bounded(oversized.c_str());
+    Check(strlen(bounded.regSubkey) == sizeof(bounded.regSubkey) - 1,
+          "registry path is terminated within its storage");
+}
 
 // Points the file-backed registry at a scratch directory for the test's lifetime.
 class ScratchRegistry {
@@ -39,17 +55,17 @@ public:
             Check(!error || error == std::errc::file_exists, "create scratch registry dir");
         }
         Check(!m_Home.empty(), "reserve scratch registry dir");
-        m_HadHome = VxGetEnvironmentVariable("BALLANCE_USER_CONFIG_HOME", m_PreviousHome) != FALSE;
-        if (!VxSetEnvironmentVariable("BALLANCE_USER_CONFIG_HOME", m_Home.c_str())) {
+        m_HadHome = VxGetEnvironmentVariable("NEMO_USER_CONFIG_HOME", m_PreviousHome) != FALSE;
+        if (!VxSetEnvironmentVariable("NEMO_USER_CONFIG_HOME", m_Home.c_str())) {
             std::error_code error;
             std::filesystem::remove(m_Home, error);
             Check(false, "set config home");
         }
     }
     ~ScratchRegistry() {
-        VxSetEnvironmentVariable("BALLANCE_USER_CONFIG_HOME", m_HadHome ? m_PreviousHome.CStr() : nullptr);
+        VxSetEnvironmentVariable("NEMO_USER_CONFIG_HOME", m_HadHome ? m_PreviousHome.CStr() : nullptr);
         std::error_code error;
-        const auto directory = std::filesystem::path(m_Home) / "Ballance";
+        const auto directory = std::filesystem::path(m_Home) / "NeMo2";
         std::filesystem::remove(directory / "registry.ini", error);
         std::filesystem::remove(directory, error);
         std::filesystem::remove(m_Home, error);
@@ -100,17 +116,18 @@ public:
     CKBehaviorContext call;
     CKParameterLocal *inputs[4] = {};
 
-    ReadRegistryFixture() {
+    ReadRegistryFixture(CKERROR (*createPrototype)(CKBehaviorPrototype **) = CreateReadRegistryProto,
+                        int inputCount = 4) {
         SetProcessorSpecific_FunctionsPtr();
         Check(CKStartUp() == CK_OK, "start runtime");
         CKBuildClassHierarchyTable();
         Check(CKCreateContext(&context, nullptr, 0, 0) == CK_OK, "create context");
         behavior = CKBehavior::Cast(context->CreateObject(CKCID_BEHAVIOR, Str("ReadRegistry")));
         Check(behavior != nullptr, "create behavior");
-        Check(CreateReadRegistryProto(&prototype) == CK_OK, "create prototype");
+        Check(createPrototype(&prototype) == CK_OK, "create prototype");
         Check(behavior->InitFromPrototype(prototype) == CK_OK, "initialize behavior");
         const CKGUID guids[4] = {CKPGUID_STRING, CKPGUID_STRING, CKPGUID_DATAARRAY, CKPGUID_STRING};
-        for (int i = 0; i < 4; ++i) {
+        for (int i = 0; i < inputCount; ++i) {
             inputs[i] = context->CreateCKParameterLocal(Str("in"), guids[i]);
             Check(inputs[i] && behavior->GetInputParameter(i)->SetDirectSource(inputs[i]) == CK_OK, "bind input");
         }
@@ -134,6 +151,42 @@ public:
         ReadRegistry(call);
     }
 };
+
+static void NewGameInfoUsesHostDefaultsAndCompositionOverrides() {
+    ReadRegistryFixture fx(CreateCreateNewGameInfoProto, 1);
+    InterfaceManager *manager = new InterfaceManager(fx.context);
+    Check(manager->GetDefaultRegistryPath() == nullptr, "neutral manager has no application override");
+    Check(fx.behavior->GetInputParameter(0)->SetDirectSource(nullptr) == CK_OK, "unbind registry path");
+
+    const auto create = [&]() {
+        CreateNewGameInfo(fx.call);
+        Check(manager->GetGameInfo() != nullptr, "created game info");
+        return manager->GetGameInfo();
+    };
+    const auto clear = [&]() {
+        delete manager->GetGameInfo();
+        manager->SetGameInfo(nullptr);
+    };
+
+    CGameInfo *info = create();
+    Check(strcmp(info->regSubkey, "\"Software\\\\Virtools\\\\Settings\"") == 0,
+          "unconfigured behavior uses neutral registry path");
+    clear();
+
+    manager->SetDefaultRegistryPath("Software\\Sample\\Settings");
+    info = create();
+    Check(strcmp(info->regSubkey, "Software\\Sample\\Settings") == 0,
+          "behavior uses the host registry path after recreation");
+    Check(create() == info, "existing game info is retained");
+    clear();
+
+    Check(fx.behavior->GetInputParameter(0)->SetDirectSource(fx.inputs[0]) == CK_OK, "bind registry path");
+    fx.SetString(0, "Software\\Composition\\Settings");
+    info = create();
+    Check(strcmp(info->regSubkey, "Software\\Composition\\Settings") == 0,
+          "composition registry path overrides the host default");
+    clear();
+}
 
 static void SingleValueReadsLocalMachine() {
     WriteValues(VXCONFIG_ROOT_LOCAL_MACHINE, "Software\\TT\\Single", 7, 1.5f, "machine");
@@ -262,6 +315,8 @@ static void WriteKeepsColumnOnTypeMismatch() {
 int main() {
     try {
         ScratchRegistry registry;
+        GameInfoUsesTheApplicationRegistryPath();
+        NewGameInfoUsesHostDefaultsAndCompositionOverrides();
         QueryHelpersMirrorRegQueryValueEx();
         SingleValueReadsLocalMachine();
         ArrayModeReadsColumnsWithoutOk();

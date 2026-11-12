@@ -74,12 +74,7 @@ int CreateNewGameInfo(const CKBehaviorContext &behcontext)
         return CKBR_OK;
     }
 
-    gameInfo = new CGameInfo;
-    if (path)
-    {
-        strncpy(gameInfo->regSubkey, path, sizeof(gameInfo->regSubkey) - 1);
-        gameInfo->regSubkey[sizeof(gameInfo->regSubkey) - 1] = '\0';
-    }
+    gameInfo = new CGameInfo(path ? path : man->GetDefaultRegistryPath());
     man->SetGameInfo(gameInfo);
 
     beh->SetOutputParameterValue(0, &gameInfo, sizeof(CGameInfo *));

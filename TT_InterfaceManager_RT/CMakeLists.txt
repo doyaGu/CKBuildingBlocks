@@ -18,6 +18,8 @@ if (CKBB_BUILD_TESTS AND BUILD_TESTING AND TARGET CK2_3DStatic)
     add_executable(TTInterfaceManagerRetailTest
             tests/RetailBehaviorTest.cpp
             Behaviors/ReadRegistry.cpp
+            Behaviors/CreateNewGameInfo.cpp
+            InterfaceManager.cpp
             NemoArray.cpp
             RegistryUtils.cpp
     )

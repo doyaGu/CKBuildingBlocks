@@ -24,7 +24,7 @@ public:
     int levelBonus;
     int levelReached;
 
-    CGameInfo()
+    explicit CGameInfo(const char *registryPath = NULL)
         : next(NULL),
           registryRoot(VXCONFIG_ROOT_CURRENT_USER),
           gameScore(0),
@@ -40,7 +40,9 @@ public:
         memset(levelName, 0, sizeof(levelName));
         memset(fileName, 0, sizeof(fileName));
         memset(path, 0, sizeof(path));
-        strcpy(regSubkey, "\"Software\\\\Ballance\\\\Settings\"");
+        const char *key = registryPath ? registryPath : "\"Software\\\\Virtools\\\\Settings\"";
+        strncpy(regSubkey, key, sizeof(regSubkey) - 1);
+        regSubkey[sizeof(regSubkey) - 1] = '\0';
     }
 
     virtual ~CGameInfo() {}

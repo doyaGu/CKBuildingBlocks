@@ -134,6 +134,17 @@ public:
         m_GameInfo = gameInfo;
     }
 
+    // Used when a GameInfo has no explicit registry path.
+    const char *GetDefaultRegistryPath() const
+    {
+        return m_DefaultRegistryPath.Empty() ? NULL : m_DefaultRegistryPath.CStr();
+    }
+
+    void SetDefaultRegistryPath(const char *path)
+    {
+        m_DefaultRegistryPath = path ? path : "";
+    }
+
     char *GetCmoName()
     {
         return &m_CmoName[0];
@@ -248,6 +259,7 @@ protected:
     TTPlayerCommand m_CommandQueue[TT_PLAYER_COMMAND_QUEUE_SIZE];
     int m_CommandHead;
     int m_CommandTail;
+    XString m_DefaultRegistryPath;
 };
 
 #endif // TT_INTERFACEMANAGER_H
