@@ -220,7 +220,7 @@ void BlurRender(CKRenderContext *rc, void *arg)
     VxColor fcolor = mat->GetDiffuse();
     if (fcolor.a == 1.0f)
         fcolor.a = 0.9f;
-    fcolor.a = 0.01f + (float)(rand() & 1023) * 0.0002f;
+    fcolor.a = 0.01f + (float)(rc->GetCKContext()->Random() & 1023) * 0.0002f;
     CKDWORD col = RGBAFTOCOLOR(&fcolor);
     VxFillStructure(4, data->ColorPtr, data->ColorStride, 4, &col);
 #else
@@ -246,7 +246,7 @@ void BlurRender(CKRenderContext *rc, void *arg)
     VxColor fcolor = mat->GetDiffuse();
     if (fcolor.a == 1.0f)
         fcolor.a = 0.9f;
-    fcolor.a = 0.01f + (float)(rand() & 1023) * 0.0002f;
+    fcolor.a = 0.01f + (float)(rc->GetCKContext()->Random() & 1023) * 0.0002f;
     CKDWORD col = RGBAFTOCOLOR(&fcolor);
     VxFillStructure(4, data->Colors.Ptr, data->Colors.Stride, 4, &col);
 #endif

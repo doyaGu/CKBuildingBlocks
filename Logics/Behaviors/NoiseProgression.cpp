@@ -126,7 +126,7 @@ int NoiseProgression(const CKBehaviorContext &behcontext)
     else
     { // not yet finish...
         // the noise call
-        float value = 0.5f + 0.5f * PerlinNoise1D(progression, alpha, beta, harmonics);
+        float value = 0.5f + 0.5f * PerlinNoise1D(behcontext.Context, progression, alpha, beta, harmonics);
 
         Pos = a + (b - a) * value;
 
@@ -196,7 +196,7 @@ int NoiseProgressionTimeBased(const CKBehaviorContext &behcontext)
     else // not yet finish...
     {
         // the noise call
-        float value = 0.5f + 0.5f * PerlinNoise1D(progression, alpha, beta, harmonics);
+        float value = 0.5f + 0.5f * PerlinNoise1D(behcontext.Context, progression, alpha, beta, harmonics);
 
         Pos = a + (b - a) * value;
 

@@ -7,13 +7,32 @@
 #include <math.h>
 #include "perlin.h"
 
-static int p[B + B + 2];
-static float g3[B + B + 2][3];
-static float g2[B + B + 2][2];
-static float g1[B + B + 2];
-static int start = 1;
+namespace {
+const CKGUID NoiseGuid(0x4e524e47, 0x4c4f4749);
+class LogicsNoiseState : public CKBaseManager {
+public:
+    explicit LogicsNoiseState(CKContext *context)
+        : CKBaseManager(context, NoiseGuid, "Logics Noise") { context->RegisterNewManager(this); }
+    int p[B + B + 2];
+    float g3[B + B + 2][3], g2[B + B + 2][2], g1[B + B + 2];
+    int start = 1;
+    float noise1(float);
+    float noise2(float *);
+    float noise3(float *);
+    void init();
+};
+LogicsNoiseState &NoiseForContext(CKContext *context) {
+    auto *state = static_cast<LogicsNoiseState *>(context->GetManagerByGuid(NoiseGuid));
+    if (!state) state = new LogicsNoiseState(context);
+    return *state;
+}
+}
 
-float noise1(float arg)
+void DestroyLogicsNoise(CKContext *context) {
+    delete context->GetManagerByGuid(NoiseGuid);
+}
+
+float LogicsNoiseState::noise1(float arg)
 {
     int bx0, bx1;
     float rx0, rx1, sx, t, u, v, vec[1];
@@ -34,7 +53,7 @@ float noise1(float arg)
     return (lerp(sx, u, v));
 }
 
-float noise2(float vec[2])
+float LogicsNoiseState::noise2(float vec[2])
 {
     int bx0, bx1, by0, by1, b00, b10, b01, b11;
     float rx0, rx1, ry0, ry1, *q, sx, sy, a, b, t, u, v;
@@ -75,7 +94,7 @@ float noise2(float vec[2])
     return lerp(sy, a, b);
 }
 
-float noise3(float vec[3])
+float LogicsNoiseState::noise3(float vec[3])
 {
     int bx0, bx1, by0, by1, bz0, bz1, b00, b10, b01, b11;
     float rx0, rx1, ry0, ry1, rz0, rz1, *q, sy, sz, a, b, c, d, t, u, v;
@@ -153,28 +172,28 @@ void normalize3(float v[3])
     v[2] = v[2] / s;
 }
 
-void init(void)
+void LogicsNoiseState::init(void)
 {
     int i, j, k;
 
     for (i = 0; i < B; i++)
     {
         p[i] = i;
-        g1[i] = (float)((rand() % (B + B)) - B) / B;
+        g1[i] = (float)((m_Context->Random() % (B + B)) - B) / B;
 
         for (j = 0; j < 2; j++)
-            g2[i][j] = (float)((rand() % (B + B)) - B) / B;
+            g2[i][j] = (float)((m_Context->Random() % (B + B)) - B) / B;
         normalize2(g2[i]);
 
         for (j = 0; j < 3; j++)
-            g3[i][j] = (float)((rand() % (B + B)) - B) / B;
+            g3[i][j] = (float)((m_Context->Random() % (B + B)) - B) / B;
         normalize3(g3[i]);
     }
 
     while (--i)
     {
         k = p[i];
-        p[i] = p[j = rand() % B];
+        p[i] = p[j = m_Context->Random() % B];
         p[j] = k;
     }
 
@@ -197,7 +216,7 @@ void init(void)
    "beta" is the harmonic scaling/spacing, typically 2.
 */
 
-float PerlinNoise1D(float x, float alpha, float beta, int n)
+float PerlinNoise1D(CKContext *context, float x, float alpha, float beta, int n)
 {
     int i;
     float val, sum = 0;
@@ -206,7 +225,7 @@ float PerlinNoise1D(float x, float alpha, float beta, int n)
     p = x;
     for (i = 0; i < n; i++)
     {
-        val = noise1(p);
+        val = NoiseForContext(context).noise1(p);
         sum += val / scale;
         scale *= alpha;
         p *= beta;
@@ -214,7 +233,7 @@ float PerlinNoise1D(float x, float alpha, float beta, int n)
     return (sum);
 }
 
-float PerlinNoise2D(float x, float y, float alpha, float beta, int n)
+float PerlinNoise2D(CKContext *context, float x, float y, float alpha, float beta, int n)
 {
     int i;
     float val, sum = 0;
@@ -224,7 +243,7 @@ float PerlinNoise2D(float x, float y, float alpha, float beta, int n)
     p[1] = y;
     for (i = 0; i < n; i++)
     {
-        val = noise2(p);
+        val = NoiseForContext(context).noise2(p);
         sum += val / scale;
         scale *= alpha;
         p[0] *= beta;
@@ -233,7 +252,7 @@ float PerlinNoise2D(float x, float y, float alpha, float beta, int n)
     return (sum);
 }
 
-float PerlinNoise3D(float x, float y, float z, float alpha, float beta, int n)
+float PerlinNoise3D(CKContext *context, float x, float y, float z, float alpha, float beta, int n)
 {
     int i;
     float val, sum = 0;
@@ -244,7 +263,7 @@ float PerlinNoise3D(float x, float y, float z, float alpha, float beta, int n)
     p[2] = z;
     for (i = 0; i < n; i++)
     {
-        val = noise3(p);
+        val = NoiseForContext(context).noise3(p);
         sum += val / scale;
         scale *= alpha;
         p[0] *= beta;

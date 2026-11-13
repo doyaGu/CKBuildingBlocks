@@ -1,3 +1,6 @@
+#ifndef CK_LOGICS_PERLIN_H
+#define CK_LOGICS_PERLIN_H
+
 #define B 0x100
 #define BM 0xff
 #define N 0x1000
@@ -15,13 +18,10 @@
 #define at2(rx, ry) (rx * q[0] + ry * q[1])
 #define at3(rx, ry, rz) (rx * q[0] + ry * q[1] + rz * q[2])
 
-void init(void);
-float noise1(float);
-float noise2(float *);
-float noise3(float *);
-void normalize3(float *);
-void normalize2(float *);
+class CKContext;
+void DestroyLogicsNoise(CKContext *context);
+float PerlinNoise1D(CKContext *, float, float, float, int);
+float PerlinNoise2D(CKContext *, float, float, float, float, int);
+float PerlinNoise3D(CKContext *, float, float, float, float, float, int);
 
-float PerlinNoise1D(float, float, float, int);
-float PerlinNoise2D(float, float, float, float, int);
-float PerlinNoise3D(float, float, float, float, float, int);
+#endif

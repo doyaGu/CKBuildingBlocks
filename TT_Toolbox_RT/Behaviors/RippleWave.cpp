@@ -13,9 +13,9 @@
 #include <string.h>
 
 // Random in range helper
-static float RippleRandomRange(float min, float max)
+static float RippleRandomRange(CKContext *context, float min, float max)
 {
-    return min + (float)rand() / (float)RAND_MAX * (max - min);
+    return min + (float)context->Random() / (float)CK_RANDOM_MAX * (max - min);
 }
 
 static void FreeRippleWaveBuffer(CKBehavior *beh)
@@ -203,8 +203,8 @@ int RippleWave(const CKBehaviorContext &behcontext)
 
         // Create a drop at random position (avoiding edges)
         float maxPos = (float)(gridSize - 1);
-        int dropX = (int)RippleRandomRange(1.0f, maxPos);
-        int dropY = (int)RippleRandomRange(1.0f, maxPos);
+        int dropX = (int)RippleRandomRange(behcontext.Context, 1.0f, maxPos);
+        int dropY = (int)RippleRandomRange(behcontext.Context, 1.0f, maxPos);
 
         int centerIdx = dropX + gridSize * dropY;
 

@@ -289,20 +289,20 @@ int GridManager::RegisterType(CKSTRING TypeName)
         delete[] m_LayerTypeColor;
         m_LayerTypeColor = tmp3;
 
-        int r3 = (rand() & 1) + (rand() & 1); // random color
+        int r3 = (m_Context->Random() & 1) + (m_Context->Random() & 1); // random color
         int R, G, B;
         if (r3 == 1)
-            R = 128 + rand() & 127;
+            R = 128 + m_Context->Random() & 127;
         else
-            R = rand() & 255;
+            R = m_Context->Random() & 255;
         if (r3 == 0)
-            G = 128 + rand() & 127;
+            G = 128 + m_Context->Random() & 127;
         else
-            G = rand() & 255;
+            G = m_Context->Random() & 255;
         if (r3 == 2)
-            B = 128 + rand() & 127;
+            B = 128 + m_Context->Random() & 127;
         else
-            B = rand() & 255;
+            B = m_Context->Random() & 255;
         m_LayerTypeColor[m_LayerTypeCount].Set(R, G, B);
 
         //---

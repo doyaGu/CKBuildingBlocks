@@ -597,7 +597,7 @@ void ParticleEmitter::AddParticles()
     int emits;
     if (m_VariancesFlags & PV_EMISSION)
     {
-        emits = emitsPerFrame + (int)((float)emitsVar * RANDNUM);
+        emits = emitsPerFrame + (int)((float)emitsVar * ParticleRandomSigned(m_Context));
     }
     else
     {
@@ -627,12 +627,12 @@ void ParticleEmitter::AddParticles()
             InitiateDirection(p);
 
             // Initiate density
-            p->m_Density = rand() * INV_RAND;
+            p->m_Density = m_Context->Random() * INV_RAND;
 
             // Calculate the speed
             if (m_VariancesFlags & PV_SPEED)
             {
-                p->dir *= m_Speed + (m_SpeedVariation * RANDNUM);
+                p->dir *= m_Speed + (m_SpeedVariation * ParticleRandomSigned(m_Context));
             }
             else
             {
@@ -653,7 +653,7 @@ void ParticleEmitter::AddParticles()
                 p->m_Angle = 0;
                 if (m_VariancesFlags & PV_ANGULARSPEED)
                 {
-                    p->m_DeltaAngle = m_AngularSpeed + m_AngularSpeedVariation * RANDNUM;
+                    p->m_DeltaAngle = m_AngularSpeed + m_AngularSpeedVariation * ParticleRandomSigned(m_Context);
                 }
                 else
                 {
@@ -668,11 +668,11 @@ void ParticleEmitter::AddParticles()
                     oc = group->GetObjectCount();
                 else
                     oc = 0;
-                p->m_GroupIndex = (int)(oc * ((float)rand() * INV_RAND));
+                p->m_GroupIndex = (int)(oc * ((float)m_Context->Random() * INV_RAND));
                 p->m_Angle = 0;
                 if (m_VariancesFlags & PV_ANGULARSPEED)
                 {
-                    p->m_DeltaAngle = m_AngularSpeed + m_AngularSpeedVariation * RANDNUM;
+                    p->m_DeltaAngle = m_AngularSpeed + m_AngularSpeedVariation * ParticleRandomSigned(m_Context);
                 }
                 else
                 {
@@ -691,7 +691,7 @@ void ParticleEmitter::AddParticles()
             ////////////////////////
             if (m_VariancesFlags & PV_LIFESPAN)
             {
-                p->m_Life = m_Life + m_LifeVariation * RANDNUM;
+                p->m_Life = m_Life + m_LifeVariation * ParticleRandomSigned(m_Context);
             }
             else
             {
@@ -710,10 +710,10 @@ void ParticleEmitter::AddParticles()
             // Initial Color
             if (m_VariancesFlags & PV_INITIALCOLOR)
             {
-                p->m_Color.r = m_StartColor.r + (m_StartColorVar.r * RANDNUM);
-                p->m_Color.g = m_StartColor.g + (m_StartColorVar.g * RANDNUM);
-                p->m_Color.b = m_StartColor.b + (m_StartColorVar.b * RANDNUM);
-                p->m_Color.a = m_StartColor.a + (m_StartColorVar.a * RANDNUM);
+                p->m_Color.r = m_StartColor.r + (m_StartColorVar.r * ParticleRandomSigned(m_Context));
+                p->m_Color.g = m_StartColor.g + (m_StartColorVar.g * ParticleRandomSigned(m_Context));
+                p->m_Color.b = m_StartColor.b + (m_StartColorVar.b * ParticleRandomSigned(m_Context));
+                p->m_Color.a = m_StartColor.a + (m_StartColorVar.a * ParticleRandomSigned(m_Context));
             }
             else
             {
@@ -724,10 +724,10 @@ void ParticleEmitter::AddParticles()
             {
                 if (m_VariancesFlags & PV_ENDINGCOLOR)
                 {
-                    p->deltaColor.r = ((m_EndColor.r + (m_EndColorVar.r * RANDNUM)) - p->m_Color.r) * invlife;
-                    p->deltaColor.g = ((m_EndColor.g + (m_EndColorVar.g * RANDNUM)) - p->m_Color.g) * invlife;
-                    p->deltaColor.b = ((m_EndColor.b + (m_EndColorVar.b * RANDNUM)) - p->m_Color.b) * invlife;
-                    p->deltaColor.a = ((m_EndColor.a + (m_EndColorVar.a * RANDNUM)) - p->m_Color.a) * invlife;
+                    p->deltaColor.r = ((m_EndColor.r + (m_EndColorVar.r * ParticleRandomSigned(m_Context))) - p->m_Color.r) * invlife;
+                    p->deltaColor.g = ((m_EndColor.g + (m_EndColorVar.g * ParticleRandomSigned(m_Context))) - p->m_Color.g) * invlife;
+                    p->deltaColor.b = ((m_EndColor.b + (m_EndColorVar.b * ParticleRandomSigned(m_Context))) - p->m_Color.b) * invlife;
+                    p->deltaColor.a = ((m_EndColor.a + (m_EndColorVar.a * ParticleRandomSigned(m_Context))) - p->m_Color.a) * invlife;
                 }
                 else
                 {
@@ -752,7 +752,7 @@ void ParticleEmitter::AddParticles()
             // Initial Size
             if (m_VariancesFlags & PV_INITIALSIZE)
             {
-                p->m_Size = m_StartSize + (m_StartSizeVar * RANDNUM);
+                p->m_Size = m_StartSize + (m_StartSizeVar * ParticleRandomSigned(m_Context));
             }
             else
             {
@@ -763,7 +763,7 @@ void ParticleEmitter::AddParticles()
             {
                 if (m_VariancesFlags & PV_ENDINGSIZE)
                 {
-                    p->m_DeltaSize = (m_EndSize + (m_EndSizeVar * RANDNUM) - p->m_Size) * invlife;
+                    p->m_DeltaSize = (m_EndSize + (m_EndSizeVar * ParticleRandomSigned(m_Context)) - p->m_Size) * invlife;
                 }
                 else
                 {
@@ -790,7 +790,7 @@ void ParticleEmitter::AddParticles()
                 // Initial Texture
                 if (m_VariancesFlags & PV_INITIALTEXTURE)
                 {
-                    p->m_CurrentFrame = m_InitialTextureFrame + (int)(m_InitialTextureFrameVariance * RANDNUMP);
+                    p->m_CurrentFrame = m_InitialTextureFrame + (int)(m_InitialTextureFrameVariance * ParticleRandomPositive(m_Context));
                 }
                 else
                 {
@@ -805,7 +805,7 @@ void ParticleEmitter::AddParticles()
                 {
                     if (m_VariancesFlags & PV_SPEEDTEXTURE)
                     {
-                        p->m_DeltaFrametime = m_SpeedTextureFrame + m_SpeedTextureFrameVariance * RANDNUM;
+                        p->m_DeltaFrametime = m_SpeedTextureFrame + m_SpeedTextureFrameVariance * ParticleRandomSigned(m_Context);
                     }
                     else
                     {
@@ -831,7 +831,7 @@ void ParticleEmitter::AddParticles()
             {
                 if (m_VariancesFlags & PV_BOUNCE)
                 {
-                    p->m_Bounce = m_Bounce + (m_BounceVariation * RANDNUM);
+                    p->m_Bounce = m_Bounce + (m_BounceVariation * ParticleRandomSigned(m_Context));
                 }
                 else
                 {
@@ -848,7 +848,7 @@ void ParticleEmitter::AddParticles()
             {
                 if (m_VariancesFlags & PV_WEIGHT)
                 {
-                    p->m_Weight = m_Weight + (m_WeightVariation * RANDNUM);
+                    p->m_Weight = m_Weight + (m_WeightVariation * ParticleRandomSigned(m_Context));
                 }
                 else
                 {
@@ -864,7 +864,7 @@ void ParticleEmitter::AddParticles()
             {
                 if (m_VariancesFlags & PV_SURFACE)
                 {
-                    p->m_Surface = m_Surface + (m_SurfaceVariation * RANDNUM);
+                    p->m_Surface = m_Surface + (m_SurfaceVariation * ParticleRandomSigned(m_Context));
                 }
                 else
                 {
@@ -895,7 +895,7 @@ void ParticleEmitter::AddParticles2()
         float emits;
         if (m_VariancesFlags & PV_EMISSION)
         {
-            emits = self->m_EmissionDelay + emitsVar * RANDNUM;
+            emits = self->m_EmissionDelay + emitsVar * ParticleRandomSigned(m_Context);
         }
         else
         {
@@ -948,12 +948,12 @@ void ParticleEmitter::AddParticles2()
                     InitiateDirection(p);
 
                     // Initiate density
-                    p->m_Density = rand() * INV_RAND;
+                    p->m_Density = m_Context->Random() * INV_RAND;
 
                     // Calculate the speed
                     if (m_VariancesFlags & PV_SPEED)
                     {
-                        p->dir *= m_Speed + (m_SpeedVariation * RANDNUM);
+                        p->dir *= m_Speed + (m_SpeedVariation * ParticleRandomSigned(m_Context));
                     }
                     else
                     {
@@ -974,7 +974,7 @@ void ParticleEmitter::AddParticles2()
                         p->m_Angle = 0;
                         if (m_VariancesFlags & PV_ANGULARSPEED)
                         {
-                            p->m_DeltaAngle = m_AngularSpeed + m_AngularSpeedVariation * RANDNUM;
+                            p->m_DeltaAngle = m_AngularSpeed + m_AngularSpeedVariation * ParticleRandomSigned(m_Context);
                         }
                         else
                         {
@@ -989,11 +989,11 @@ void ParticleEmitter::AddParticles2()
                             oc = group->GetObjectCount();
                         else
                             oc = 0;
-                        p->m_GroupIndex = (int)(oc * ((float)rand() * INV_RAND));
+                        p->m_GroupIndex = (int)(oc * ((float)m_Context->Random() * INV_RAND));
                         p->m_Angle = 0;
                         if (m_VariancesFlags & PV_ANGULARSPEED)
                         {
-                            p->m_DeltaAngle = m_AngularSpeed + m_AngularSpeedVariation * RANDNUM;
+                            p->m_DeltaAngle = m_AngularSpeed + m_AngularSpeedVariation * ParticleRandomSigned(m_Context);
                         }
                         else
                         {
@@ -1012,7 +1012,7 @@ void ParticleEmitter::AddParticles2()
                     ////////////////////////
                     if (m_VariancesFlags & PV_LIFESPAN)
                     {
-                        p->m_Life = m_Life + m_LifeVariation * RANDNUM;
+                        p->m_Life = m_Life + m_LifeVariation * ParticleRandomSigned(m_Context);
                     }
                     else
                     {
@@ -1031,10 +1031,10 @@ void ParticleEmitter::AddParticles2()
                     // Initial Color
                     if (m_VariancesFlags & PV_INITIALCOLOR)
                     {
-                        p->m_Color.r = m_StartColor.r + (m_StartColorVar.r * RANDNUM);
-                        p->m_Color.g = m_StartColor.g + (m_StartColorVar.g * RANDNUM);
-                        p->m_Color.b = m_StartColor.b + (m_StartColorVar.b * RANDNUM);
-                        p->m_Color.a = m_StartColor.a + (m_StartColorVar.a * RANDNUM);
+                        p->m_Color.r = m_StartColor.r + (m_StartColorVar.r * ParticleRandomSigned(m_Context));
+                        p->m_Color.g = m_StartColor.g + (m_StartColorVar.g * ParticleRandomSigned(m_Context));
+                        p->m_Color.b = m_StartColor.b + (m_StartColorVar.b * ParticleRandomSigned(m_Context));
+                        p->m_Color.a = m_StartColor.a + (m_StartColorVar.a * ParticleRandomSigned(m_Context));
                     }
                     else
                     {
@@ -1045,10 +1045,10 @@ void ParticleEmitter::AddParticles2()
                     {
                         if (m_VariancesFlags & PV_ENDINGCOLOR)
                         {
-                            p->deltaColor.r = ((m_EndColor.r + (m_EndColorVar.r * RANDNUM)) - p->m_Color.r) * invlife;
-                            p->deltaColor.g = ((m_EndColor.g + (m_EndColorVar.g * RANDNUM)) - p->m_Color.g) * invlife;
-                            p->deltaColor.b = ((m_EndColor.b + (m_EndColorVar.b * RANDNUM)) - p->m_Color.b) * invlife;
-                            p->deltaColor.a = ((m_EndColor.a + (m_EndColorVar.a * RANDNUM)) - p->m_Color.a) * invlife;
+                            p->deltaColor.r = ((m_EndColor.r + (m_EndColorVar.r * ParticleRandomSigned(m_Context))) - p->m_Color.r) * invlife;
+                            p->deltaColor.g = ((m_EndColor.g + (m_EndColorVar.g * ParticleRandomSigned(m_Context))) - p->m_Color.g) * invlife;
+                            p->deltaColor.b = ((m_EndColor.b + (m_EndColorVar.b * ParticleRandomSigned(m_Context))) - p->m_Color.b) * invlife;
+                            p->deltaColor.a = ((m_EndColor.a + (m_EndColorVar.a * ParticleRandomSigned(m_Context))) - p->m_Color.a) * invlife;
                         }
                         else
                         {
@@ -1073,7 +1073,7 @@ void ParticleEmitter::AddParticles2()
                     // Initial Size
                     if (m_VariancesFlags & PV_INITIALSIZE)
                     {
-                        p->m_Size = m_StartSize + (m_StartSizeVar * RANDNUM);
+                        p->m_Size = m_StartSize + (m_StartSizeVar * ParticleRandomSigned(m_Context));
                     }
                     else
                     {
@@ -1084,7 +1084,7 @@ void ParticleEmitter::AddParticles2()
                     {
                         if (m_VariancesFlags & PV_ENDINGSIZE)
                         {
-                            p->m_DeltaSize = (m_EndSize + (m_EndSizeVar * RANDNUM) - p->m_Size) * invlife;
+                            p->m_DeltaSize = (m_EndSize + (m_EndSizeVar * ParticleRandomSigned(m_Context)) - p->m_Size) * invlife;
                         }
                         else
                         {
@@ -1111,7 +1111,7 @@ void ParticleEmitter::AddParticles2()
                         // Initial Texture
                         if (m_VariancesFlags & PV_INITIALTEXTURE)
                         {
-                            p->m_CurrentFrame = m_InitialTextureFrame + (int)(m_InitialTextureFrameVariance * RANDNUMP);
+                            p->m_CurrentFrame = m_InitialTextureFrame + (int)(m_InitialTextureFrameVariance * ParticleRandomPositive(m_Context));
                         }
                         else
                         {
@@ -1126,7 +1126,7 @@ void ParticleEmitter::AddParticles2()
                         {
                             if (m_VariancesFlags & PV_SPEEDTEXTURE)
                             {
-                                p->m_DeltaFrametime = m_SpeedTextureFrame + m_SpeedTextureFrameVariance * RANDNUM;
+                                p->m_DeltaFrametime = m_SpeedTextureFrame + m_SpeedTextureFrameVariance * ParticleRandomSigned(m_Context);
                             }
                             else
                             {
@@ -1152,7 +1152,7 @@ void ParticleEmitter::AddParticles2()
                     {
                         if (m_VariancesFlags & PV_BOUNCE)
                         {
-                            p->m_Bounce = m_Bounce + (m_BounceVariation * RANDNUM);
+                            p->m_Bounce = m_Bounce + (m_BounceVariation * ParticleRandomSigned(m_Context));
                         }
                         else
                         {
@@ -1169,7 +1169,7 @@ void ParticleEmitter::AddParticles2()
                     {
                         if (m_VariancesFlags & PV_WEIGHT)
                         {
-                            p->m_Weight = m_Weight + (m_WeightVariation * RANDNUM);
+                            p->m_Weight = m_Weight + (m_WeightVariation * ParticleRandomSigned(m_Context));
                         }
                         else
                         {
@@ -1185,7 +1185,7 @@ void ParticleEmitter::AddParticles2()
                     {
                         if (m_VariancesFlags & PV_SURFACE)
                         {
-                            p->m_Surface = m_Surface + (m_SurfaceVariation * RANDNUM);
+                            p->m_Surface = m_Surface + (m_SurfaceVariation * ParticleRandomSigned(m_Context));
                         }
                         else
                         {
@@ -1209,7 +1209,7 @@ void ParticleEmitter::AddParticles3()
     int emits;
     if (m_VariancesFlags & PV_EMISSION)
     {
-        emits = emitsPerFrame + (int)((float)emitsVar * RANDNUM);
+        emits = emitsPerFrame + (int)((float)emitsVar * ParticleRandomSigned(m_Context));
     }
     else
     {
@@ -1245,7 +1245,7 @@ void ParticleEmitter::AddParticles3()
             p->prevpos = p->pos;
 
             // Keep deflector-density filtering deterministic for wave particles too.
-            p->m_Density = rand() * INV_RAND;
+            p->m_Density = m_Context->Random() * INV_RAND;
 
             p->dir = VxVector(0, 0, 0);
 
@@ -1273,7 +1273,7 @@ void ParticleEmitter::AddParticles3()
             ////////////////////////
             if (m_VariancesFlags & PV_LIFESPAN)
             {
-                p->m_Life = m_Life + m_LifeVariation * RANDNUM;
+                p->m_Life = m_Life + m_LifeVariation * ParticleRandomSigned(m_Context);
             }
             else
             {
@@ -1292,10 +1292,10 @@ void ParticleEmitter::AddParticles3()
             // Initial Color
             if (m_VariancesFlags & PV_INITIALCOLOR)
             {
-                p->m_Color.r = m_StartColor.r + (m_StartColorVar.r * RANDNUM);
-                p->m_Color.g = m_StartColor.g + (m_StartColorVar.g * RANDNUM);
-                p->m_Color.b = m_StartColor.b + (m_StartColorVar.b * RANDNUM);
-                p->m_Color.a = m_StartColor.a + (m_StartColorVar.a * RANDNUM);
+                p->m_Color.r = m_StartColor.r + (m_StartColorVar.r * ParticleRandomSigned(m_Context));
+                p->m_Color.g = m_StartColor.g + (m_StartColorVar.g * ParticleRandomSigned(m_Context));
+                p->m_Color.b = m_StartColor.b + (m_StartColorVar.b * ParticleRandomSigned(m_Context));
+                p->m_Color.a = m_StartColor.a + (m_StartColorVar.a * ParticleRandomSigned(m_Context));
             }
             else
             {
@@ -1306,10 +1306,10 @@ void ParticleEmitter::AddParticles3()
             {
                 if (m_VariancesFlags & PV_ENDINGCOLOR)
                 {
-                    p->deltaColor.r = ((m_EndColor.r + (m_EndColorVar.r * RANDNUM)) - p->m_Color.r) * invlife;
-                    p->deltaColor.g = ((m_EndColor.g + (m_EndColorVar.g * RANDNUM)) - p->m_Color.g) * invlife;
-                    p->deltaColor.b = ((m_EndColor.b + (m_EndColorVar.b * RANDNUM)) - p->m_Color.b) * invlife;
-                    p->deltaColor.a = ((m_EndColor.a + (m_EndColorVar.a * RANDNUM)) - p->m_Color.a) * invlife;
+                    p->deltaColor.r = ((m_EndColor.r + (m_EndColorVar.r * ParticleRandomSigned(m_Context))) - p->m_Color.r) * invlife;
+                    p->deltaColor.g = ((m_EndColor.g + (m_EndColorVar.g * ParticleRandomSigned(m_Context))) - p->m_Color.g) * invlife;
+                    p->deltaColor.b = ((m_EndColor.b + (m_EndColorVar.b * ParticleRandomSigned(m_Context))) - p->m_Color.b) * invlife;
+                    p->deltaColor.a = ((m_EndColor.a + (m_EndColorVar.a * ParticleRandomSigned(m_Context))) - p->m_Color.a) * invlife;
                 }
                 else
                 {
@@ -1334,7 +1334,7 @@ void ParticleEmitter::AddParticles3()
             // Initial Size
             if (m_VariancesFlags & PV_INITIALSIZE)
             {
-                p->m_Size = m_StartSize + (m_StartSizeVar * RANDNUM);
+                p->m_Size = m_StartSize + (m_StartSizeVar * ParticleRandomSigned(m_Context));
             }
             else
             {
@@ -1345,7 +1345,7 @@ void ParticleEmitter::AddParticles3()
             {
                 if (m_VariancesFlags & PV_ENDINGSIZE)
                 {
-                    p->m_DeltaSize = (m_EndSize + (m_EndSizeVar * RANDNUM) - p->m_Size) * invlife;
+                    p->m_DeltaSize = (m_EndSize + (m_EndSizeVar * ParticleRandomSigned(m_Context)) - p->m_Size) * invlife;
                 }
                 else
                 {
@@ -1372,7 +1372,7 @@ void ParticleEmitter::AddParticles3()
                 // Initial Texture
                 if (m_VariancesFlags & PV_INITIALTEXTURE)
                 {
-                    p->m_CurrentFrame = m_InitialTextureFrame + (int)(m_InitialTextureFrameVariance * RANDNUMP);
+                    p->m_CurrentFrame = m_InitialTextureFrame + (int)(m_InitialTextureFrameVariance * ParticleRandomPositive(m_Context));
                 }
                 else
                 {
@@ -1387,7 +1387,7 @@ void ParticleEmitter::AddParticles3()
                 {
                     if (m_VariancesFlags & PV_SPEEDTEXTURE)
                     {
-                        p->m_DeltaFrametime = m_SpeedTextureFrame + m_SpeedTextureFrameVariance * RANDNUM;
+                        p->m_DeltaFrametime = m_SpeedTextureFrame + m_SpeedTextureFrameVariance * ParticleRandomSigned(m_Context);
                     }
                     else
                     {
@@ -1413,7 +1413,7 @@ void ParticleEmitter::AddParticles3()
             {
                 if (m_VariancesFlags & PV_BOUNCE)
                 {
-                    p->m_Bounce = m_Bounce + (m_BounceVariation * RANDNUM);
+                    p->m_Bounce = m_Bounce + (m_BounceVariation * ParticleRandomSigned(m_Context));
                 }
                 else
                 {
@@ -1430,7 +1430,7 @@ void ParticleEmitter::AddParticles3()
             {
                 if (m_VariancesFlags & PV_WEIGHT)
                 {
-                    p->m_Weight = m_Weight + (m_WeightVariation * RANDNUM);
+                    p->m_Weight = m_Weight + (m_WeightVariation * ParticleRandomSigned(m_Context));
                 }
                 else
                 {
@@ -1446,7 +1446,7 @@ void ParticleEmitter::AddParticles3()
             {
                 if (m_VariancesFlags & PV_SURFACE)
                 {
-                    p->m_Surface = m_Surface + (m_SurfaceVariation * RANDNUM);
+                    p->m_Surface = m_Surface + (m_SurfaceVariation * ParticleRandomSigned(m_Context));
                 }
                 else
                 {
@@ -1463,10 +1463,10 @@ void ParticleEmitter::InitiateDirection(Particle *p)
 {
     VxVector dir;
     CK3dEntity *entity = (CK3dEntity *)m_Context->GetObject(m_Entity);
-    dir.z = cosf(m_PitchVariation * RANDNUM);
-    dir.x = dir.z * sinf(m_YawVariation * RANDNUM);
-    dir.z *= cosf(m_YawVariation * RANDNUM);
-    dir.y = sinf(m_PitchVariation * RANDNUM);
+    dir.z = cosf(m_PitchVariation * ParticleRandomSigned(m_Context));
+    dir.x = dir.z * sinf(m_YawVariation * ParticleRandomSigned(m_Context));
+    dir.z *= cosf(m_YawVariation * ParticleRandomSigned(m_Context));
+    dir.y = sinf(m_PitchVariation * ParticleRandomSigned(m_Context));
     entity->TransformVector(&(p->dir), &dir);
 }
 

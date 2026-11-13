@@ -248,7 +248,7 @@ int GeneralParticleSystem(const CKBehaviorContext &behcontext)
                 beh->GetInputParameterValue(EMISSIONDELAY, &emissiondelay);
                 float emissiondelayvariance = 0;
                 beh->GetInputParameterValue(EMISSIONDELAYVAR, &emissiondelayvariance);
-                emissiondelay += emissiondelayvariance * RANDNUM;
+                emissiondelay += emissiondelayvariance * ParticleRandomSigned(behcontext.Context);
 
                 if (emissiondelay > 0) // linked with time
                 {

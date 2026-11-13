@@ -71,7 +71,7 @@ void ParticleManager::ManageInfinitePlaneDeflectors(ParticleEmitter *em, float d
             olddir = particle->dir * particle->m_DeltaTime;
             prevpos = particle->pos - olddir;
 
-            if (rand() * INV_RAND < density)
+            if (m_Context->Random() * INV_RAND < density)
             {
                 if (RayPlaneIntersection(intnormal, O, prevpos, particle->pos, intpoint))
                 {
@@ -261,7 +261,7 @@ void ParticleManager::ManageCylinderDeflectors(ParticleEmitter *em, float deltat
             olddir = particle->dir * particle->m_DeltaTime;
             prevpos = particle->pos - olddir;
 
-            if (rand() * INV_RAND < density)
+            if (m_Context->Random() * INV_RAND < density)
             {
                 ent->InverseTransform(&o_prevpos, &prevpos);
                 ent->InverseTransform(&o_ppos, &(particle->pos));
@@ -358,7 +358,7 @@ void ParticleManager::ManageSphereDeflectors(ParticleEmitter *em, float deltat)
             olddir = particle->dir * particle->m_DeltaTime;
             prevpos = particle->pos - olddir;
 
-            if (rand() * INV_RAND < density)
+            if (m_Context->Random() * INV_RAND < density)
             {
                 ent->InverseTransform(&o_prevpos, &prevpos);
                 ent->InverseTransform(&o_ppos, &(particle->pos));
@@ -453,7 +453,7 @@ void ParticleManager::ManageBoxDeflectors(ParticleEmitter *em, float deltat)
             olddir = particle->dir * particle->m_DeltaTime;
             prevpos = particle->pos - olddir;
 
-            if (rand() * INV_RAND < density)
+            if (m_Context->Random() * INV_RAND < density)
             {
                 ent->InverseTransform(&o_prevpos, &prevpos);
                 ent->InverseTransform(&o_ppos, &(particle->pos));
@@ -562,7 +562,7 @@ void ParticleManager::ManageObjectDeflectors(ParticleEmitter *em, float deltat)
             olddir = particle->dir * particle->m_DeltaTime;
             prevpos = particle->pos - olddir;
 
-            if (rand() * INV_RAND < density)
+            if (m_Context->Random() * INV_RAND < density)
             {
                 // we test first if the bounding box is intersected
                 if (RayInteriorBoxIntersection(worldbox, prevpos, (particle->pos), o_prevpos, o_intnormal))

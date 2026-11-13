@@ -94,8 +94,11 @@ CKERROR InitInstance(CKContext *context)
     return CK_OK;
 }
 
+void DestroyMeshNoise(CKContext *context);
+
 CKERROR ExitInstance(CKContext *context)
 {
+    DestroyMeshNoise(context);
     CKParameterManager *pm = context->GetParameterManager();
     pm->UnRegisterParameterType(CKPGUID_COLORCHANNELTYPE);
 

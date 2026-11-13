@@ -71,13 +71,27 @@ CKERROR CreateNoiseProto(CKBehaviorPrototype **pproto)
 #define NP 12 /* 2^N */
 #define NM 0xfff
 
-static int p[B + B + 2];
-static float g3[B + B + 2][3];
-static float g2[B + B + 2][2];
-static float g1[B + B + 2];
-static int start = 1;
+namespace {
+const CKGUID NoiseGuid(0x4e524e47, 0x4d455348);
+class MeshNoiseState : public CKBaseManager {
+public:
+    explicit MeshNoiseState(CKContext *context)
+        : CKBaseManager(context, NoiseGuid, "Mesh Noise") { context->RegisterNewManager(this); }
+    int p[B + B + 2];
+    float g3[B + B + 2][3], g2[B + B + 2][2], g1[B + B + 2];
+    int start = 1;
+    float noise3(const VxVector &);
+    void init();
+};
+}
 
-static void init(void);
+void DestroyMeshNoise(CKContext *context) { delete context->GetManagerByGuid(NoiseGuid); }
+
+float noise3(CKContext *context, const VxVector &value) {
+    auto *state = static_cast<MeshNoiseState *>(context->GetManagerByGuid(NoiseGuid));
+    if (!state) state = new MeshNoiseState(context);
+    return state->noise3(value);
+}
 
 #define s_curve(t) (t * t * (3.0f - 2.0f * t))
 
@@ -90,7 +104,7 @@ static void init(void);
     r0 = t - (int)t;             \
     r1 = r0 - 1.0f;
 
-float noise3(const VxVector &vect)
+float MeshNoiseState::noise3(const VxVector &vect)
 {
     const float *vec = vect.v;
     int bx0, bx1, by0, by1, bz0, bz1, b00, b10, b01, b11;
@@ -171,7 +185,7 @@ static void normalize3(float v[3])
     v[2] = v[2] * s;
 }
 
-static void init(void)
+void MeshNoiseState::init(void)
 {
     int i, j, k;
 
@@ -179,21 +193,21 @@ static void init(void)
     {
         p[i] = i;
 
-        g1[i] = (float)((rand() % (B + B)) - B) / B;
+        g1[i] = (float)((m_Context->Random() % (B + B)) - B) / B;
 
         for (j = 0; j < 2; j++)
-            g2[i][j] = (float)((rand() % (B + B)) - B) / B;
+            g2[i][j] = (float)((m_Context->Random() % (B + B)) - B) / B;
         normalize2(g2[i]);
 
         for (j = 0; j < 3; j++)
-            g3[i][j] = (float)((rand() % (B + B)) - B) / B;
+            g3[i][j] = (float)((m_Context->Random() % (B + B)) - B) / B;
         normalize3(g3[i]);
     }
 
     while (--i)
     {
         k = p[i];
-        p[i] = p[j = rand() % B];
+        p[i] = p[j = m_Context->Random() % B];
         p[j] = k;
     }
 
@@ -283,11 +297,11 @@ int Noise(const CKBehaviorContext &behcontext)
 
         noise_vect.x = sp.y;
         noise_vect.y = sp.z;
-        d.x = noise3(noise_vect);
+        d.x = noise3(behcontext.Context, noise_vect);
         noise_vect.x = sp.x;
-        d.y = noise3(noise_vect);
+        d.y = noise3(behcontext.Context, noise_vect);
         noise_vect.y = sp.y;
-        d.z = noise3(noise_vect);
+        d.z = noise3(behcontext.Context, noise_vect);
 
         *(VxVector *)varray = (v + (d * axis));
     }

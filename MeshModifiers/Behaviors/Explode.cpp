@@ -218,7 +218,7 @@ int Explode(const CKBehaviorContext &behcontext)
         if (!deform)
         {
             ste.Normalize();
-            ste *= (delta * effectValue * ((float)(rand() % 100) * 0.01f));
+            ste *= (delta * effectValue * ((float)(behcontext.Context->Random() % 100) * 0.01f));
             ste += (direction * D * 0.1f);
             *va += ste;
             *vb += ste;
@@ -228,15 +228,15 @@ int Explode(const CKBehaviorContext &behcontext)
         {
             ste.Normalize();
             s = ste;
-            ste *= (delta * effectValue * ((float)(rand() % 100) * 0.01f));
+            ste *= (delta * effectValue * ((float)(behcontext.Context->Random() % 100) * 0.01f));
             ste += (direction * D * 0.1f);
             *va += ste;
             ste = s;
-            ste *= (delta * effectValue * ((float)(rand() % 100) * 0.01f));
+            ste *= (delta * effectValue * ((float)(behcontext.Context->Random() % 100) * 0.01f));
             ste += (direction * D * 0.1f);
             *vb += ste;
             ste = s;
-            ste *= (delta * effectValue * ((float)(rand() % 100) * 0.01f));
+            ste *= (delta * effectValue * ((float)(behcontext.Context->Random() % 100) * 0.01f));
             ste += (direction * D * 0.1f);
             *vc += ste;
         }

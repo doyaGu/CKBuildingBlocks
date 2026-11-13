@@ -79,8 +79,11 @@ CKERROR InitInstance(CKContext *context)
     return CK_OK;
 }
 
+void DestroyLogicsNoise(CKContext *context);
+
 CKERROR ExitInstance(CKContext *context)
 {
+    DestroyLogicsNoise(context);
     CKParameterManager *pm = context->GetParameterManager();
 
     pm->UnRegisterParameterType(CKPGUID_INTERSECTIONPRECISIONTYPE);

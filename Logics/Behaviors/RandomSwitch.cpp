@@ -104,7 +104,7 @@ int RandomSwitch(const CKBehaviorContext &behcontext)
         }
     }
 
-    float res = sum * rand() / static_cast<float>(RAND_MAX);
+    float res = sum * behcontext.Context->Random() / static_cast<float>(CK_RANDOM_MAX);
 
     sum = 0.0f;
     for (c = 0; c < input_count; ++c)

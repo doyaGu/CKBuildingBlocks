@@ -54,7 +54,7 @@ void FollowProblem::Set(FollowStruct *followStruct, Path *path, CKAttributeType 
     if (m_Fuzzyness > 1)
         m_Fuzzyness = 1;
     m_Fuzzyness2 = 0.5f * m_Fuzzyness;
-    m_Fuzzyness /= static_cast<float>(RAND_MAX);
+    m_Fuzzyness /= static_cast<float>(CK_RANDOM_MAX);
     m_Pingpong = followStruct->pingpong;
     if (followStruct->maxBlockedTime >= 0)
         m_MaxBlockedTime = followStruct->maxBlockedTime;
@@ -406,8 +406,8 @@ void FollowProblem::PointAndDir()
     {
         // Add random in nextpoint.
         m_Grid->InverseTransform(&m_NextPoint, &m_NextPoint);
-        m_NextPoint.x += ((float)rand() * m_Fuzzyness) - m_Fuzzyness2;
-        m_NextPoint.z += ((float)rand() * m_Fuzzyness) - m_Fuzzyness2;
+        m_NextPoint.x += ((float)m_Beh->GetCKContext()->Random() * m_Fuzzyness) - m_Fuzzyness2;
+        m_NextPoint.z += ((float)m_Beh->GetCKContext()->Random() * m_Fuzzyness) - m_Fuzzyness2;
         m_Grid->Transform(&m_NextPoint, &m_NextPoint);
     }
     m_NextPoint.y = 0;
@@ -433,8 +433,8 @@ void FollowProblem::PointAndDir2()
     {
         // Add random in nextpoint.
         m_Grid->InverseTransform(&m_NextPoint, &m_NextPoint);
-        m_NextPoint.x += ((float)rand() * m_Fuzzyness) - m_Fuzzyness2;
-        m_NextPoint.z += ((float)rand() * m_Fuzzyness) - m_Fuzzyness2;
+        m_NextPoint.x += ((float)m_Beh->GetCKContext()->Random() * m_Fuzzyness) - m_Fuzzyness2;
+        m_NextPoint.z += ((float)m_Beh->GetCKContext()->Random() * m_Fuzzyness) - m_Fuzzyness2;
         m_Grid->Transform(&m_NextPoint, &m_NextPoint);
     }
     m_NextPoint.y = 0;

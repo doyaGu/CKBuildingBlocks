@@ -1473,7 +1473,7 @@ int LightmapGenerator::LightMapsRender(CKRenderContext *dev, CKRenderObject *ro,
         VxDrawPrimitiveData *data = dev->GetDrawPrimitiveStructure(CKRST_DP_TR_CL_VCT, 3);
 
         // init the randomize generator
-        srand(1);
+        ctx->SetRandomSeed(1);
 
         ///
         // Object loop
@@ -1521,7 +1521,7 @@ int LightmapGenerator::LightMapsRender(CKRenderContext *dev, CKRenderObject *ro,
 #endif
 
                     // we need to set an "unique" color
-                    CKDWORD uniqueColor = RGBAFTOCOLOR(float(rand()) / static_cast<float>(RAND_MAX), float(rand()) / static_cast<float>(RAND_MAX), float(rand()) / static_cast<float>(RAND_MAX), 1.0f);
+                    CKDWORD uniqueColor = RGBAFTOCOLOR(float(ctx->Random()) / static_cast<float>(CK_RANDOM_MAX), float(ctx->Random()) / static_cast<float>(CK_RANDOM_MAX), float(ctx->Random()) / static_cast<float>(CK_RANDOM_MAX), 1.0f);
 
                     // color filling
 #if CKVERSION == 0x13022002 || CKVERSION == 0x05082002

@@ -9,12 +9,16 @@
 // const int HALF_RAND = (RAND_MAX / 2);
 // const float INVHALF_RAND = 1.0f/HALF_RAND;
 
-#define HALF_RAND ((float)RAND_MAX / 2.0f)
+#define HALF_RAND ((float)CK_RANDOM_MAX / 2.0f)
 #define INVHALF_RAND (1.0f / HALF_RAND)
-#define INV_RAND (1.0f / (float)RAND_MAX)
+#define INV_RAND (1.0f / (float)CK_RANDOM_MAX)
 
-#define RANDNUM ((float)(rand() - HALF_RAND) * INVHALF_RAND)
-#define RANDNUMP ((float)rand() * INV_RAND)
+inline float ParticleRandomSigned(CKContext *context) {
+    return (float)(context->Random() - HALF_RAND) * INVHALF_RAND;
+}
+inline float ParticleRandomPositive(CKContext *context) {
+    return (float)context->Random() * INV_RAND;
+}
 
 // float RandomNum();
 CKBOOL RayBoxIntersection(const VxBbox &box, VxVector &p0, VxVector &p1, VxVector &res, VxVector &norm);

@@ -12,7 +12,7 @@ void ObjectEmitter::InitiateParticle(Particle *p)
     int nbface = m_Shape->GetFaceCount();
     if (nbface <= 0)
         return;
-    int face = rand() % nbface;
+    int face = m_Context->Random() % nbface;
 
     VxVector av, bv, cv, fn;
     fn = m_Shape->GetFaceNormal(face);
@@ -20,9 +20,9 @@ void ObjectEmitter::InitiateParticle(Particle *p)
     bv = m_Shape->GetFaceVertex(face, 1);
     cv = m_Shape->GetFaceVertex(face, 2);
     float af, bf, cf;
-    af = (float)fabs(RANDNUM);
-    bf = (float)fabs(RANDNUM);
-    cf = (float)fabs(RANDNUM);
+    af = (float)fabs(ParticleRandomSigned(m_Context));
+    bf = (float)fabs(ParticleRandomSigned(m_Context));
+    cf = (float)fabs(ParticleRandomSigned(m_Context));
     av *= af;
     bv *= bf;
     cv *= cf;
@@ -38,7 +38,7 @@ void ObjectEmitter::InitiateParticle(Particle *p)
     entity->Transform(&newEnd, &endPoint);
     newDir = newEnd - newStart;
     VxMatrix mat;
-    Vx3DMatrixFromEulerAngles(mat, m_YawVariation * RANDNUM, m_PitchVariation * RANDNUM, 0.0);
+    Vx3DMatrixFromEulerAngles(mat, m_YawVariation * ParticleRandomSigned(m_Context), m_PitchVariation * ParticleRandomSigned(m_Context), 0.0);
     Vx3DRotateVector(&(p->dir), mat, &newDir);
 }
 

@@ -24,9 +24,9 @@ struct WaveParams
 };
 
 // Helper function for random in range
-static float RandomRange(float min, float max)
+static float RandomRange(CKContext *context, float min, float max)
 {
-    return min + (float)rand() / (float)RAND_MAX * (max - min);
+    return min + (float)context->Random() / (float)CK_RANDOM_MAX * (max - min);
 }
 
 CKObjectDeclaration *FillBehaviorPMSMeshdeformDecl();
@@ -137,7 +137,7 @@ int PMSMeshdeform(const CKBehaviorContext &behcontext)
         beh->ActivateInput(0, FALSE);
         beh->ActivateOutput(0, TRUE);
 
-        srand(10);
+        behcontext.Context->SetRandomSeed(10);
 
         // Allocate wave Y parameters
         WaveParams *waveY = new WaveParams[waveCount];
@@ -164,9 +164,9 @@ int PMSMeshdeform(const CKBehaviorContext &behcontext)
             float expFactor = -1.0f * powf(waveY[i].frequency * 3.9216f, -4.0f);
             waveY[i].amplitude *= expf(expFactor);
             waveY[i].amplitude /= (0.16f / maxAmplitude);
-            waveY[i].amplitude *= RandomRange(-1.0f, 1.0f);
+            waveY[i].amplitude *= RandomRange(behcontext.Context, -1.0f, 1.0f);
 
-            waveY[i].phase = RandomRange(0.0f, PI2);
+            waveY[i].phase = RandomRange(behcontext.Context, 0.0f, PI2);
             waveY[i].speed = sqrtf(gravity / waveY[i].k) * 5.0f;
 
             // Get wavelength X
@@ -178,7 +178,7 @@ int PMSMeshdeform(const CKBehaviorContext &behcontext)
 
             // Get amplitude X
             beh->GetInputParameterValue(paramIndex + 2, &waveX[i].amplitude);
-            waveX[i].phase = RandomRange(0.0f, PI2);
+            waveX[i].phase = RandomRange(behcontext.Context, 0.0f, PI2);
 
             paramIndex += 3;
         }
